@@ -134,7 +134,7 @@
           setlocale(LC_TIME, 'id_ID.utf8'); 
           ?>
           <h6 class="m-0 font-weight-bold">
-            Data Informasi Produksi (<?= strftime('%A, %d %B %Y', strtotime($tanggal_dipilih)) ?>)
+            Data Informasi Produksi (<?= date("l, d F Y", strtotime($tanggal_dipilih)) ?>)
           </h6>
           <form method="get" class="form-inline">
             <label for="tanggal" class="mr-2 mb-0 text-white">Pilih Tanggal:</label>
