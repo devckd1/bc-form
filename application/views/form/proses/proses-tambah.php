@@ -87,17 +87,18 @@
                 ];
 
                 $standar_berat = [
-                    'tepung_terigu' => '',
+                    'tepung_terigu' => '32.960',
                     'tepung_tapioka' => '2.270',
                     'yeast' => '0.732',
-                    'bread_improver' => '',
-                    'premix' => '',
+                    'bread_improver' => '0.038',
+                    'premix' => ['default' => '0.7468', 'col8' => '0.7653'],
                     'shortening' => '0.252',
                     'chill_water' => '18'
                 ];
 
                 $default_mixing = ['waktu_mixing_1' => 3, 'waktu_mixing_2' => 8];
                 $default_baking = ['baking_time_high' => 5, 'baking_time_low' => 7];
+                $default_suhu = ['suhu_setting' => 35, 'rh_setting' => 80];
                 ?>
 
                 <!-- Form Header -->
@@ -158,7 +159,8 @@
                                         <td>
                                             <?php
                                             if ($kategori == 'kondisi_rm') {
-                                                $stdVal = $standar_berat[$subParams[0]] ?? '';
+                                                $rawStd = $standar_berat[$subParams[0]] ?? '';
+                                                $stdVal = is_array($rawStd) ? $rawStd['default'] : $rawStd;
                                                 echo '<input type="text" name="proses_produksi[' . $kategori . '][' . $subParams[0] . '][0]" class="form-control form-control-sm" value="' . $stdVal . '">';
                                             }
                                             ?>
@@ -170,6 +172,7 @@
                                                     $value = '';
                                                     if (isset($default_mixing[$sub])) $value = $default_mixing[$sub];
                                                     if (isset($default_baking[$sub])) $value = $default_baking[$sub];
+                                                    if (isset($default_suhu[$sub])) $value = $default_suhu[$sub];
 
                                                     $subLower = strtolower($sub);
                                                     $isCheckbox = false;
@@ -178,7 +181,8 @@
                                                     // ✅ Kondisi RM logic
                                                     if ($kategori == 'kondisi_rm' && $subLower !== 'chill_water' && !str_contains($subLower, 'suhu')) {
                                                         if ($col == 8) {
-                                                            $stdVal = $standar_berat[$subLower] ?? '';
+                                                            $rawStd = $standar_berat[$subLower] ?? '';
+                                                            $stdVal = is_array($rawStd) ? ($rawStd['col8'] ?? $rawStd['default']) : $rawStd;
                                                             echo '<input type="text" name="proses_produksi[' . $kategori . '][' . $subLower . '][' . $col . ']" class="form-control form-control-sm" value="' . $stdVal . '">';
                                                             continue;
                                                         } else {
@@ -273,19 +277,19 @@
                     const kodeProduksiInputs = $('.kode_produksi_field');
 
                     const firstKode = $('#kode_produksi_1');
-                        firstKode.on('blur', function() {
-                            let baseVal = $(this).val().trim();
-                            if (!baseVal) return;
-                            if (!baseVal.match(/\d+$/)) {
-                                baseVal = `${baseVal}1`;
-                                $(this).val(baseVal);
-                            }
-                            kodeProduksiInputs.each(function(index) {
-                                if (index === 0) return;
-                                const suffix = index + 1;
-                                $(this).val(`${baseVal.replace(/\d+$/, '')}${suffix}`);
-                            });
+                    firstKode.on('blur', function() {
+                        let baseVal = $(this).val().trim();
+                        if (!baseVal) return;
+                        if (!baseVal.match(/\d+$/)) {
+                            baseVal = `${baseVal}1`;
+                            $(this).val(baseVal);
+                        }
+                        kodeProduksiInputs.each(function(index) {
+                            if (index === 0) return;
+                            const suffix = index + 1;
+                            $(this).val(`${baseVal.replace(/\d+$/, '')}${suffix}`);
                         });
+                    });
 
                     // --- Duration Calculation ---
                     function calculateDuration(start, end) {
@@ -343,4 +347,3 @@
         background-color: #2E86C1;
     }
 </style>
-

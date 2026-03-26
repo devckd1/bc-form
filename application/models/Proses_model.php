@@ -99,21 +99,21 @@ class Proses_model extends CI_Model
 		$nama_produk = $this->input->post('nama_produk');
 		$catatan = $this->input->post('catatan');
 
-		// Get existing record
+		// Get existing record for logging
 		$old_data = $this->db->get_where($this->table, ['uuid' => $uuid])->row_array();
-		$old_json = json_decode($old_data['proses_produksi'], true) ?? [];
 
 		$proses_input = $this->input->post('proses_produksi');
-		$cleaned = $old_json; // start from old data
+		$cleaned = []; // always start fresh
 
 		if (is_array($proses_input)) {
 			foreach ($proses_input as $kategori => $params) {
 				foreach ($params as $param => $cols) {
 					for ($i = 0; $i < 11; $i++) {
-						// Keep old value if no new input provided
-						if (isset($cols[$i]) && trim($cols[$i]) !== '') {
+						// Always use submitted value, even if empty (user intentionally cleared it)
+						if (isset($cols[$i])) {
 							$cleaned[$kategori][$param][$i] = trim($cols[$i]);
-						} elseif (!isset($cleaned[$kategori][$param][$i])) {
+						} else {
+							// Field not submitted at all (e.g. unchecked checkbox) = clear it
 							$cleaned[$kategori][$param][$i] = '';
 						}
 
@@ -127,19 +127,16 @@ class Proses_model extends CI_Model
 			}
 		}
 
-		// 🔹 Debug: write to log (remove later)
-		log_message('debug', 'UPDATE proses_produksi: ' . print_r($cleaned, true));
-
 		$json_proses = json_encode($cleaned);
 
 		$data = [
-			'date' => $date,
-			'shift' => $shift,
-			'nama_produk' => $nama_produk,
-			'jenis_produk' => $nama_produk,
-			'catatan' => $catatan,
+			'date'            => $date,
+			'shift'           => $shift,
+			'nama_produk'     => $nama_produk,
+			'jenis_produk'    => $nama_produk,
+			'catatan'         => $catatan,
 			'proses_produksi' => $json_proses,
-			'modified_at' => date('Y-m-d H:i:s')
+			'modified_at'     => date('Y-m-d H:i:s')
 		];
 
 		$this->db->where('uuid', $uuid);
@@ -242,17 +239,17 @@ class Proses_model extends CI_Model
 
 					switch ($mime) {
 						case 'image/jpeg':
-						$image = imagecreatefromjpeg($tmp_name);
-						break;
+							$image = imagecreatefromjpeg($tmp_name);
+							break;
 						case 'image/png':
-						$image = imagecreatefrompng($tmp_name);
-						break;
+							$image = imagecreatefrompng($tmp_name);
+							break;
 						case 'image/webp':
-						$image = imagecreatefromwebp($tmp_name);
-						break;
+							$image = imagecreatefromwebp($tmp_name);
+							break;
 						default:
-						$image = null;
-						break;
+							$image = null;
+							break;
 					}
 
 					if ($image) {
@@ -276,7 +273,7 @@ class Proses_model extends CI_Model
 						$old_json = json_decode($old_data['proses_packing'], true);
 						if (isset($old_json[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0])) {
 							$proses_packing[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0] =
-							$old_json[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0];
+								$old_json[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0];
 						}
 					}
 				}
@@ -470,7 +467,7 @@ class Proses_model extends CI_Model
 		log_message('error', 'EXPORT QUERY: ' . $this->db->last_query());
 		log_message('error', 'EXPORT TOTAL: ' . $query->num_rows());
 
-    // ✅ WAJIB RESULT()
+		// ✅ WAJIB RESULT()
 		return $query->result();
 	}
 
