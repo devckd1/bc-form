@@ -302,70 +302,88 @@
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         function calculateBestBefore(kode) {
-            if (!kode || kode.length < 4) return '';
-            const yearCode = kode.charAt(0).toUpperCase();
-            const monthCode = kode.charAt(1).toUpperCase();
-            const day = parseInt(kode.substring(2, 4), 10);
-            const monthMap = {
-                A: 1,
-                B: 2,
-                C: 3,
-                D: 4,
-                E: 5,
-                F: 6,
-                G: 7,
-                H: 8,
-                I: 9,
-                J: 10,
-                K: 11,
-                L: 12
-            };
-            if (isNaN(day) || !monthMap[monthCode]) return '';
-            const month = monthMap[monthCode];
-            const yearBase = 2010;
-            const year = yearBase + (yearCode.charCodeAt(0) - 65);
-            const date = new Date(year, month - 1, day);
-            date.setMonth(date.getMonth() + 6);
-            const d = String(date.getDate()).padStart(2, '0');
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const y = date.getFullYear();
-            return `${d}.${m}.${y}`;
-        }
+    if (!kode || kode.length < 4) return '';
 
-        // update best_before when kode_produksi changes
-        document.querySelectorAll('input[name*="[kode_produksi]"]').forEach((input) => {
-            input.addEventListener('input', function() {
-                const kode = this.value.trim();
-                const name = this.name;
-                const match = name.match(/packing\[(\d+)\]\[(.*?)\]\[kode_produksi\]\[0\]/);
-                if (!match) return;
+    const yearCode = kode.charAt(0).toUpperCase();
+    const monthCode = kode.charAt(1).toUpperCase();
+    const day = parseInt(kode.substring(2, 4), 10);
+
+    const monthMap = {
+        A: 1, B: 2, C: 3, D: 4, E: 5, F: 6,
+        G: 7, H: 8, I: 9, J: 10, K: 11, L: 12
+    };
+
+    if (isNaN(day) || !monthMap[monthCode]) return '';
+
+    const month = monthMap[monthCode];
+    const yearBase = 2010;
+    const year = yearBase + (yearCode.charCodeAt(0) - 65);
+
+    // original production date
+    const originalDate = new Date(year, month - 1, day);
+
+    // add 6 months manually
+    const targetMonthIndex = originalDate.getMonth() + 6;
+    const targetYear = originalDate.getFullYear() + Math.floor(targetMonthIndex / 12);
+    const targetMonth = targetMonthIndex % 12;
+
+    // get last day of target month
+    const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+    // clamp the day
+    const finalDay = Math.min(day, lastDayOfMonth);
+
+    const finalDate = new Date(targetYear, targetMonth, finalDay);
+
+    const d = String(finalDate.getDate()).padStart(2, '0');
+    const m = String(finalDate.getMonth() + 1).padStart(2, '0');
+    const y = finalDate.getFullYear();
+
+    return `${d}.${m}.${y}`;
+}
+
+// update best_before when kode_produksi changes
+    document.querySelectorAll('input[name*="[kode_produksi]"]').forEach((input) => {
+
+        input.addEventListener('input', function () {
+            const kode = this.value.trim();
+            const name = this.name;
+
+            const match = name.match(/packing\[(\d+)\]\[(.*?)\]\[kode_produksi\]\[0\]/);
+            if (!match) return;
+
+            const col = match[1];
+            const kategori = match[2];
+
+            const bestBeforeInput = document.querySelector(
+                `input[name="packing[${col}][${kategori}][best_before][0]"]`
+            );
+
+            if (bestBeforeInput) {
+                bestBeforeInput.value = calculateBestBefore(kode);
+            }
+        });
+
+        // initialize value on page load
+        const kode = input.value.trim();
+        if (kode) {
+            const name = input.name;
+
+            const match = name.match(/packing\[(\d+)\]\[(.*?)\]\[kode_produksi\]\[0\]/);
+            if (match) {
                 const col = match[1];
                 const kategori = match[2];
+
                 const bestBeforeInput = document.querySelector(
                     `input[name="packing[${col}][${kategori}][best_before][0]"]`
                 );
+
                 if (bestBeforeInput) {
                     bestBeforeInput.value = calculateBestBefore(kode);
                 }
-            });
-
-            // init value
-            const kode = input.value.trim();
-            if (kode) {
-                const name = input.name;
-                const match = name.match(/packing\[(\d+)\]\[(.*?)\]\[kode_produksi\]\[0\]/);
-                if (match) {
-                    const col = match[1];
-                    const kategori = match[2];
-                    const bestBeforeInput = document.querySelector(
-                        `input[name="packing[${col}][${kategori}][best_before][0]"]`
-                    );
-                    if (bestBeforeInput) {
-                        bestBeforeInput.value = calculateBestBefore(kode);
-                    }
-                }
             }
-        });
+        }
+    });
 
         // === AUTO HITUNG LAMA AGING ===
         function hitungLamaAging(jamMulai, jamSelesai) {
