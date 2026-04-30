@@ -301,6 +301,7 @@ class Proses extends MY_Controller
 		// -----------------------------
 		foreach ($proses_data as $index => $pd) {
 			$proses_produksi = json_decode($pd->proses_produksi ?? '[]', true);
+			if (empty($proses_produksi)) continue; // ← skip empty rows
 			$pdf->AddPage();
 			$this->_generate_halaman_produksi($pdf, $data, [$pd], $proses_produksi);
 		}
@@ -542,13 +543,16 @@ class Proses extends MY_Controller
 						continue;
 					}
 
+					$checkmark_values = ['1', '✓', 'oke', 'ok', 'baik'];
+					$is_checked = in_array(strtolower(trim($value)), array_map('strtolower', $checkmark_values));
+
 					if (
-						($group === 'kondisi_rm' && $value == 1) ||
-						($group === 'mixing' && $field === 'sensori' && $value == 1) ||
-						($group === 'hasil_baking' && $field === 'sensori_produk' && $value == 1)
+						($group === 'kondisi_rm' && $is_checked) ||
+						($group === 'mixing' && $field === 'sensori' && $is_checked) ||
+						($group === 'hasil_baking' && $field === 'sensori_produk' && $is_checked)
 					) {
 						$pdf->SetFont('dejavusans', '', 8);
-						$pdf->Cell($cellWidth, 4, '✔', 1, 0, 'C');
+						$pdf->Cell($cellWidth, 4, '✓', 1, 0, 'C');
 						$pdf->SetFont('times', '', 8);
 					} else {
 						$pdf->Cell($cellWidth, 4, $value, 1);
