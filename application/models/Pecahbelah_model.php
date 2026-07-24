@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Pecahbelah_model extends CI_Model {
+class Pecahbelah_model extends CI_Model
+{
 
 	protected $table = 'benda_pecah';
-	
+
 	public function rules()
 	{
 		return [
@@ -76,11 +78,11 @@ class Pecahbelah_model extends CI_Model {
 		$area = $this->input->post('area');
 		$pemilik = $this->input->post('pemilik');
 		$jumlah = $this->input->post('jumlah');
-		$kondisi_awal = $this->input->post('kondisi_awal'); 
-		$kondisi_akhir = $this->input->post('kondisi_akhir'); 
+		$kondisi_awal = $this->input->post('kondisi_awal');
+		$kondisi_akhir = $this->input->post('kondisi_akhir');
 		$keterangan = $this->input->post('keterangan');
 
-		$old_data = $this->db->get_where('benda_pecah', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('benda_pecah', ['uuid' => $uuid])->row_array();
 
 		$benda_pecah = [];
 		foreach ($nama_barang as $i => $b) {
@@ -109,7 +111,7 @@ class Pecahbelah_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('benda_pecah', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'benda_pecah_logs',
@@ -150,7 +152,7 @@ class Pecahbelah_model extends CI_Model {
 
 		$updateData = [
 			'qc_update' => $username,
-			'benda_pecah' => json_encode($benda_pecah), 
+			'benda_pecah' => json_encode($benda_pecah),
 			'modified_at' => date('Y-m-d H:i:s'),
 		];
 
@@ -162,7 +164,7 @@ class Pecahbelah_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -191,13 +193,12 @@ class Pecahbelah_model extends CI_Model {
 		);
 
 		$this->db->update('benda_pecah', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -226,8 +227,7 @@ class Pecahbelah_model extends CI_Model {
 		);
 
 		$this->db->update('benda_pecah', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 	public function get_all()
 	{
@@ -245,7 +245,7 @@ class Pecahbelah_model extends CI_Model {
 	public function get_by_uuid_pecahbelah($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -255,21 +255,21 @@ class Pecahbelah_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_pecahbelah_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, qc_update, shift, created_at, modified_at, nama_produksi, status_produksi, tgl_update_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('benda_pecah');
 
-		$data_benda_pecah = $query->row();  
-		return $data_benda_pecah; 
+		$data_benda_pecah = $query->row();
+		return $data_benda_pecah;
 	}
 
 	public function get_data_by_plant()
@@ -283,5 +283,50 @@ class Pecahbelah_model extends CI_Model {
 	{
 		$this->db->where('uuid', $uuid);
 		return $this->db->delete('benda_pecah');
+	}
+
+	public function get_by_date($tanggal, $plant = null, $shift = null)
+	{
+		if (empty($tanggal)) {
+			return [];
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('created_at', 'ASC');
+
+		return $this->db->get('benda_pecah')->result();
+	}
+
+	public function get_by_date_verif($tanggal, $plant = null, $shift = null)
+	{
+		if (empty($tanggal)) {
+			return null;
+		}
+
+		$this->db->select('nama_spv, tgl_update_spv, username, date, qc_update, shift, created_at, modified_at, nama_produksi, status_produksi, tgl_update_produksi');
+
+		$this->db->where('DATE(date)', $tanggal);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
+
+		return $this->db->get('benda_pecah')->row();
 	}
 }
