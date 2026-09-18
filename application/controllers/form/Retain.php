@@ -214,7 +214,7 @@ class Retain extends MY_Controller {
     setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
     $tanggal = $data['retain']->date;
     $datetime = new DateTime($tanggal);
-    $formatted_date = strftime('%A, %d %B %Y', $datetime->getTimestamp());
+    $formatted_date = date('l, d F Y', $date->getTimestamp());
 
     $pdf->SetFont('times', '', 9);
     $label_width = 35;

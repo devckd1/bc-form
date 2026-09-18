@@ -154,12 +154,14 @@
 						Cetak
 					</button>
 
-					<button type="submit"
-						formaction="<?= base_url('form/pemeriksaan_gabungan/cetak') ?>"
-						class="btn btn-primary">
-						<i class="fas fa-file-pdf fa-sm text-white-50"></i>
-						Cetak Gabungan
-					</button>
+					<?php if ($this->session->userdata('plant') != '651ac623-5e48-44cc-b2f6-5d622603f53c') : ?>
+						<button type="submit"
+							formaction="<?= base_url('form/pemeriksaan_gabungan/cetak') ?>"
+							class="btn btn-primary">
+							<i class="fas fa-file-pdf fa-sm text-white-50"></i>
+							Cetak Gabungan
+						</button>
+					<?php endif; ?>
 
 				</form>
 			</div>

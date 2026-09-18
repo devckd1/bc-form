@@ -290,8 +290,8 @@ class Seasoning extends MY_Controller {
 // 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');	
 // 		$tanggal = $data['seasoning']->date;
 // 		$date = new DateTime($tanggal);
-// 		$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
-// 		$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+// 		$formatted_date = date('l, d F Y', $date->getTimestamp());
+// 		$formatted_date2 = date('l, d F Y', $date->getTimestamp());
 
 // 		$pdf->SetFont('times', '', 10);
 // 		$pdf->SetX(17);
@@ -567,7 +567,7 @@ class Seasoning extends MY_Controller {
 
        setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
        $date = new DateTime($seasoning_verif->date);
-       $formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
+       $formatted_date = date('l, d F Y', $date->getTimestamp());
 
        $pdf->SetFont('times', '', 10);
        $pdf->Write(0, 'Tanggal: ' . $formatted_date);

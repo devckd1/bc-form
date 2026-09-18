@@ -220,9 +220,9 @@ class Releasepacking extends MY_Controller {
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['releasepacking']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
+		$formatted_date = date('l, d F Y', $date->getTimestamp());
 
-		$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+		$formatted_date2 = date('l, d F Y', $date->getTimestamp());
 
 		$pdf->SetFont('times', '', 10);
 		$pdf->SetX(17);
@@ -242,7 +242,7 @@ class Releasepacking extends MY_Controller {
 		foreach ($releasepacking_data as $releasepacking) { 
 			$bb = $releasepacking->best_before;
 			$best_before = new DateTime($bb);
-			$formatted_bb = strftime('%d %B %Y', $best_before->getTimestamp());
+			$formatted_bb = date('l, d F Y', $best_before->getTimestamp());
 			$no = 1;
 			$pdf->SetFont('times', '', 10);
 			$pdf->Cell(10, 8, $no, 1, 0, 'C');

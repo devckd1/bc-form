@@ -366,10 +366,20 @@ class Proses extends MY_Controller
 	{
 		$pdf->SetFont('times', 'B', 13);
 		$pdf->SetTextColor(0, 0, 0);
-		$logo_path = FCPATH . 'assets/img/logo.jpg';
+		$logo_path = FCPATH . 'assets/img/cpi-logo.png';
 		if (file_exists($logo_path)) {
-			$pdf->Image($logo_path, 10, 10, 35);
+			$pdf->Image($logo_path, 10, 10, 10);
 		}
+
+		$pdf->SetFont('times', 'B', 7);
+
+		$pdf->SetXY(25, 10);
+		$pdf->Cell(0, 3, 'PT. CHAROEN POKPHAND INDONESIA', 0, 1);
+
+		$pdf->SetXY(25, 13);
+		$pdf->Cell(0, 3, 'FOOD DIVISION', 0, 1);
+
+		$pdf->Ln(2);
 
 		$pdf->Write(11, "\n");
 		$pdf->MultiCell(0, 5, 'VERIFIKASI PROSES PRODUKSI', 0, 'C');
@@ -696,13 +706,20 @@ class Proses extends MY_Controller
 	private function _generate_halaman_packing($pdf, $data, $proses_packing, $proses_data, $shift)
 	{
 		$pdf->SetFont('times', 'B', 13);
-
-		$logo_path = FCPATH . 'assets/img/logo.jpg';
-		if (file_exists($logo_path)) {
-			$pdf->Image($logo_path, 10, 10, 35);
-		}
-
 		$pdf->SetTextColor(0, 0, 0);
+
+		$logo_path = FCPATH . 'assets/img/cpi-logo.png';
+		if (file_exists($logo_path)) {
+			$pdf->Image($logo_path, 10, 10, 10);
+		}
+		$pdf->SetFont('times', 'B', 7);
+		$pdf->SetXY(25, 10);
+		$pdf->Cell(0, 3, 'PT. CHAROEN POKPHAND INDONESIA', 0, 1);
+		$pdf->SetXY(25, 13);
+		$pdf->Cell(0, 3, 'FOOD DIVISION', 0, 1);
+
+		$pdf->Ln(2);
+
 		$pdf->Write(11, "\n");
 		$pdf->MultiCell(0, 5, 'VERIFIKASI PROSES PRODUKSI', 0, 'C');
 		$pdf->Ln(3);
@@ -772,9 +789,8 @@ class Proses extends MY_Controller
 			}
 		}
 
-		// === STALLING / AGING ===
-		$pdf->SetFont('times', 'B', 9);
-		$pdf->Cell(40 + ($jumlah_batch * 25), 5, 'STALLING / AGING', 1, 1, 'L');
+		$pdf->SetFont('times', 'B', 7);
+		$pdf->Cell(40 + ($jumlah_batch * 25), 4.5, 'STALLING / AGING', 1, 1, 'L');
 		$pdf->SetFont('times', '', 8);
 
 		$params_stall = [
@@ -796,7 +812,7 @@ class Proses extends MY_Controller
 		}
 
 		// === GRINDING ===
-		$pdf->SetFont('times', 'B', 9);
+		$pdf->SetFont('times', ' ', 9);
 		$pdf->Cell(40 + ($jumlah_batch * 25), 5, 'GRINDING', 1, 1, 'L');
 		$pdf->SetFont('times', '', 8);
 		$pdf->Cell(40, 5, 'Hasil Grinding', 1);
@@ -811,12 +827,12 @@ class Proses extends MY_Controller
 		$pdf->Ln();
 
 		// === DRYING ===
-		$pdf->SetFont('times', 'B', 9);
+		$pdf->SetFont('times', ' ', 9);
 		$pdf->Cell(40 + ($jumlah_batch * 25), 5, 'DRYING', 1, 1, 'L');
 		$pdf->SetFont('times', '', 8);
 
 		$params_drying = [
-			'Suhu Setting / Aktual (85° - 90°C)' => ['suhu_setting', 'suhu_aktual'],
+			'Suhu Setting / Aktual (85°-90°C)' => ['suhu_setting', 'suhu_aktual'],
 			'Dryer Speed (4 - 6 rpm)' => ['dryer_speed']
 		];
 
@@ -833,7 +849,7 @@ class Proses extends MY_Controller
 		}
 
 		// === PEMERIKSAAN FINISHED PRODUCT ===
-		$pdf->SetFont('times', 'B', 9);
+		$pdf->SetFont('times', ' ', 9);
 		$pdf->Cell(40 + ($jumlah_batch * 25), 5, 'PEMERIKSAAN FINISHED PRODUCT', 1, 1, 'L');
 		$pdf->SetFont('times', '', 7);
 
@@ -841,7 +857,7 @@ class Proses extends MY_Controller
 			'Nama Produk' => 'nama_produk',
 			'Kode Produksi' => 'kode_produksi',
 			'Best Before' => 'best_before',
-			'Suhu Produk Sebelum Packing (32 - 35°C)' => 'suhu_sebelum_packing',
+			"Suhu Produk Sebelum Packing\n(32 - 35°C)" => 'suhu_sebelum_packing',
 			'Kadar Air Produk (4 - 8%)' => 'kadar_air_produk',
 			'Bulk Density (225 - 325 g/l)' => 'bulk_density',
 			'Sensori Produk' => 'sensori_produk',
@@ -858,7 +874,35 @@ class Proses extends MY_Controller
 		foreach ($params_fp as $label => $field) {
 			$pdf->SetFont('times', '', 8);
 			$cell_height = ($field === 'bukti_labelisasi') ? $cell_height_image : 5;
-			$pdf->Cell(40, $cell_height, $label, 1, 0, 'L');
+			$x = $pdf->GetX();
+			$y = $pdf->GetY();
+
+			if ($field === 'suhu_sebelum_packing') {
+
+				$cell_height = 10;
+
+				$pdf->Cell(40, 10, '', 1, 0);
+
+				$pdf->SetXY($x + 1, $y + 1);
+				$pdf->Cell(38, 4, 'Suhu Produk Sebelum Packing', 0, 2, 'L');
+				$pdf->Cell(38, 4, '(32 - 35°C)', 0, 0, 'L');
+
+				$pdf->SetXY($x + 40, $y);
+			} elseif (is_array($field) && in_array('kondisi_kemasan', $field)) {
+
+				$cell_height = 10;
+
+				$pdf->Cell(40, 10, '', 1, 0);
+
+				$pdf->SetXY($x + 1, $y + 1);
+				$pdf->Cell(38, 4, 'Kondisi Kemasan', 0, 2, 'L');
+				$pdf->Cell(38, 4, 'Ketepatan Labelisasi', 0, 0, 'L');
+
+				$pdf->SetXY($x + 40, $y);
+			} else {
+
+				$pdf->Cell(40, $cell_height, $label, 1, 0, 'L');
+			}
 
 			for ($i = 0; $i < $jumlah_batch; $i++) {
 				$val = '';

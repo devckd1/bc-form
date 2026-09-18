@@ -559,8 +559,8 @@ class Produksi extends MY_Controller {
 			setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 			$tanggal = $data['produksi']->date;
 			$date = new DateTime($tanggal);
-			$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
-			$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+			$formatted_date = date('l, d F Y', $date->getTimestamp());
+			$formatted_date2 = date('l, d F Y', $date->getTimestamp());
 
 			$pdf->SetFont('times', '', 8);
 			$pdf->SetX(8);
@@ -1000,7 +1000,7 @@ class Produksi extends MY_Controller {
 			$pdf->SetFont('times', '', 8);
 			$tanggal_stall = $data['produksi']->date_stall;
 			$stall = new DateTime($tanggal_stall);
-			$formatted_stall = strftime('%A, %d %B %Y', $stall->getTimestamp());
+			$formatted_stall = date('l, d F Y', $stall->getTimestamp());
 			$pdf->SetX(8);
 			$pdf->Write(0, 'Tanggal: ' . $formatted_stall);
 			$pdf->SetX($pdf->GetX() + 10);

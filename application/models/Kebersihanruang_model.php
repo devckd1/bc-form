@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Kebersihanruang_model extends CI_Model {
+class Kebersihanruang_model extends CI_Model
+{
 
 	protected $table = 'kebersihan_ruang';
-	
+
 	public function rules()
 	{
 		return [
@@ -54,20 +56,22 @@ class Kebersihanruang_model extends CI_Model {
 		$kondisi  = $this->input->post('kondisi') ?? [];
 		$problem  = $this->input->post('problem') ?? [];
 		$tindakan = $this->input->post('tindakan') ?? [];
+		$foto1    = $this->input->post('foto1') ?? '';
+		$foto2    = $this->input->post('foto2') ?? '';
 
 		$detail = [];
 
 		foreach ($bagian as $index => $nama_bagian) {
 
 			if (!isset($kondisi[$index])) {
-				return false; 
+				return false;
 			}
 
 			$detail[] = [
 				'bagian'   => $nama_bagian,
-				'kondisi'  => is_array($kondisi[$index]) 
-				? implode(',', $kondisi[$index]) 
-				: $kondisi[$index],
+				'kondisi'  => is_array($kondisi[$index])
+					? implode(',', $kondisi[$index])
+					: $kondisi[$index],
 				'problem'  => $problem[$index]  ?? '',
 				'tindakan' => $tindakan[$index] ?? '',
 			];
@@ -81,6 +85,8 @@ class Kebersihanruang_model extends CI_Model {
 			'shift'            => $shift,
 			'lokasi'           => $lokasi,
 			'detail'           => json_encode($detail),
+			'foto1'            => $foto1,
+			'foto2'            => $foto2,
 			'status_produksi'  => 1,
 			'status_spv'       => 0,
 			'nama_produksi'    => $nama_produksi,
@@ -99,10 +105,11 @@ class Kebersihanruang_model extends CI_Model {
 		$kondisi   = $this->input->post('kondisi') ?? [];
 		$problem   = $this->input->post('problem') ?? [];
 		$tindakan  = $this->input->post('tindakan') ?? [];
+		$verifikasi = $this->input->post('verifikasi') ?? [];
 
 		$old_data = $this->db
-		->get_where('kebersihan_ruang', ['uuid'=>$uuid])
-		->row_array();
+			->get_where('kebersihan_ruang', ['uuid' => $uuid])
+			->row_array();
 
 		$detail = [];
 
@@ -111,22 +118,23 @@ class Kebersihanruang_model extends CI_Model {
 			$detail[] = [
 				'bagian'   => $b,
 
-            // ✅ PERBAIKAN PENTING DI SINI
-				'kondisi'  => isset($kondisi[$i]) 
-				? (is_array($kondisi[$i]) 
-					? implode(',', $kondisi[$i]) 
-					: $kondisi[$i])
-				: 'bersih',
+				// ✅ PERBAIKAN PENTING DI SINI
+				'kondisi'  => isset($kondisi[$i])
+					? (is_array($kondisi[$i])
+						? implode(',', $kondisi[$i])
+						: $kondisi[$i])
+					: 'bersih',
 
 				'problem'  => $problem[$i] ?? '',
 				'tindakan' => $tindakan[$i] ?? '',
+				'verifikasi' => $verifikasi[$i] ?? null
 			];
 		}
 
 		$updateData = [
 			'date'        => $this->input->post('date'),
 			'shift'       => $this->input->post('shift'),
-			'lokasi'      => $this->input->post('lokasi'), 
+			'lokasi'      => $this->input->post('lokasi'),
 			'username'    => $this->session->userdata('username'),
 			'detail'      => json_encode($detail),
 			'modified_at' => date('Y-m-d H:i:s'),
@@ -138,8 +146,8 @@ class Kebersihanruang_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 
 			$new_data = $this->db
-			->get_where('kebersihan_ruang', ['uuid' => $uuid])
-			->row_array();
+				->get_where('kebersihan_ruang', ['uuid' => $uuid])
+				->row_array();
 
 			$this->activity_logger->log_activity(
 				'update',
@@ -158,7 +166,7 @@ class Kebersihanruang_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -187,13 +195,12 @@ class Kebersihanruang_model extends CI_Model {
 		);
 
 		$this->db->update('kebersihan_ruang', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -222,8 +229,7 @@ class Kebersihanruang_model extends CI_Model {
 		);
 
 		$this->db->update('kebersihan_ruang', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -253,7 +259,7 @@ class Kebersihanruang_model extends CI_Model {
 	public function get_by_uuid_kebersihanruang($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -263,21 +269,21 @@ class Kebersihanruang_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_kebersihanruang_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, nama_produksi, status_produksi, tgl_update_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('kebersihan_ruang');
 
-		$data_kebersihan_ruang = $query->row();  
-		return $data_kebersihan_ruang; 
+		$data_kebersihan_ruang = $query->row();
+		return $data_kebersihan_ruang;
 	}
 
 	public function get_data_by_plant()
@@ -302,7 +308,7 @@ class Kebersihanruang_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -327,7 +333,7 @@ class Kebersihanruang_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -341,4 +347,39 @@ class Kebersihanruang_model extends CI_Model {
 		return $query->row();
 	}
 
+	private function upload_foto($field)
+	{
+		if (empty($_FILES[$field]['name'])) {
+			return null;
+		}
+
+		$config['upload_path']   = './uploads/kebersihan/';
+		$config['allowed_types'] = 'jpg|jpeg|png';
+		$config['max_size']      = 4096; // 4MB biar aman sebelum compress
+		$config['encrypt_name']  = TRUE;
+
+		$CI = &get_instance();
+		$CI->load->library('upload', $config);
+
+		if ($CI->upload->do_upload($field)) {
+
+			$file = $CI->upload->data();
+
+			// 🔥 COMPRESS GAMBAR
+			$config2['image_library']  = 'gd2';
+			$config2['source_image']   = $file['full_path'];
+			$config2['maintain_ratio'] = TRUE;
+			$config2['quality']        = '60%'; // compress (bisa 40-70)
+			$config2['width']          = 1280;  // resize max width
+			$config2['new_image']      = $file['full_path'];
+
+			$CI->load->library('image_lib', $config2);
+			$CI->image_lib->resize();
+			$CI->image_lib->clear();
+
+			return $file['file_name'];
+		}
+
+		return null;
+	}
 }

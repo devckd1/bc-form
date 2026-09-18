@@ -250,20 +250,39 @@ class Pecahbelah extends MY_Controller
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
 		$pdf->setPrintHeader(false);
+		$pdf->setPrintFooter(false);
 		$pdf->SetMargins(10, 14, 10);
-		$pdf->AddPage();
-		$pdf->SetFont('times', 'B', 10);
+		/*$pdf->AddPage();
 
-		$logo_path = FCPATH . 'assets/img/logo.jpg';
+		// ===========================
+		// Logo
+		// ===========================
+		$logo_path = FCPATH . 'assets/img/cpi-logo.png';
+
 		if (file_exists($logo_path)) {
-			$pdf->Image($logo_path, 10, 10, 38);
-		} else {
-			$pdf->Write(7, "Logo tidak ditemukan\n");
+			$pdf->Image($logo_path, 10, 10, 10);
 		}
 
-		$pdf->Write(7, "\n");
-		$pdf->MultiCell(0, 5, 'PEMERIKSAAN BENDA MUDAH PECAH', 0, 'C');
-		$pdf->Ln(6);
+		// ===========================
+		// Nama Perusahaan
+		// ===========================
+		$pdf->SetFont('times', 'B', 7);
+
+		$pdf->SetXY(22, 10);
+		$pdf->Cell(0, 3, 'PT. CHAROEN POKPHAND INDONESIA', 0, 1);
+
+		$pdf->SetXY(22, 13);
+		$pdf->Cell(0, 3, 'FOOD DIVISION', 0, 1);
+
+		// ===========================
+		// Judul
+		// ===========================
+		$pdf->SetFont('times', 'B', 10);
+
+		$pdf->SetY(20);
+		$pdf->Cell(0, 6, 'PEMERIKSAAN BENDA MUDAH PECAH', 0, 1, 'C');
+
+		$pdf->Ln(2);*/
 
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $this->input->post('tanggal');
@@ -280,6 +299,29 @@ class Pecahbelah extends MY_Controller
 		$jam_akhir = date('H:i', $date->getTimestamp());*/
 
 		foreach ($allData as $shiftData) {
+
+			$pdf->AddPage();
+
+			$pdf->SetFont('times', 'B', 10);
+
+			$logo_path = FCPATH . 'assets/img/cpi-logo.png';
+			if (file_exists($logo_path)) {
+				$pdf->Image($logo_path, 10, 10, 10);
+			}
+
+			$pdf->SetFont('times', 'B', 7);
+
+			$pdf->SetXY(25, 10);
+			$pdf->Cell(0, 3, 'PT. CHAROEN POKPHAND INDONESIA', 0, 1);
+
+			$pdf->SetXY(25, 13);
+			$pdf->Cell(0, 3, 'FOOD DIVISION', 0, 1);
+
+			$pdf->Ln(4);
+
+			$pdf->SetFont('times', 'B', 10);
+			$pdf->MultiCell(0, 5, 'PEMERIKSAAN BENDA MUDAH PECAH', 0, 'C');
+			$pdf->Ln(3);
 
 			$shift = $shiftData['shift'];
 			$data['pecahbelah'] = $shiftData['verif'];
@@ -400,7 +442,7 @@ class Pecahbelah extends MY_Controller
 
 			$pdf->SetY($pdf->GetY() + 3);
 			$pdf->SetFont('dejavusans', '', 6);
-			$pdf->MultiCell(0, 10, "✓ : Ok, kondisi masih utuh, tidak pecah\n✗ : Tidak Ok, kondisi tidak utuh, pecah / retak", 0, 'L');
+			$pdf->MultiCell(0, 4, "✓ : Ok, kondisi masih utuh, tidak pecah\n✗ : Tidak Ok, kondisi tidak utuh, pecah / retak", 0, 'L');
 
 			$this->load->model('pegawai_model');
 			$data['pecahbelah']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['pecahbelah']->username);

@@ -221,8 +221,8 @@ class Larutan extends MY_Controller {
 
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$date = new DateTime($data['larutan']->date);
-		$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
-		$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+		$formatted_date = date('l, d F Y', $date->getTimestamp());
+		$formatted_date2 = date('l, d F Y', $date->getTimestamp());
 
 		$pdf->SetFont('times', '', 10);
 		$pdf->SetX(16);

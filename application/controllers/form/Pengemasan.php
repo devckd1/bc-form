@@ -220,9 +220,9 @@ class Pengemasan extends MY_Controller {
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['pengemasan']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
+		$formatted_date = date('l, d F Y', $date->getTimestamp());
 
-		$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+		$formatted_date2 = date('l, d F Y', $date->getTimestamp());
 
 		$pdf->SetFont('times', '', 10);
 		$pdf->SetX(16);
@@ -262,7 +262,7 @@ class Pengemasan extends MY_Controller {
 		foreach ($pengemasan_data as $pengemasan) {
 			$bb = $pengemasan->best_before;
 			$best_before = new DateTime($bb);
-			$formatted_bb = strftime('%d %b %Y', $best_before->getTimestamp());
+			$formatted_bb = date('l, d F Y', $best_before->getTimestamp());
 
 			$pukul = $pengemasan->waktu;
 			$pukul2 = new DateTime($pukul);

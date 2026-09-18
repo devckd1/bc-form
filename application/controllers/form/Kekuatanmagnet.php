@@ -233,7 +233,7 @@ class Kekuatanmagnet extends MY_Controller {
 			setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 			$tanggal = $kekuatanmagnet->date;
 			$date = new DateTime($tanggal);
-			$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
+			$formatted_date = date('l, d F Y', $date->getTimestamp());
 			$pdf->SetFont('times', '', 8);
 			$pdf->Cell(30, 6, $formatted_date, 1, 0, 'C');
 			$pdf->Cell(51, 6, $kekuatanmagnet->nama_alat, 1, 0, 'C');

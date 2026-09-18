@@ -576,3 +576,10 @@ $route['gosong/delete/(:any)'] = 'form/gosong/delete/$1';
 $route['gosong/export-excel'] = 'form/gosong/export_excel';
 $route['gosong/logs'] = 'form/gosong_logs/index';
 $route['gosong/export_excel'] = 'form/gosong/export_excel';
+
+// rotes iot 
+$route['iot/suhu/(:any)'] = 'iot/suhu/$1';
+
+// akses plant
+$route['akses-plant'] = 'akses_plant/index';
+$route['akses-plant/save'] = 'akses_plant/save';

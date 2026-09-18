@@ -209,7 +209,7 @@ class Pembuatanlarutan extends MY_Controller {
 			setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 			$tanggal = $pembuatanlarutan->date;
 			$date = new DateTime($tanggal);
-			$formatted_date = strftime('%d %B %Y', $date->getTimestamp());
+			$formatted_date = date('l, d F Y', $date->getTimestamp());
 
 			$exp = $pembuatanlarutan->expired;
 			$exp = new DateTime($exp); 

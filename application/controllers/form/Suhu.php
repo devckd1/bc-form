@@ -208,6 +208,1013 @@ class Suhu extends MY_Controller
 	{
 		$tanggal = $this->input->post('tanggal');
 		$plant_id = $this->session->userdata('plant');
+		$plant_uuid = $this->session->userdata('plant');
+
+		if (empty($tanggal)) {
+			show_error('Tanggal tidak boleh kosong', 404);
+		}
+
+		$this->load->model('pegawai_model');
+		$this->load->model('suhu_model');
+
+		// Ambil semua data tanggal tersebut
+		$suhu_data = $this->suhu_model->get_by_date_and_plant_pdf($tanggal, $plant_uuid);
+
+		if (empty($suhu_data)) {
+			show_error('Data tidak ditemukan', 404);
+		}
+
+		// Ambil data verifikasi
+		$suhu_data_verif = $this->suhu_model->get_by_date_verif_and_plant($tanggal, $plant_uuid);
+
+		$data['suhu'] = $suhu_data_verif;
+
+		$data['suhu']->nama_lengkap_qc =
+			$this->pegawai_model->get_nama_lengkap($data['suhu']->username);
+
+		$data['suhu']->nama_lengkap_spv =
+			$this->pegawai_model->get_nama_lengkap($data['suhu']->nama_spv);
+
+		$data['suhu']->nama_lengkap_produksi =
+			$data['suhu']->nama_produksi;
+
+		// =====================================
+		// GROUP BERDASARKAN SHIFT
+		// =====================================
+
+		$shift_data = [];
+
+		foreach ($suhu_data as $row) {
+
+			$shift = (int)$row->shift;
+
+			if (!isset($shift_data[$shift])) {
+				$shift_data[$shift] = [];
+			}
+
+			$shift_data[$shift][] = $row;
+		}
+
+		ksort($shift_data);
+
+		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
+
+		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
+
+		$is_cikande = ($plant_id === '651ac623-5e48-44cc-b2f6-5d622603f53c');
+		$is_salatiga = !$is_cikande;
+
+		$pdf = new TCPDF(
+			PDF_PAGE_ORIENTATION,
+			PDF_UNIT,
+			'LEGAL',
+			true,
+			'UTF-8',
+			false
+		);
+
+		$pdf->setPrintHeader(false);
+		$pdf->setPrintFooter(false);
+		$pdf->SetMargins(10, 14, 10);
+
+		$datetime = new DateTime($tanggal);
+
+		$formatted_date = date(
+			'l, d F Y',
+			$datetime->getTimestamp()
+		);
+
+		$formatted_date2 = date(
+			'l, d F Y',
+			$datetime->getTimestamp()
+		);
+
+		$logo_path = FCPATH . 'assets/img/cpi-logo.png';
+
+		// =====================================
+		// LOKASI & STANDAR
+		// =====================================
+
+		$lokasi = $is_salatiga
+			? [
+				"Ruang Pengayakan",
+				"Ruang RM",
+				"Chiller 1",
+				"Chiller 2",
+				"Chiller 3",
+				"Chiller 4",
+				"Chiller 5",
+				"Chiller 6",
+				"Ruang Mixing",
+				"Area Baking",
+				"Area Cutting & Grinding",
+				"Ruang Aging",
+				"Area Packing"
+			]
+			: [
+				"Ruang Produksi",
+				"Gudang Premix",
+				"Gudang Raw Material",
+				"Gudang Finish Good",
+				"Proofing Room",
+				"Aging Room 1",
+				"Aging Room 2",
+				"Area Packing",
+				"Ruang Produksi (Bubble)"
+			];
+
+		$standar = [];
+
+		foreach ($lokasi as $nama) {
+
+			if ($is_salatiga) {
+
+				if (strpos($nama, 'Chiller') !== false) {
+					$standar[$nama] = ['0-4', ''];
+				} elseif ($nama == 'Ruang RM') {
+					$standar[$nama] = ['15-22', ''];
+				} elseif ($nama == 'Ruang Aging') {
+					$standar[$nama] = ['35-45', ''];
+				} else {
+					$standar[$nama] = ['25-35', ''];
+				}
+			} else {
+
+				$default = [
+					"Ruang Produksi" => ["25-35", "65-80"],
+					"Gudang Premix" => ["15-22", "45-55"],
+					"Gudang Raw Material" => ["25-35", "60-75"],
+					"Gudang Finish Good" => ["28-36", "60-75"],
+					"Proofing Room" => ["34-36", "78-82"],
+					"Aging Room 1" => ["35-45", "50-70"],
+					"Aging Room 2" => ["35-45", "50-70"],
+					"Area Packing" => ["25-35", ""],
+					"Ruang Produksi (Bubble)" => ["25-35", "65-80"]
+				];
+
+				$standar[$nama] = $default[$nama] ?? ['', ''];
+			}
+		}
+
+		$lokasi_unik = [];
+
+		foreach ($suhu_data as $item) {
+
+			$lokasi_array = json_decode($item->lokasi, true);
+
+			if (!$lokasi_array) {
+				continue;
+			}
+
+			foreach ($lokasi_array as $lok) {
+				$lokasi_unik[] = $lok['nama_lokasi'];
+			}
+		}
+
+		$lokasi_unik = array_unique($lokasi_unik);
+
+		$total_kolom_data = count($lokasi_unik) * ($is_cikande ? 2 : 1);
+
+		if ($is_salatiga) {
+
+			$max_table_width = $pdf->getPageWidth() - 20;
+
+			$col_pukul = 18;
+
+			$col_suhu = ($max_table_width - $col_pukul) / $total_kolom_data;
+		} else {
+
+			$col_suhu = 10;
+
+			$max_table_width = 195;
+
+			$col_pukul = 25;
+		}
+
+		// =====================================
+		// MULAI LOOP SHIFT
+		// =====================================
+
+		if ($is_salatiga) {
+
+			foreach ($shift_data as $shift => $data_shift) {
+
+				$pdf->AddPage('L');
+
+				// Logo
+				if (file_exists($logo_path)) {
+					$pdf->Image($logo_path, 10, 10, 10);
+				}
+
+				// Header Perusahaan
+				$pdf->SetFont('times', 'B', 7);
+
+				$headerX = 22;
+				$headerY = 10;
+
+				$pdf->SetXY($headerX, $headerY);
+				$pdf->Cell(0, 3, 'PT. CHAROEN POKPHAND INDONESIA', 0, 1);
+
+				$pdf->SetX($headerX);
+				$pdf->Cell(0, 3, 'FOOD DIVISION', 0, 1);
+
+				// Judul
+				$pdf->Ln(6);
+				$pdf->SetFont('times', 'B', 12);
+				$pdf->Cell(0, 6, 'PEMANTAUAN SUHU DAN KELEMBAPAN RUANG', 0, 1, 'C');
+
+				$pdf->Ln(6);
+
+				$pdf->SetFont('times', '', 9);
+
+				$pdf->Cell(125, 5, 'Tanggal : ' . $formatted_date, 0, 0, 'L');
+				$pdf->Cell(30, 5, 'Shift : ' . $shift, 0, 1, 'L');
+
+				$pdf->Ln(3);
+
+				// =====================================
+				// MATRIX DATA SHIFT
+				// =====================================
+
+				$matrix = [];
+				$humidity_matrix = [];
+
+				foreach ($data_shift as $item) {
+
+					$jam = date(
+						'H:i',
+						strtotime($item->pukul)
+					);
+
+					$lokasi_array = json_decode(
+						$item->lokasi,
+						true
+					);
+
+					if (!$lokasi_array) {
+						continue;
+					}
+
+					foreach ($lokasi_array as $lok) {
+
+						$nama = trim($lok['nama_lokasi']);
+
+						$nilai_suhu = trim((string)($lok['suhu'] ?? ''));
+						$nilai_rh   = trim((string)($lok['rh'] ?? ''));
+
+						$matrix[$nama][$jam] =
+							($nilai_suhu === '' || strtolower($nilai_suhu) === 'kosong')
+							? '-'
+							: $nilai_suhu;
+
+						$humidity_matrix[$nama][$jam] =
+							($nilai_rh === '' || strtolower($nilai_rh) === 'kosong')
+							? '-'
+							: $nilai_rh;
+					}
+				}
+				// =====================================
+				// DAFTAR JAM SHIFT INI
+				// =====================================
+
+				$pdf->SetFont('times', '', 8);
+
+				$jam_list = [];
+
+				foreach ($data_shift as $item) {
+
+					$jam = date('H:i', strtotime($item->pukul));
+
+					if (!in_array($jam, $jam_list)) {
+						$jam_list[] = $jam;
+					}
+				}
+
+				sort($jam_list);
+
+				$w_no = 10;
+				$w_lokasi = 40;
+				$w_std = 18;
+				$w_ket = 40;
+
+				$total_width = $pdf->getPageWidth() - 20;
+
+				$w_jam = ($total_width - $w_no - $w_lokasi - $w_std - $w_ket)
+					/ max(count($jam_list), 1);
+
+				// =====================================
+				// HEADER TABEL
+				// =====================================
+
+				$y = $pdf->GetY();
+				$x = $pdf->GetX();
+
+				$pdf->Cell($w_no, 12, 'No.', 1, 0, 'C');
+
+				$pdf->Cell($w_lokasi, 12, 'Lokasi', 1, 0, 'C');
+
+				$pdf->Cell($w_std, 12, 'Standar', 1, 0, 'C');
+
+				$pdf->Cell(
+					$w_jam * count($jam_list),
+					6,
+					'Hasil Pemeriksaan',
+					1,
+					0,
+					'C'
+				);
+
+				$pdf->Cell(
+					$w_ket,
+					12,
+					'Keterangan',
+					1,
+					0,
+					'C'
+				);
+
+				$pdf->SetXY(
+					$x + $w_no + $w_lokasi + $w_std,
+					$y + 6
+				);
+
+				foreach ($jam_list as $jam) {
+
+					$pdf->Cell(
+						$w_jam,
+						6,
+						$jam,
+						1,
+						0,
+						'C'
+					);
+				}
+
+				$pdf->Ln();
+
+				// =====================================
+				// TABEL SUHU
+				// =====================================
+
+				$pdf->SetFont('times', 'B', 9);
+
+				$pdf->Cell(
+					$w_no + $w_lokasi + $w_std + ($w_jam * count($jam_list)) + $w_ket,
+					6,
+					'Pemantauan Suhu (°C)',
+					1,
+					1,
+					'L'
+				);
+
+				$pdf->SetFont('times', '', 8);
+
+				$no = 1;
+
+				foreach ($lokasi as $nama_lokasi) {
+
+					$pdf->Cell(
+						$w_no,
+						6,
+						$no++,
+						1,
+						0,
+						'C'
+					);
+
+					$pdf->Cell(
+						$w_lokasi,
+						6,
+						$nama_lokasi,
+						1,
+						0,
+						'L'
+					);
+
+					$pdf->Cell(
+						$w_std,
+						6,
+						$standar[$nama_lokasi][0],
+						1,
+						0,
+						'C'
+					);
+
+					foreach ($jam_list as $jam) {
+
+						$nilai = $matrix[$nama_lokasi][$jam] ?? '-';
+
+						$pdf->Cell(
+							$w_jam,
+							6,
+							$nilai,
+							1,
+							0,
+							'C'
+						);
+					}
+
+					$pdf->Cell(
+						$w_ket,
+						6,
+						'',
+						1,
+						1,
+						'C'
+					);
+				}
+
+				// =====================================
+				// TABEL KELEMBAPAN
+				// =====================================
+
+				$pdf->SetFont('times', 'B', 9);
+
+				$pdf->Cell(
+					$w_no + $w_lokasi + $w_std + ($w_jam * count($jam_list)) + $w_ket,
+					6,
+					'Pemantauan Kelembapan (%)',
+					1,
+					1,
+					'L'
+				);
+
+				$pdf->SetFont('times', '', 8);
+
+				$pdf->Cell(
+					$w_no,
+					6,
+					'1',
+					1,
+					0,
+					'C'
+				);
+
+				$pdf->Cell(
+					$w_lokasi,
+					6,
+					'Ruang Aging',
+					1,
+					0,
+					'L'
+				);
+
+				$pdf->Cell(
+					$w_std,
+					6,
+					'',
+					1,
+					0,
+					'C'
+				);
+
+				foreach ($jam_list as $jam) {
+
+					$nilai = $humidity_matrix['Ruang Aging'][$jam] ?? '-';
+
+					$pdf->Cell(
+						$w_jam,
+						6,
+						$nilai,
+						1,
+						0,
+						'C'
+					);
+				}
+
+				$pdf->Cell(
+					$w_ket,
+					6,
+					'',
+					1,
+					1,
+					'C'
+				);
+				// =====================================
+				// CATATAN SHIFT
+				// =====================================
+
+				$pdf->Ln(2);
+
+				$pdf->SetFont('times', 'I', 7);
+
+				$page_width = $pdf->getPageWidth();
+
+				$pdf->Cell(
+					$page_width - 20,
+					5,
+					'QB 06/00',
+					0,
+					1,
+					'R'
+				);
+
+				$pdf->SetFont('times', '', 8);
+
+				$pdf->Cell(
+					5,
+					4,
+					'Catatan :',
+					0,
+					1
+				);
+
+				$catatanSudah = [];
+
+				foreach ($data_shift as $item) {
+
+					if (
+						!empty($item->catatan) &&
+						!in_array($item->catatan, $catatanSudah)
+					) {
+
+						$catatanSudah[] = $item->catatan;
+
+						$pdf->Cell(
+							8,
+							4,
+							'',
+							0,
+							0
+						);
+
+						$pdf->MultiCell(
+							180,
+							4,
+							'- ' . $item->catatan,
+							0,
+							'L'
+						);
+					}
+				}
+
+				// =====================================
+				// STATUS VERIFIKASI SHIFT
+				// =====================================
+
+				$status_verifikasi = true;
+
+				foreach ($data_shift as $item) {
+
+					if ($item->status_spv != '1') {
+
+						$status_verifikasi = false;
+						break;
+					}
+				}
+
+				// =====================================
+				// DATA QC SHIFT
+				// =====================================
+
+				$qc_usernames = [];
+
+				$qc_created_at = null;
+
+				$produksi_nama = '';
+
+				$produksi_tgl = '';
+
+				$spv_nama = '';
+
+				$spv_tgl = '';
+
+				foreach ($data_shift as $item) {
+
+					if (!empty($item->username)) {
+						$qc_usernames[] = $item->username;
+					}
+
+					if (!$qc_created_at && !empty($item->created_at)) {
+						$qc_created_at = $item->created_at;
+					}
+
+					if (empty($produksi_nama) && !empty($item->nama_produksi)) {
+						$produksi_nama = $item->nama_produksi;
+					}
+
+					if (empty($produksi_tgl) && !empty($item->tgl_update_produksi)) {
+						$produksi_tgl = $item->tgl_update_produksi;
+					}
+
+					if (empty($spv_nama) && !empty($item->nama_spv)) {
+						$spv_nama = $item->nama_spv;
+					}
+
+					if (empty($spv_tgl) && !empty($item->tgl_update_spv)) {
+						$spv_tgl = $item->tgl_update_spv;
+					}
+				}
+
+				$qc_usernames = array_unique($qc_usernames);
+
+				$qc_nama = [];
+
+				foreach ($qc_usernames as $username) {
+
+					$nama = $this->pegawai_model->get_nama_lengkap($username);
+
+					if (!empty($nama)) {
+						$qc_nama[] = $nama;
+					}
+				}
+
+				$qc_text = implode(', ', $qc_nama);
+
+				$qc_time = $qc_created_at
+					? date('d-m-Y | H:i', strtotime($qc_created_at))
+					: '-';
+
+				$produksi_time = $produksi_tgl
+					? date('d-m-Y | H:i', strtotime($produksi_tgl))
+					: '-';
+
+				$spv_time = $spv_tgl
+					? date('d-m-Y | H:i', strtotime($spv_tgl))
+					: '-';
+
+				// =====================================
+				// QR
+				// =====================================
+
+				$y_ttd = $pdf->GetY() + 8;
+
+				$qr_size = 15;
+
+				$page_width = $pdf->getPageWidth();
+
+				$x1 = 40;
+				$x2 = ($page_width / 2) - 10;
+				$x3 = $page_width - 70;
+
+				if ($status_verifikasi) {
+
+					$pdf->SetXY($x1, $y_ttd);
+					$pdf->Cell(45, 5, 'Dibuat Oleh', 0, 0, 'C');
+
+					$pdf->SetXY($x2, $y_ttd);
+					$pdf->Cell(45, 5, 'Diketahui Oleh', 0, 0, 'C');
+
+					$pdf->SetXY($x3, $y_ttd);
+					$pdf->Cell(45, 5, 'Disetujui Oleh', 0, 1, 'C');
+
+					$pdf->write2DBarcode(
+						"Dibuat secara digital oleh\n" . $qc_text . "\nQC Inspector\n" . $qc_time,
+						'QRCODE,L',
+						$x1 + 15,
+						$y_ttd + 5,
+						$qr_size,
+						$qr_size
+					);
+
+					if (!empty($produksi_nama)) {
+
+						$pdf->write2DBarcode(
+							"Diketahui secara digital oleh\n" . $produksi_nama . "\nForeman/Forelady Produksi\n" . $produksi_time,
+							'QRCODE,L',
+							$x2 + 15,
+							$y_ttd + 5,
+							$qr_size,
+							$qr_size
+						);
+					}
+
+					$pdf->write2DBarcode(
+						"Disetujui secara digital oleh\n" . $this->pegawai_model->get_nama_lengkap($spv_nama) . "\nSupervisor QC Bread Crumb\n" . $spv_time,
+						'QRCODE,L',
+						$x3 + 15,
+						$y_ttd + 5,
+						$qr_size,
+						$qr_size
+					);
+
+					$pdf->SetXY($x1, $y_ttd + 20);
+					$pdf->Cell(45, 5, 'QC Inspector', 0, 0, 'C');
+
+					$pdf->SetXY($x2, $y_ttd + 20);
+					$pdf->Cell(45, 5, 'Foreman/Forelady Produksi', 0, 0, 'C');
+
+					$pdf->SetXY($x3, $y_ttd + 20);
+					$pdf->Cell(45, 5, 'Supervisor QC', 0, 1, 'C');
+				} else {
+
+					$pdf->Ln(8);
+
+					$pdf->SetTextColor(255, 0, 0);
+
+					$pdf->Cell(
+						0,
+						6,
+						'Data Belum Diverifikasi',
+						0,
+						1,
+						'C'
+					);
+
+					$pdf->SetTextColor(0, 0, 0);
+				}
+			} // ===== END FOREACH SHIFT =====
+
+			$filename = "Suhu Ruang_{$formatted_date2}.pdf";
+			$pdf->Output($filename, 'I');
+		} else {
+
+			foreach ($shift_data as $shift => $data_shift) {
+
+				$pdf->AddPage(); // Portrait seperti controller lama
+
+				$pdf->SetFont('times', 'B', 12);
+
+				if (file_exists($logo_path)) {
+					$pdf->Image($logo_path, 10, 10, 35);
+				}
+
+				$pdf->Ln(10);
+
+				$pdf->MultiCell(
+					0,
+					5,
+					'PEMANTAUAN SUHU DAN KELEMBAPAN RUANG',
+					0,
+					'C'
+				);
+
+				$pdf->Ln(6);
+
+				$pdf->SetFont('times', '', 9);
+
+				$pdf->Cell(90, 5, 'Tanggal : ' . $formatted_date, 0, 0, 'L');
+				$pdf->Cell(30, 5, 'Shift : ' . $shift, 0, 1, 'L');
+
+				$pdf->Ln(3);
+
+				// FORMAT CIKANDE LAMA
+				$grouped_by_time = [];
+
+				foreach ($data_shift as $item) {
+
+					$jam = date('H:i', strtotime($item->pukul));
+
+					$lokasi_array = json_decode($item->lokasi, true);
+
+					if (!$lokasi_array) {
+						continue;
+					}
+
+					foreach ($lokasi_array as $lok) {
+
+						$grouped_by_time[$jam][$lok['nama_lokasi']] = [
+							'suhu' => $lok['suhu'] ?? '-',
+							'rh'   => $lok['rh'] ?? '-'
+						];
+					}
+				}
+
+				ksort($grouped_by_time);
+				$pdf->SetFont('times', '', 6.5);
+				$baris_tinggi = 4;
+
+				$pdf->Cell($col_pukul, $baris_tinggi * 3, 'Pukul', 1, 0, 'C');
+
+				foreach ($lokasi_unik as $lokasi) {
+
+					$width = ($lokasi == 'Ruang Produksi (Bubble)')
+						? ($col_suhu * 3) // Bubble lebih lebar
+						: ($col_suhu * 2);
+
+					$pdf->Cell($width, $baris_tinggi, $lokasi, 1, 0, 'C');
+				}
+
+				$pdf->Ln();
+
+				$pdf->Cell($col_pukul, $baris_tinggi, '', 0, 0);
+
+				foreach ($lokasi_unik as $lokasi) {
+
+					if ($lokasi == 'Ruang Produksi (Bubble)') {
+						$pdf->Cell($col_suhu * 1.5, $baris_tinggi, 'Suhu', 1, 0, 'C');
+						$pdf->Cell($col_suhu * 1.5, $baris_tinggi, 'RH (%)', 1, 0, 'C');
+					} else {
+						$pdf->Cell($col_suhu, $baris_tinggi, 'Suhu', 1, 0, 'C');
+						$pdf->Cell($col_suhu, $baris_tinggi, 'RH (%)', 1, 0, 'C');
+					}
+				}
+
+				$pdf->Ln();
+
+				$pdf->Cell($col_pukul, $baris_tinggi, 'Standar', 1, 0, 'C');
+
+				foreach ($lokasi_unik as $lokasi) {
+
+					if ($lokasi == 'Ruang Produksi (Bubble)') {
+						$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $standar[$lokasi][0], 1, 0, 'C');
+						$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $standar[$lokasi][1], 1, 0, 'C');
+					} else {
+						$pdf->Cell($col_suhu, $baris_tinggi, $standar[$lokasi][0], 1, 0, 'C');
+						$pdf->Cell($col_suhu, $baris_tinggi, $standar[$lokasi][1], 1, 0, 'C');
+					}
+				}
+
+				$pdf->Ln();
+
+				foreach ($grouped_by_time as $jam => $lokasi_data) {
+
+					$pdf->Cell($col_pukul, $baris_tinggi, $jam, 1, 0, 'C');
+
+					foreach ($lokasi_unik as $lokasi) {
+
+						$suhu = $lokasi_data[$lokasi]['suhu'] ?? '-';
+						$rh   = $lokasi_data[$lokasi]['rh'] ?? '-';
+
+						if ($lokasi == 'Ruang Produksi (Bubble)') {
+							$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $suhu, 1, 0, 'C');
+							$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $rh, 1, 0, 'C');
+						} else {
+							$pdf->Cell($col_suhu, $baris_tinggi, $suhu, 1, 0, 'C');
+							$pdf->Cell($col_suhu, $baris_tinggi, $rh, 1, 0, 'C');
+						}
+					}
+
+					$pdf->Ln();
+				}
+
+				$pdf->SetFont('times', 'I', 7);
+				$page_width = $pdf->getPageWidth();
+
+				$pdf->Cell($page_width - 20, 5, 'QB 06/00', 0, 1, 'R');
+
+				$pdf->SetY($pdf->GetY() + 2);
+				$pdf->SetFont('times', '', 8);
+				$pdf->Cell(5, 3, 'Catatan : ', 0, 1, 'L');
+				foreach ($data_shift as $item) {
+					if (!empty($item->catatan)) {
+						$pdf->Cell(8, 0, '', 0, 0, 'L');
+						$pdf->Cell(200, 0, ' - ' . $item->catatan, 0, 1, 'L');
+					}
+				}
+
+				$y_after_keterangan = $pdf->GetY() + 2;
+				$status_verifikasi = true;
+				foreach ($data_shift as $item) {
+					if ($item->status_spv != '1') {
+						$status_verifikasi = false;
+						break;
+					}
+				}
+
+				$pdf->SetFont('times', '', 8);
+				$pdf->SetTextColor(0, 0, 0);
+
+				$y_ttd   = $pdf->GetY() + 6;
+				$qr_size = 15;
+				$page_width = $pdf->getPageWidth();
+
+				if ($is_salatiga) {
+
+					$x1 = 40;
+					$x2 = ($page_width / 2) - 10;
+					$x3 = $page_width - 70;
+				} else {
+
+					$x1 = 20;
+					$x2 = 85;
+					$x3 = 150;
+				}
+
+				$qc_usernames  = [];
+				$qc_created_at = null;
+
+				foreach ($data_shift as $item) {
+					if (!empty($item->username)) {
+						$qc_usernames[] = $item->username;
+					}
+
+					if (!$qc_created_at && !empty($item->created_at)) {
+						$qc_created_at = $item->created_at;
+					}
+				}
+
+				$qc_usernames = array_unique($qc_usernames);
+
+				$qc_nama_lengkap = [];
+				foreach ($qc_usernames as $username) {
+					$nama = $this->pegawai_model->get_nama_lengkap($username);
+					if (!empty($nama)) {
+						$qc_nama_lengkap[] = $nama;
+					}
+				}
+
+				$qc_nama_text = !empty($qc_nama_lengkap)
+					? implode(', ', array_unique($qc_nama_lengkap))
+					: '-';
+
+				$qc_tanggal = $qc_created_at
+					? (new DateTime($qc_created_at))->format('d-m-Y | H:i')
+					: '-';
+
+				$qr_qc_text = "Dibuat secara digital oleh,\n"
+					. $qc_nama_text . "\n"
+					. "QC Inspector\n"
+					. $qc_tanggal;
+
+				$qr_produksi_text = null;
+
+				if (!empty($data['suhu']->nama_lengkap_produksi) && !empty($data['suhu']->tgl_update_produksi)) {
+					$prod_tanggal = (new DateTime($data['suhu']->tgl_update_produksi ?? $data['suhu']->tgl_update_produksi))
+						->format('d-m-Y | H:i');
+
+					$qr_produksi_text = "Diketahui secara digital oleh,\n"
+						. $data['suhu']->nama_lengkap_produksi . "\n"
+						. "Foreman/Forelady Produksi\n"
+						. $prod_tanggal;
+				}
+
+				$spv_tanggal = !empty($data['suhu']->tgl_update_spv)
+					? (new DateTime($data['suhu']->tgl_update_spv))->format('d-m-Y | H:i')
+					: '-';
+
+				$qr_spv_text = "Disetujui secara digital oleh,\n"
+					. $data['suhu']->nama_lengkap_spv . "\n"
+					. "Supervisor QC Bread Crumb\n"
+					. $spv_tanggal;
+
+				if ($status_verifikasi) {
+					$pdf->SetFont('times', '', 8);
+					$pdf->SetXY($x1, $y_ttd);
+					$pdf->Cell(45, 5, 'Dibuat Oleh,', 0, 0, 'C');
+
+					$pdf->SetXY($x2, $y_ttd);
+					$pdf->Cell(45, 5, 'Diketahui Oleh,', 0, 0, 'C');
+
+					$pdf->SetXY($x3, $y_ttd);
+					$pdf->Cell(45, 5, 'Disetujui Oleh,', 0, 1, 'C');
+
+					$pdf->write2DBarcode(
+						$qr_qc_text,
+						'QRCODE,L',
+						$x1 + 15,
+						$y_ttd + 5,
+						$qr_size,
+						$qr_size,
+						null,
+						'N'
+					);
+
+					if ($qr_produksi_text) {
+
+						$pdf->write2DBarcode(
+							$qr_produksi_text,
+							'QRCODE,L',
+							$x2 + 15,
+							$y_ttd + 5,
+							$qr_size,
+							$qr_size,
+							null,
+							'N'
+						);
+					}
+
+					$pdf->write2DBarcode(
+						$qr_spv_text,
+						'QRCODE,L',
+						$x3 + 15,
+						$y_ttd + 5,
+						$qr_size,
+						$qr_size,
+						null,
+						'N'
+					);
+
+					$pdf->SetXY($x1, $y_ttd + 20);
+					$pdf->Cell(45, 5, 'QC Inspector', 0, 0, 'C');
+
+					$pdf->SetXY($x2, $y_ttd + 20);
+					$pdf->Cell(45, 5, 'Foreman/Forelady Produksi', 0, 0, 'C');
+
+					$pdf->SetXY($x3, $y_ttd + 20);
+					$pdf->Cell(45, 5, 'Supervisor QC', 0, 1, 'C');
+				} else {
+					$pdf->SetFont('times', '', 8);
+					$pdf->SetTextColor(255, 0, 0);
+					$page_width = $pdf->getPageWidth();
+
+					$pdf->SetXY(($page_width / 2) - 40, $y_ttd);
+					$pdf->Cell(80, 6, 'Data Belum Diverifikasi', 0, 1, 'C');
+					$pdf->SetTextColor(0, 0, 0);
+				}
+
+				$pdf->setPrintFooter(false);
+			}
+			$filename = "Suhu Ruang_{$formatted_date2}.pdf";
+			$pdf->Output($filename, 'I');
+		}
+	}
+
+
+	/*public function cetak()
+	{
+		$tanggal = $this->input->post('tanggal');
+		$plant_id = $this->session->userdata('plant');
 
 		if (empty($tanggal)) {
 			show_error('Tanggal tidak boleh kosong', 404);
@@ -354,7 +1361,7 @@ class Suhu extends MY_Controller
 
 			$col_suhu = 10;
 			$max_table_width = 195;
-			$col_pukul = max(15, $max_table_width - ($col_suhu * $total_kolom_data));
+			$col_pukul = 25;
 		}
 		// =====================================
 		// MATRIX DATA SUHU & RH
@@ -590,7 +1597,11 @@ class Suhu extends MY_Controller
 
 			foreach ($lokasi_unik as $lokasi) {
 
-				$pdf->Cell($col_suhu * 2, $baris_tinggi, $lokasi, 1, 0, 'C');
+				$width = ($lokasi == 'Ruang Produksi (Bubble)')
+					? ($col_suhu * 3) // Bubble lebih lebar
+					: ($col_suhu * 2);
+
+				$pdf->Cell($width, $baris_tinggi, $lokasi, 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -599,8 +1610,13 @@ class Suhu extends MY_Controller
 
 			foreach ($lokasi_unik as $lokasi) {
 
-				$pdf->Cell($col_suhu, $baris_tinggi, 'Suhu', 1, 0, 'C');
-				$pdf->Cell($col_suhu, $baris_tinggi, 'RH (%)', 1, 0, 'C');
+				if ($lokasi == 'Ruang Produksi (Bubble)') {
+					$pdf->Cell($col_suhu * 1.5, $baris_tinggi, 'Suhu', 1, 0, 'C');
+					$pdf->Cell($col_suhu * 1.5, $baris_tinggi, 'RH (%)', 1, 0, 'C');
+				} else {
+					$pdf->Cell($col_suhu, $baris_tinggi, 'Suhu', 1, 0, 'C');
+					$pdf->Cell($col_suhu, $baris_tinggi, 'RH (%)', 1, 0, 'C');
+				}
 			}
 
 			$pdf->Ln();
@@ -609,23 +1625,13 @@ class Suhu extends MY_Controller
 
 			foreach ($lokasi_unik as $lokasi) {
 
-				$pdf->Cell(
-					$col_suhu,
-					$baris_tinggi,
-					$standar[$lokasi][0],
-					1,
-					0,
-					'C'
-				);
-
-				$pdf->Cell(
-					$col_suhu,
-					$baris_tinggi,
-					$standar[$lokasi][1],
-					1,
-					0,
-					'C'
-				);
+				if ($lokasi == 'Ruang Produksi (Bubble)') {
+					$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $standar[$lokasi][0], 1, 0, 'C');
+					$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $standar[$lokasi][1], 1, 0, 'C');
+				} else {
+					$pdf->Cell($col_suhu, $baris_tinggi, $standar[$lokasi][0], 1, 0, 'C');
+					$pdf->Cell($col_suhu, $baris_tinggi, $standar[$lokasi][1], 1, 0, 'C');
+				}
 			}
 
 			$pdf->Ln();
@@ -639,8 +1645,13 @@ class Suhu extends MY_Controller
 					$suhu = $lokasi_data[$lokasi]['suhu'] ?? '-';
 					$rh   = $lokasi_data[$lokasi]['rh'] ?? '-';
 
-					$pdf->Cell($col_suhu, $baris_tinggi, $suhu, 1, 0, 'C');
-					$pdf->Cell($col_suhu, $baris_tinggi, $rh, 1, 0, 'C');
+					if ($lokasi == 'Ruang Produksi (Bubble)') {
+						$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $suhu, 1, 0, 'C');
+						$pdf->Cell($col_suhu * 1.5, $baris_tinggi, $rh, 1, 0, 'C');
+					} else {
+						$pdf->Cell($col_suhu, $baris_tinggi, $suhu, 1, 0, 'C');
+						$pdf->Cell($col_suhu, $baris_tinggi, $rh, 1, 0, 'C');
+					}
 				}
 
 				$pdf->Ln();
@@ -815,7 +1826,7 @@ class Suhu extends MY_Controller
 		$pdf->setPrintFooter(false);
 		$filename = "Suhu Ruang_{$formatted_date2}.pdf";
 		$pdf->Output($filename, 'I');
-	}
+	}*/
 
 
 	public function export_excel()

@@ -71,7 +71,7 @@ if (is_string($proses_data)) {
             if (!empty($proses->date) && $proses->date !== '0000-00-00') {
               setlocale(LC_TIME, 'id_ID.utf8');
               $tanggal = strtotime($proses->date);
-              echo strftime('%A, %d %B %Y', $tanggal);
+              echo date('l, d F Y', $tanggal);
             } else {
               echo '-';
             }
@@ -166,7 +166,7 @@ if (is_string($proses_data)) {
             <tr>
               <th style="width: 40%;">Hari / Tanggal</th>
               <td>
-                <?= (!empty($proses->date_stall) && $proses->date_stall !== '0000-00-00') ? strftime('%A, %d %B %Y', strtotime($proses->date_stall)) : '-' ?>
+                <?= (!empty($proses->date_stall) && $proses->date_stall !== '0000-00-00') ? date('l, d F Y', strtotime($proses->date_stall)) : '-' ?>
               </td>
             </tr>
             <tr>

@@ -1,10 +1,12 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Suhu_model extends CI_Model {
-	
+class Suhu_model extends CI_Model
+{
+
 	public function rules()
 	{
 		return [
@@ -43,7 +45,7 @@ class Suhu_model extends CI_Model {
 		$date = $this->input->post('date');
 		$pukul = $this->input->post('pukul');
 		$shift = $this->input->post('shift');
-		$lokasi = $this->input->post('lokasi'); 
+		$lokasi = $this->input->post('lokasi');
 		$catatan = $this->input->post('catatan');
 		$status_produksi = "1";
 		$status_spv = "0";
@@ -72,9 +74,9 @@ class Suhu_model extends CI_Model {
 		$date = $this->input->post('date');
 		$pukul = $this->input->post('pukul');
 		$shift = $this->input->post('shift');
-		$lokasi = $this->input->post('lokasi'); 
+		$lokasi = $this->input->post('lokasi');
 		$catatan = $this->input->post('catatan');
-		$old_data = $this->db->get_where('suhu', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('suhu', ['uuid' => $uuid])->row_array();
 		$data = [
 			'username' => $username,
 			'date' => $date,
@@ -85,21 +87,21 @@ class Suhu_model extends CI_Model {
 			'modified_at' => date("Y-m-d H:i:s")
 		];
 
-		
+
 		$this->db->update('suhu', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('suhu', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('suhu', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus suhu_logs
+			// simpan log ke tabel khusus suhu_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'suhu_logs', // nama tabel log khusus suhu
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'suhu_logs', // nama tabel log khusus suhu
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
@@ -108,7 +110,7 @@ class Suhu_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -137,13 +139,12 @@ class Suhu_model extends CI_Model {
 		);
 
 		$this->db->update('suhu', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -172,8 +173,7 @@ class Suhu_model extends CI_Model {
 		);
 
 		$this->db->update('suhu', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -192,7 +192,7 @@ class Suhu_model extends CI_Model {
 	public function get_by_uuid_suhu($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -202,21 +202,21 @@ class Suhu_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_suhu_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, status_produksi, tgl_update_produksi, shift');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('suhu');
 
-		$data_suhu = $query->row();  
-		return $data_suhu; 
+		$data_suhu = $query->row();
+		return $data_suhu;
 	}
 
 	public function get_suhu_by_plant()
@@ -227,10 +227,10 @@ class Suhu_model extends CI_Model {
 		$this->db->from('suhu');
 		$this->db->where('plant', $plant);
 
-    // Urut tanggal terbaru dulu
+		// Urut tanggal terbaru dulu
 		$this->db->order_by('date', 'DESC');
 
-    // Urut shift perhari: Shift 2 → Shift 1 → Shift 3
+		// Urut shift perhari: Shift 2 → Shift 1 → Shift 3
 		$this->db->order_by("
 			CASE
 			WHEN TIME(pukul) >= '15:00:00' AND TIME(pukul) < '23:00:00' THEN 1  -- Shift 2
@@ -239,7 +239,7 @@ class Suhu_model extends CI_Model {
 			END
 			", '', false);
 
-    // Urut jam kronologis di dalam shift
+		// Urut jam kronologis di dalam shift
 		$this->db->order_by('pukul', 'DESC');
 
 		return $this->db->get()->result();
@@ -253,14 +253,14 @@ class Suhu_model extends CI_Model {
 	public function get_by_date($tanggal)
 	{
 		$this->db->where('DATE(date)', $tanggal);
-		$this->db->order_by('pukul', 'ASC'); 
+		$this->db->order_by('pukul', 'ASC');
 		return $this->db->get('suhu')->result();
 	}
 
 	public function get_by_date_verif($tanggal)
 	{
 		$this->db->where('DATE(date)', $tanggal);
-		$this->db->order_by('pukul', 'ASC'); 
+		$this->db->order_by('pukul', 'ASC');
 		$query = $this->db->get('suhu');
 		$result = $query->result();
 
@@ -278,15 +278,30 @@ class Suhu_model extends CI_Model {
 	{
 		if ($plant === '651ac623-5e48-44cc-b2f6-5d622603f53c') {
 			$this->db->where_in('lokasi', [
-				"Ruang Produksi", "Gudang Premix", "Gudang Raw Material",
-				"Gudang Finish Good", "Proofing Room", "Aging Room 1",
-				"Aging Room 2", "Ruang Produksi (Bubble)"
+				"Ruang Produksi",
+				"Gudang Premix",
+				"Gudang Raw Material",
+				"Gudang Finish Good",
+				"Proofing Room",
+				"Aging Room 1",
+				"Aging Room 2",
+				"Ruang Produksi (Bubble)"
 			]);
 		} else {
 			$this->db->where_in('lokasi', [
-				"Ruang Pengayakan", "Ruang RM", "Chiller 1", "Chiller 2", "Chiller 3",
-				"Chiller 4", "Chiller 5", "Chiller 6", "Ruang Mixing", "Area Baking",
-				"Area Cutting & Grinding", "Ruang Aging", "Area Packing"
+				"Ruang Pengayakan",
+				"Ruang RM",
+				"Chiller 1",
+				"Chiller 2",
+				"Chiller 3",
+				"Chiller 4",
+				"Chiller 5",
+				"Chiller 6",
+				"Ruang Mixing",
+				"Area Baking",
+				"Area Cutting & Grinding",
+				"Ruang Aging",
+				"Area Packing"
 			]);
 		}
 		$this->db->where('date', $tanggal);
@@ -310,23 +325,14 @@ class Suhu_model extends CI_Model {
 	public function get_suhu_today_by_plant($plant_uuid, $tanggal = null)
 	{
 		$this->db->where('plant', $plant_uuid);
+		$this->db->order_by('pukul', 'ASC');
 
-		if ($tanggal) {
-			$this->db->where('DATE(date)', $tanggal);
-		} else {
-			$this->db->where('DATE(date)', date('Y-m-d'));
-		}
-
-		$this->db->order_by('date', 'ASC');
-		$query = $this->db->get('suhu');
-		$results = $query->result();
+		$results = $this->db->get('suhu')->result();
 
 		foreach ($results as $row) {
-			$row->lokasi = json_decode($row->lokasi, true); 
+			$row->lokasi = json_decode($row->lokasi, true);
 		}
 
 		return $results;
 	}
-
-
 }

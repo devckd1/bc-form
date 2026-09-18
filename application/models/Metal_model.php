@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Metal_model extends CI_Model {
-	
+class Metal_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date_metal',
 				'label' => 'Date',
@@ -17,12 +19,12 @@ class Metal_model extends CI_Model {
 				'field' => 'shift',
 				'label' => 'Shift',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'time',
 				'label' => 'Time',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'nama_produk',
 				'label' => 'Produk Name',
@@ -48,7 +50,7 @@ class Metal_model extends CI_Model {
 				'label' => 'STD Fe',
 				'rules' => 'required'
 			],
-			[ 
+			[
 				'field' => 'std_nonfe',
 				'label' => 'STD Non Fe',
 				'rules' => 'required'
@@ -103,7 +105,7 @@ class Metal_model extends CI_Model {
 				'label' => 'Notes'
 			]
 		];
-	} 
+	}
 
 	public function insert()
 	{
@@ -172,8 +174,7 @@ class Metal_model extends CI_Model {
 		);
 
 		$this->db->insert('metal', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_update()
@@ -245,14 +246,14 @@ class Metal_model extends CI_Model {
 	public function update($uuid)
 	{
 		$username = $this->session->userdata('username');
-		$old_data = $this->db->get_where('metal', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('metal', ['uuid' => $uuid])->row_array();
 		$data = [
 			'username_1'   => $username,
 			'date_metal'   => $this->input->post('date_metal'),
 			'shift'        => $this->input->post('shift'),
 			'time'         => $this->input->post('time'),
 			'nama_produk'  => $this->input->post('nama_produk'),
-			'kode_produksi'=> $this->input->post('kode_produksi'),
+			'kode_produksi' => $this->input->post('kode_produksi'),
 			'no_program'   => $this->input->post('no_program'),
 			'deteksi_ng'   => $this->input->post('deteksi_ng'),
 			'std_fe'       => $this->input->post('std_fe'),
@@ -270,7 +271,7 @@ class Metal_model extends CI_Model {
 			'sus_b'        => $this->input->post('sus_b') ?: 'tidak terdeteksi',
 
 			'keterangan'   => $this->input->post('keterangan'),
-			'catatan_metal'=> $this->input->post('catatan_metal'),
+			'catatan_metal' => $this->input->post('catatan_metal'),
 
 			'modified_at'  => date("Y-m-d H:i:s")
 		];
@@ -281,7 +282,7 @@ class Metal_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('metal', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'metal_logs',
@@ -396,7 +397,7 @@ class Metal_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -425,13 +426,12 @@ class Metal_model extends CI_Model {
 		);
 
 		$this->db->update('metal', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -441,7 +441,7 @@ class Metal_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -461,8 +461,7 @@ class Metal_model extends CI_Model {
 		);
 
 		$this->db->update('metal', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -481,7 +480,7 @@ class Metal_model extends CI_Model {
 	public function get_by_uuid_metal($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -491,21 +490,21 @@ class Metal_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_metal_verif($uuid_array)
 	{
 		$this->db->select('nama_spv_metal, tgl_update_spv_metal, date_metal, shift, username_1, username_2, std_fe,std_nonfe,std_sus304, nama_produksi_metal, status_spv, nama_produksi_metal, tgl_update_produksi_metal');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv_metal', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv_metal', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('metal');
 
-		$data_metal = $query->row();  
-		return $data_metal; 
+		$data_metal = $query->row();
+		return $data_metal;
 	}
 
 	public function get_data_by_plant()
@@ -521,7 +520,7 @@ class Metal_model extends CI_Model {
 		return $this->db->delete('metal');
 	}
 
-	public function get_by_date($tanggal, $plant = null)
+	public function get_by_date($tanggal, $plant = null, $shift = null)
 	{
 		if (empty($tanggal)) {
 			return false;
@@ -530,10 +529,28 @@ class Metal_model extends CI_Model {
 		$this->db->where('DATE(date_metal)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
-		$this->db->order_by('date_metal', 'ASC');
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		// Urut berdasarkan jam pemeriksaan
+		//$this->db->order_by('time', 'ASC');
+		if ($shift == 3) {
+			$this->db->order_by("
+				CASE
+					WHEN TIME(time) >= '23:00:00' THEN 0
+					ELSE 1
+				END
+			", "", false);
+
+			$this->db->order_by('time', 'ASC');
+		} else {
+			$this->db->order_by('time', 'ASC');
+		}
+
 		$query = $this->db->get('metal');
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
@@ -545,20 +562,34 @@ class Metal_model extends CI_Model {
 		return false;
 	}
 
-	public function get_last_verif_by_date($tanggal, $plant = null)
+	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
-		$this->db->select('nama_spv_metal, tgl_update_spv_metal, date_metal, shift, username_1, username_2, std_fe,std_nonfe,std_sus304, nama_produksi_metal, status_spv, nama_produksi_metal, tgl_update_produksi_metal');
+		if (empty($tanggal)) {
+			return false;
+		}
+
 		$this->db->where('DATE(date_metal)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
-		$this->db->order_by('tgl_update_spv_metal', 'DESC');
-		$this->db->limit(1);
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('time', 'DESC');
+		$this->db->order_by('id', 'DESC');
+
 		$query = $this->db->get('metal');
 
-		return $query->row();
+		log_message('debug', 'Query get_last_verif_by_date: ' . $this->db->last_query());
+
+		if ($query->num_rows() > 0) {
+			return $query->row();
+		}
+
+		return false;
 	}
 
 	public function get_last_by_plant($plant_uuid)
@@ -568,13 +599,11 @@ class Metal_model extends CI_Model {
 		}
 
 		return $this->db
-		->where('plant', $plant_uuid)
-		->order_by('date_metal', 'DESC')
-		->order_by('time', 'DESC')
-		->limit(1)
-		->get('metal')
-		->row();
+			->where('plant', $plant_uuid)
+			->order_by('date_metal', 'DESC')
+			->order_by('time', 'DESC')
+			->limit(1)
+			->get('metal')
+			->row();
 	}
-
-
 }
