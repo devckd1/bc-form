@@ -91,15 +91,6 @@
                             <label for="tanggal">Tanggal</label>
                             <input type="date" name="tanggal" id="tanggal" class="form-control" required>
                         </div>
-                        <div class="col-md-3">
-                            <label for="shift">Shift</label>
-                            <select name="shift" id="shift" class="form-control" required>
-                                <option value="">-- Pilih Shift --</option>
-                                <option value="1">Shift 1</option>
-                                <option value="2">Shift 2</option>
-                                <option value="3">Shift 3</option>
-                            </select>
-                        </div>
                         <div class="col-md-6 align-self-end">
                             <button type="submit" class="btn btn-success">
                                 <i class="fas fa-print fa-sm text-white-50"></i> Cetak PDF

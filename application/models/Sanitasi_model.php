@@ -351,16 +351,24 @@ public function delete_by_uuid($uuid)
 	return $this->db->delete('sanitasi');
 }
 
-public function get_by_date($date, $plant = null)
-{
-	$this->db->where('DATE(date)', $date);
-	if (!empty($plant)) {
-		$this->db->where('plant', $plant);
+	public function get_by_date($date, $plant = null, $shift = null)
+	{
+		$this->db->where('DATE(date)', $date);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		$query = $this->db->get('sanitasi');
+
+		log_message('debug', 'QUERY SANITASI: ' . $this->db->last_query());
+
+		return $query->result();
 	}
-	$query = $this->db->get('sanitasi');
-	log_message('debug', 'QUERY SANITASI: ' . $this->db->last_query());
-	return $query->result();
-}
 
 
 }

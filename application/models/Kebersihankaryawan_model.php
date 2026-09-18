@@ -308,7 +308,7 @@ class Kebersihankaryawan_model extends CI_Model {
 		return $this->db->delete('kebersihan_karyawan');
 	}
 
-	public function get_by_date($tanggal, $plant = null)
+public function get_by_date($tanggal, $plant = null, $shift = null)
 	{
 		if (empty($tanggal)) {
 			return false;
@@ -317,7 +317,11 @@ class Kebersihankaryawan_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -330,6 +334,22 @@ class Kebersihankaryawan_model extends CI_Model {
 		}
 
 		return false;
+	}
+
+	public function get_shift_by_date($tanggal, $plant = null)
+	{
+		$this->db->select('shift');
+		$this->db->from('kebersihan_karyawan');
+		$this->db->where('DATE(date)', $tanggal);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->group_by('shift');
+		$this->db->order_by('shift', 'ASC');
+
+		return $this->db->get()->result();
 	}
 
 	public function get_last_verif_by_date($tanggal, $plant = null)

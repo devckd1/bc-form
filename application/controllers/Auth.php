@@ -50,6 +50,48 @@ class Auth extends CI_Controller {
 
 	}
 
+	public function switch_plant()
+	{
+		if (!$this->session->userdata('user_uuid')) {
+			redirect('auth/login');
+		}
+
+		$plant_uuid = $this->input->post('plant_uuid');
+		$redirect_url = $this->input->post('redirect_url');
+
+		if (!$plant_uuid) {
+			redirect('home');
+		}
+
+		if ($this->auth_model->switch_plant($plant_uuid)) {
+
+			// Ambil nama plant
+			$plant = $this->db
+				->where('uuid', $plant_uuid)
+				->get('plant')
+				->row();
+
+			$plant_name = $plant ? $plant->plant : 'Plant';
+
+			$this->session->set_flashdata(
+				'success_msg',
+				'Berhasil switch ke plant ' . $plant_name . '.'
+			);
+		} else {
+
+			$this->session->set_flashdata(
+				'error_msg',
+				'Anda tidak memiliki akses ke plant tersebut.'
+			);
+		}
+
+		// Tetap di halaman sebelumnya
+		if ($redirect_url) {
+			redirect($redirect_url);
+		}
+
+		redirect('home');
+	}
 
 	public function logout()
 	{

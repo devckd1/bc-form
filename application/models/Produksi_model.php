@@ -1205,6 +1205,18 @@ class Produksi_model extends CI_Model {
 		return $this->db->get()->result();
 	}
 
+	public function get_last_produksi_with_packing($plant_uuid)
+	{
+		return $this->db
+			->where('plant', $plant_uuid)
+			->where('proses_packing IS NOT NULL', null, false)
+			->where('proses_packing <>', '')
+			->order_by('date', 'DESC')
+			->order_by('id', 'DESC')
+			->limit(1)
+			->get('mixing')
+			->row();
+	}
 
 	public function get_data_by_tanggal_produk($tanggal, $produk)
 	{

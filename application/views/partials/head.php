@@ -52,6 +52,17 @@
             $salatiga_uuid = '1eb341e0-1ec4-4484-ba8f-32d23352b84d';
             ?>
 
+            <?php if ($tipe_user == 0): ?>
+
+				<li class="nav-item <?= $active_nav == 'akses_plant' ? 'active' : ''; ?>">
+					<a class="nav-link" href="<?= base_url('akses-plant'); ?>">
+						<i class="fas fa-user-lock"></i>
+						<span>Akses Plant</span>
+					</a>
+				</li>
+
+			<?php endif; ?>
+
             <!-- MASTER DATA (hanya tipe_user 0 & 1) -->
             <?php if ($tipe_user == 0): ?>
                 <hr class="sidebar-divider">
@@ -353,51 +364,141 @@
             <div id="content-wrapper" class="d-flex flex-column">
                 <div id="content">
                   <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-                    <!-- Sidebar Toggle (Topbar) -->
-                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                        <i class="fa fa-bars"></i>
-                    </button>
+					<!-- Sidebar Toggle (Topbar) -->
+					<button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+						<i class="fa fa-bars"></i>
+					</button>
 
-                    <!-- Nama Perusahaan -->
-                    <div class="d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 nama-pt">
-                        <strong>PT. CHAROEN POKPHAND INDONESIA - FOOD DIVISION</strong>
-                    </div>
+					<!-- Nama Perusahaan -->
+					<div class="d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 nama-pt">
+						<strong>PT. CHAROEN POKPHAND INDONESIA - FOOD DIVISION</strong>
+					</div>
 
-                    <!-- Topbar Navbar -->
-                    <ul class="navbar-nav ml-auto">
-                        <?php
-                        $foto = $this->session->userdata('foto') ?? 'profil.png';
-                        $foto_url = base_url('uploads/foto/' . $foto);
-                        ?>
-                        <li class="nav-item dropdown no-arrow">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <!-- Nama User -->
-                                <span class="mr-2 d-none d-lg-inline text-dark small font-weight-bold">
-                                    Hallo, <?= $this->session->userdata('nama'); ?>
-                                </span>
-                                <!-- Foto Profil -->
-                                <img class="img-profile rounded-circle" 
-                                src="<?= $foto_url ?>" 
-                                width="40" height="40" 
-                                onerror="this.onerror=null;this.src='<?= base_url('uploads/foto/profil.png') ?>';" 
-                                alt="Foto Profil">
-                            </a>
+					<!-- Topbar Navbar -->
+					<ul class="navbar-nav ml-auto">
 
-                            <!-- Dropdown Menu -->
-                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
-                            <!-- <a class="dropdown-item" href="<?= base_url('profil'); ?>">
-                                <i class="fas fa-user-edit fa-sm fa-fw mr-2 text-primary"></i> 
-                                <span class="text-dark">Profil</span>
-                            </a>
-                            <div class="dropdown-divider"></div> -->
-                            <a class="dropdown-item" href="<?= base_url('logout'); ?>">
-                                <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-danger"></i>
-                                <span class="text-dark">Logout</span>
-                            </a>
-                        </div>
-                    </li>
-                </ul>
-            </nav>
+						<?php
+						$foto = $this->session->userdata('foto') ?? 'profil.png';
+						$foto_url = base_url('uploads/foto/' . $foto);
+
+						$user_uuid = $this->session->userdata('user_uuid');
+						$user_plants = $this->auth_model->get_user_plants($user_uuid);
+						?>
+
+						<!-- SWITCH PLANT -->
+						<?php if (count($user_plants) > 1): ?>
+							<li class="nav-item dropdown no-arrow mr-2">
+
+								<a class="nav-link dropdown-toggle d-flex align-items-center"
+									href="#"
+									id="plantDropdown"
+									role="button"
+									data-toggle="dropdown"
+									aria-haspopup="true"
+									aria-expanded="false">
+
+									<i class="fas fa-building mr-2"></i>
+
+									<span class="text-dark small font-weight-bold">
+										<?php
+										$active_plant = $this->session->userdata('plant');
+										$active_plant_name = '';
+
+										foreach ($user_plants as $plant) {
+											if ($plant->uuid == $active_plant) {
+												$active_plant_name = $plant->plant;
+												break;
+											}
+										}
+										?>
+
+										<?= htmlspecialchars($active_plant_name); ?>
+									</span>
+
+								</a>
+
+								<div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+									aria-labelledby="plantDropdown">
+
+									<h6 class="dropdown-header">
+										<i class="fas fa-industry fa-sm mr-2"></i>
+										Pilih Plant
+									</h6>
+
+									<?php foreach ($user_plants as $plant): ?>
+
+										<form action="<?= base_url('auth/switch_plant'); ?>" method="POST">
+
+											<input type="hidden"
+												name="plant_uuid"
+												value="<?= $plant->uuid; ?>">
+
+											<input type="hidden"
+												name="redirect_url"
+												value="<?= current_url(); ?>">
+
+											<button type="submit"
+												class="dropdown-item d-flex align-items-center <?= $plant->uuid == $active_plant ? 'active' : ''; ?>">
+
+												<i class="fas fa-industry fa-sm fa-fw mr-2"></i>
+
+												<span>
+													<?= htmlspecialchars($plant->plant); ?>
+												</span>
+
+												<?php if ($plant->uuid == $active_plant): ?>
+													<i class="fas fa-check ml-auto"></i>
+												<?php endif; ?>
+
+											</button>
+
+										</form>
+
+									<?php endforeach; ?>
+
+								</div>
+							</li>
+						<?php endif; ?>
+
+
+						<!-- USER -->
+						<li class="nav-item dropdown no-arrow">
+
+							<a class="nav-link dropdown-toggle d-flex align-items-center"
+								href="#"
+								id="userDropdown"
+								role="button"
+								data-toggle="dropdown"
+								aria-haspopup="true"
+								aria-expanded="false">
+
+								<span class="mr-2 d-none d-lg-inline text-dark small font-weight-bold">
+									Hallo, <?= $this->session->userdata('nama'); ?>
+								</span>
+
+								<img class="img-profile rounded-circle"
+									src="<?= $foto_url ?>"
+									width="40"
+									height="40"
+									onerror="this.onerror=null;this.src='<?= base_url('uploads/foto/profil.png') ?>';"
+									alt="Foto Profil">
+
+							</a>
+
+							<div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+								aria-labelledby="userDropdown">
+
+								<a class="dropdown-item" href="<?= base_url('logout'); ?>">
+									<i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-danger"></i>
+									<span class="text-dark">Logout</span>
+								</a>
+
+							</div>
+
+						</li>
+
+					</ul>
+				</nav>
 
 
             <style type="text/css">
