@@ -583,3 +583,6 @@ $route['iot/suhu/(:any)'] = 'iot/suhu/$1';
 // akses plant
 $route['akses-plant'] = 'akses_plant/index';
 $route['akses-plant/save'] = 'akses_plant/save';
+
+$route['magnettrap/verifikasi_produksi/(:any)'] =
+    'form/magnettrap/verifikasi_produksi/$1';

@@ -1,16 +1,28 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Magnettrap_model extends CI_Model {
-	
+class Magnettrap_model extends CI_Model
+{
+
 	public function rules()
 	{
 		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
+				'rules' => 'required'
+			],
+			[
+				'field' => 'nama_produk',
+				'label' => 'Nama Produk',
+				'rules' => 'required'
+			],
+			[
+				'field' => 'kode_produksi',
+				'label' => 'Kode Produksi',
 				'rules' => 'required'
 			],
 			[
@@ -59,7 +71,7 @@ class Magnettrap_model extends CI_Model {
 		];
 	}
 
-    // ======================= Insert Data =======================
+	// ======================= Insert Data =======================
 	public function insert($file_name)
 	{
 		$produksi_data = $this->session->userdata('produksi_data');
@@ -72,6 +84,8 @@ class Magnettrap_model extends CI_Model {
 			'uuid' => $uuid,
 			'username' => $username,
 			'plant' => $plant,
+			'nama_produk' => $this->input->post('nama_produk'),
+			'kode_produksi' => $this->input->post('kode_produksi'),
 			'date' => $this->input->post('date'),
 			'shift' => $this->input->post('shift'),
 			'time' => $this->input->post('time'),
@@ -83,7 +97,7 @@ class Magnettrap_model extends CI_Model {
 			'catatan' => $this->input->post('catatan'),
 			'keterangan' => $this->input->post('keterangan'),
 			'bukti' => $file_name,
-			'status_enginer' => "1",
+			'status_enginer' => "0",
 			'nama_enginer' => $nama_produksi,
 			'status_spv' => "0",
 			'created_at' => date("Y-m-d H:i:s")
@@ -92,13 +106,15 @@ class Magnettrap_model extends CI_Model {
 		return $this->db->insert('magnet_trap', $data);
 	}
 
-    // ======================= Update Data =======================
+	// ======================= Update Data =======================
 	public function update($uuid, $file_name)
 	{
 		$old_data = $this->db->get_where('magnet_trap', ['uuid' => $uuid])->row_array();
 
 		$data = [
 			'username' => $this->session->userdata('username'),
+			'nama_produk' => $this->input->post('nama_produk'),
+			'kode_produksi' => $this->input->post('kode_produksi'),
 			'date' => $this->input->post('date'),
 			'shift' => $this->input->post('shift'),
 			'time' => $this->input->post('time'),
@@ -112,7 +128,7 @@ class Magnettrap_model extends CI_Model {
 			'bukti' => $file_name,
 			'modified_at' => date("Y-m-d H:i:s")
 		];
-		
+
 		$this->db->where('uuid', $uuid);
 		$this->db->update('magnet_trap', $data);
 
@@ -127,13 +143,12 @@ class Magnettrap_model extends CI_Model {
 			);
 		}
 
-		return true; 
-
+		return true;
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Status',
@@ -162,13 +177,28 @@ class Magnettrap_model extends CI_Model {
 		);
 
 		$this->db->update('magnet_trap', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
+		return ($this->db->affected_rows() > 0) ? true : false;
+	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$nama_enginer = $this->session->userdata('username');
+
+		$data = [
+			'nama_enginer' => $nama_enginer,
+			'status_enginer' => '1',
+			'tgl_update_enginer' => date('Y-m-d H:i:s')
+		];
+
+		$this->db->where('uuid', $uuid);
+		$this->db->update('magnet_trap', $data);
+
+		return ($this->db->affected_rows() > 0);
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_enginer',
 				'label' => 'Status',
@@ -197,8 +227,7 @@ class Magnettrap_model extends CI_Model {
 		);
 
 		$this->db->update('magnet_trap', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -217,7 +246,7 @@ class Magnettrap_model extends CI_Model {
 	public function get_by_uuid_magnettrap($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -227,21 +256,21 @@ class Magnettrap_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_magnettrap_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, date, username, shift, nama_enginer, status_enginer, tgl_update_enginer');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('magnet_trap');
 
-		$data_magnet_trap = $query->row();  
-		return $data_magnet_trap; 
+		$data_magnet_trap = $query->row();
+		return $data_magnet_trap;
 	}
 
 	public function get_data_by_plant()
@@ -266,7 +295,7 @@ class Magnettrap_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -287,11 +316,22 @@ class Magnettrap_model extends CI_Model {
 
 	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, date, username, shift, nama_enginer, status_enginer, tgl_update_enginer');
+		$this->db->select('
+			nama_spv,
+			tgl_update_spv,
+			date,
+			username,
+			shift,
+			nama_enginer,
+			status_enginer,
+			tgl_update_enginer,
+			created_at,
+			status_spv
+		');
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -308,12 +348,11 @@ class Magnettrap_model extends CI_Model {
 	public function get_by_month($tahun, $bulan, $plant)
 	{
 		return $this->db
-		->where('YEAR(date)', $tahun)
-		->where('MONTH(date)', $bulan)
-		->where('plant', $plant)
-		->order_by('date', 'ASC')
-		->get('magnet_trap')
-		->result();
+			->where('YEAR(date)', $tahun)
+			->where('MONTH(date)', $bulan)
+			->where('plant', $plant)
+			->order_by('date', 'ASC')
+			->get('magnet_trap')
+			->result();
 	}
-
 }

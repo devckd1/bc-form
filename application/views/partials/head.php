@@ -148,10 +148,10 @@
 
 							<a class="collapse-item <?= $active_nav == 'pengayakan' ? 'active' : ''; ?>" href="<?= base_url('pengayakan') ?>">Pengayakan</a>
 							<a class="collapse-item <?= $active_nav == 'kekuatanmagnet' ? 'active' : ''; ?>" href="<?= base_url('kekuatanmagnet') ?>">Pemeriksaan Kekuatan Magnet Trap</a>
-							<a class="collapse-item <?= $active_nav == 'verifikasimagnet' ? 'active' : ''; ?>" href="<?= base_url('verifikasimagnet') ?>">Verifikasi Magnet Trap</a>
+							<!-- <a class="collapse-item <?= $active_nav == 'verifikasimagnet' ? 'active' : ''; ?>" href="<?= base_url('verifikasimagnet') ?>">Verifikasi Magnet Trap</a> -->
 							<a class="collapse-item <?= $active_nav == 'thermometer' ? 'active' : ''; ?>" href="<?= base_url('thermometer') ?>">Peneraan Thermometer</a>
 							<a class="collapse-item <?= $active_nav == 'timbangan' ? 'active' : ''; ?>" href="<?= base_url('timbangan') ?>">Pemeriksaan Timbangan</a>
-							<?php if ($plant_uuid == $salatiga_uuid): ?>
+							<?php if ($plant_uuid == $salatiga_uuid || $plant_uuid == $cikande_uuid): ?>
 								<a class="collapse-item <?= $active_nav == 'magnettrap' ? 'active' : ''; ?>" href="<?= base_url('magnettrap') ?>">Pemeriksaan Magnet Trap</a>
 							<?php endif; ?>
 
@@ -249,10 +249,10 @@
 						<div class="bg-white py-2 collapse-inner rounded">
 							<a class="collapse-item <?= $active_nav == 'verifikasi-pengayakan' ? 'active' : ''; ?>" href="<?= base_url('pengayakan/verifikasi') ?>">Pengayakan</a>
 							<a class="collapse-item <?= $active_nav == 'verifikasi-kekuatanmagnet' ? 'active' : ''; ?>" href="<?= base_url('kekuatanmagnet/verifikasi') ?>">Pemeriksaan Kekuatan Magnet Trap</a>
-							<a class="collapse-item <?= $active_nav == 'verifikasi-verifikasimagnet' ? 'active' : ''; ?>" href="<?= base_url('verifikasimagnet/verifikasi') ?>">Verifikasi Magnet Trap</a>
+							<!-- <a class="collapse-item <?= $active_nav == 'verifikasi-verifikasimagnet' ? 'active' : ''; ?>" href="<?= base_url('verifikasimagnet/verifikasi') ?>">Verifikasi Magnet Trap</a> -->
 							<a class="collapse-item <?= $active_nav == 'verifikasi-thermometer' ? 'active' : ''; ?>" href="<?= base_url('thermometer/verifikasi') ?>">Peneraan Thermometer</a>
 							<a class="collapse-item <?= $active_nav == 'verifikasi-timbangan' ? 'active' : ''; ?>" href="<?= base_url('timbangan/verifikasi') ?>">Pemeriksaan Timbangan</a>
-							<?php if ($plant_uuid == $salatiga_uuid): ?>
+							<?php if ($plant_uuid == $salatiga_uuid || $plant_uuid == $cikande_uuid): ?>
 								<a class="collapse-item <?= $active_nav == 'verifikasi-magnettrap' ? 'active' : ''; ?>" href="<?= base_url('magnettrap/verifikasi') ?>">Pemeriksaan Magnet Trap</a>
 							<?php endif; ?>
 
