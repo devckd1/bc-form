@@ -586,3 +586,8 @@ $route['akses-plant/save'] = 'akses_plant/save';
 
 $route['magnettrap/verifikasi_produksi/(:any)'] =
     'form/magnettrap/verifikasi_produksi/$1';
+
+	// traceability
+$route['traceability'] = 'traceability/index';
+$route['traceability/search'] = 'traceability/search';
+$route['traceability/form-details'] = 'traceability/form_details';
