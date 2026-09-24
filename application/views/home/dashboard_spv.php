@@ -12,6 +12,13 @@
 <body>
 
 	<div class="container-fluid dashboard-wrapper">
+		<?php
+		$shift = $this->input->get('shift');
+
+		if ($shift === null || $shift === '') {
+			$shift = 'All';
+		}
+		?>
 
 		<div class="container-fluid dashboard-wrapper">
 			<!-- =====================================================
@@ -26,7 +33,8 @@
 
 						<div class="row align-items-end">
 
-							<div class="col-md-4 mb-3 mb-md-0">
+							<!-- DARI TANGGAL -->
+							<div class="col-md-3 mb-3 mb-md-0">
 
 								<label class="font-weight-bold">
 									<i class="fas fa-calendar-alt mr-1"></i>
@@ -43,7 +51,8 @@
 							</div>
 
 
-							<div class="col-md-4 mb-3 mb-md-0">
+							<!-- SAMPAI TANGGAL -->
+							<div class="col-md-3 mb-3 mb-md-0">
 
 								<label class="font-weight-bold">
 									<i class="fas fa-calendar-alt mr-1"></i>
@@ -60,6 +69,38 @@
 							</div>
 
 
+							<!-- SHIFT -->
+							<div class="col-md-2 mb-3 mb-md-0">
+
+								<label class="font-weight-bold">
+									<i class="fas fa-clock mr-1"></i>
+									Shift
+								</label>
+
+								<select name="shift" class="form-control">
+
+									<option value="All" <?= $shift === 'All' ? 'selected' : ''; ?>>
+										Semua Shift
+									</option>
+
+									<option value="1" <?= $shift === '1' ? 'selected' : ''; ?>>
+										Shift 1
+									</option>
+
+									<option value="2" <?= $shift === '2' ? 'selected' : ''; ?>>
+										Shift 2
+									</option>
+
+									<option value="3" <?= $shift === '3' ? 'selected' : ''; ?>>
+										Shift 3
+									</option>
+
+								</select>
+
+							</div>
+
+
+							<!-- TAMPILKAN -->
 							<div class="col-md-2 mb-3 mb-md-0">
 
 								<button
@@ -74,6 +115,7 @@
 							</div>
 
 
+							<!-- RESET -->
 							<div class="col-md-2">
 
 								<a
@@ -113,7 +155,7 @@
 
 						<div class="grafana-kpi-wrapper">
 							<iframe
-								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-21&var-id_plant=<?= urlencode($plant_uuid) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-21&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 								loading="lazy">
 							</iframe>
 						</div>
@@ -135,7 +177,7 @@
 
 						<div class="grafana-kpi-wrapper">
 							<iframe
-								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-22&var-id_plant=<?= urlencode($plant_uuid) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-22&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 								loading="lazy">
 							</iframe>
 						</div>
@@ -157,7 +199,7 @@
 
 						<div class="grafana-kpi-wrapper">
 							<iframe
-								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-23&var-id_plant=<?= urlencode($plant_uuid) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-23&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 								loading="lazy">
 							</iframe>
 						</div>
@@ -176,7 +218,6 @@
 			<div class="row section-gap">
 
 				<!-- ROTI GOSONG -->
-				<!-- ROTI GOSONG -->
 				<?php if ($plant_uuid !== '651ac623-5e48-44cc-b2f6-5d622603f53c'): ?>
 
 					<div class="col-lg-4 mb-4">
@@ -191,7 +232,7 @@
 
 							<div class="grafana-wrapper">
 								<iframe
-									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-24&var-id_plant=<?= urlencode($plant_uuid) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-24&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 									loading="lazy">
 								</iframe>
 							</div>
@@ -213,7 +254,7 @@
 
 							<div class="grafana-wrapper">
 								<iframe
-									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-11&var-id_plant=<?= urlencode($plant_uuid) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-27&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 									loading="lazy">
 								</iframe>
 
@@ -235,7 +276,7 @@
 
 						<div class="grafana-wrapper">
 							<iframe
-								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&timezone=browser&refresh=1m&theme=light&panelId=panel-19&var-id_plant=<?= urlencode($plant_uuid) ?>&kiosk=true&hideLogo=true&fullscreen=true&transparent=true"
+								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&timezone=browser&refresh=1m&theme=light&panelId=panel-19&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&kiosk=true&hideLogo=true&fullscreen=true&transparent=true"
 								loading="lazy">
 							</iframe>
 						</div>
@@ -276,7 +317,7 @@
 							<!-- SALATIGA : GRAFANA -->
 							<div class="grafana-wrapper">
 								<iframe
-									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=20&var-id_plant=<?= urlencode($plant_uuid) ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=20&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 									loading="lazy">
 								</iframe>
 							</div>
@@ -309,7 +350,7 @@
 							<div class="grafana-wrapper">
 
 								<iframe
-									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-11&var-id_plant=<?= urlencode($plant_uuid) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=panel-27&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 									loading="lazy">
 								</iframe>
 
@@ -333,7 +374,7 @@
 
 						<div class="grafana-breadcrumb-wrapper">
 							<iframe
-								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&timezone=browser&refresh=1m&theme=light&panelId=panel-2&var-id_plant=<?= urlencode($plant_uuid) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&transparent=true"
+								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&timezone=browser&refresh=1m&theme=light&panelId=panel-2&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&kiosk=true&hideLogo=true&fullscreen=true&transparent=true"
 								loading="lazy">
 							</iframe>
 						</div>
