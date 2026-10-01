@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Pemeriksaanchemical_model extends CI_Model {
-	
+class Pemeriksaanchemical_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -17,7 +19,7 @@ class Pemeriksaanchemical_model extends CI_Model {
 				'field' => 'shift',
 				'label' => 'Shift',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'jenis_chemical',
 				'label' => 'Chemicals',
@@ -56,7 +58,7 @@ class Pemeriksaanchemical_model extends CI_Model {
 				'field' => 'jumlah_reject',
 				'label' => 'Rejected',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'kemasan',
 				'label' => 'Packaging'
@@ -130,8 +132,8 @@ class Pemeriksaanchemical_model extends CI_Model {
 		$catatan = $this->input->post('catatan');
 		$status_spv = "0";
 
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
-		if(empty($kondisi_mobil)) {
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
 		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
@@ -168,8 +170,7 @@ class Pemeriksaanchemical_model extends CI_Model {
 		);
 
 		$this->db->insert('pemeriksaan_chemical', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function update($uuid, $file_name)
@@ -197,11 +198,11 @@ class Pemeriksaanchemical_model extends CI_Model {
 		$penerimaan = $this->input->post('penerimaan');
 		$keterangan = $this->input->post('keterangan');
 		$catatan = $this->input->post('catatan');
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
 
-		$old_data = $this->db->get_where('pemeriksaan_chemical', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('pemeriksaan_chemical', ['uuid' => $uuid])->row_array();
 
-		if(empty($kondisi_mobil)) {
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
 		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
@@ -235,30 +236,29 @@ class Pemeriksaanchemical_model extends CI_Model {
 
 			'modified_at' => date("Y-m-d H:i:s")
 		);
-		
+
 		$this->db->update('pemeriksaan_chemical', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('pemeriksaan_chemical', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('pemeriksaan_chemical', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus pemeriksaan_chemical_logs
+			// simpan log ke tabel khusus pemeriksaan_chemical_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'pemeriksaan_chemical_logs', // nama tabel log khusus pemeriksaan_chemical
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'pemeriksaan_chemical_logs', // nama tabel log khusus pemeriksaan_chemical
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -268,7 +268,7 @@ class Pemeriksaanchemical_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -287,21 +287,27 @@ class Pemeriksaanchemical_model extends CI_Model {
 		);
 
 		$this->db->update('pemeriksaan_chemical', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
 	{
-		$this->db->order_by('created_at', 'DESC');
-		$data = $this->db->get('pemeriksaan_chemical')->result();
-		return $data;
+		$this->db
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC');
+
+		return $this->db
+			->get('pemeriksaan_chemical')
+			->result();
 	}
 
 	public function get_by_uuid($uuid)
 	{
-		$data = $this->db->get_where('pemeriksaan_chemical', array('uuid' => $uuid))->row();
-		return $data;
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('pemeriksaan_chemical')
+			->row();
 	}
 
 	public function get_by_date($tanggal, $plant = null)
@@ -311,15 +317,15 @@ class Pemeriksaanchemical_model extends CI_Model {
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
-		$query = $this->db->get('pemeriksaan_chemical');
 
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
+		$query = $this->db->get('pemeriksaan_chemical');
 
 		if ($query->num_rows() > 0) {
 			return $query->result();
@@ -332,63 +338,140 @@ class Pemeriksaanchemical_model extends CI_Model {
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, shift');
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('pemeriksaan_chemical');
 
-		return $query->row();
+		return $this->db
+			->get('pemeriksaan_chemical')
+			->row();
 	}
 
 
 	public function get_by_tanggal($tanggal)
 	{
-		return $this->db->where('DATE(date)', $tanggal)
-		->order_by('date', 'ASC')
-		->get('pemeriksaan_chemical')
-		->result();
+		return $this->db
+			->where('DATE(date)', $tanggal)
+			->where('is_audit', 0)
+			->order_by('date', 'ASC')
+			->get('pemeriksaan_chemical')
+			->result();
 	}
 
-// Ambil info verifikasi (nama_spv, username, dsb) hanya satu baris terakhir dari tanggal tsb
+	// Ambil info verifikasi (nama_spv, username, dsb) hanya satu baris terakhir dari tanggal tsb
 	public function get_by_tanggal_verif($tanggal)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, created_at');
+		$this->db->select(
+			'nama_spv, tgl_update_spv, username, date, shift, created_at'
+		);
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('pemeriksaan_chemical');
 
-		return $query->row();
+		return $this->db
+			->get('pemeriksaan_chemical')
+			->row();
 	}
-	
+
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('pemeriksaan_chemical', ['plant' => $plant])->result();
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->get('pemeriksaan_chemical')
+			->result();
 	}
 
-	public function get_latest_chemical() {
-		$user_plant = $this->session->userdata('plant'); 
+	public function get_latest_chemical()
+	{
+		$plant = $this->session->userdata('plant');
 
-		$this->db->select('jenis_chemical, kode_produksi, pemasok, jumlah_barang');
-		$this->db->from('pemeriksaan_chemical');
-		$this->db->where('plant', $user_plant);
-		$this->db->order_by('created_at', 'DESC');
-		$this->db->limit(10);
-
-		$query = $this->db->get();
-		return $query->result_array();
+		return $this->db
+			->select('jenis_chemical, kode_produksi, pemasok, jumlah_barang')
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->limit(10)
+			->get('pemeriksaan_chemical')
+			->result_array();
 	}
 
 	public function delete_by_uuid($uuid)
 	{
-		$this->db->where('uuid', $uuid);
+		$this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0);
+
 		return $this->db->delete('pemeriksaan_chemical');
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('pemeriksaan_chemical')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('pemeriksaan_chemical')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('pemeriksaan_chemical')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('date', 'ASC');
+
+		$query = $this->db->get('pemeriksaan_chemical');
+
+		if ($query->num_rows() > 0) {
+			return $query->result();
+		}
+
+		return false;
+	}
 }

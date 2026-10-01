@@ -1,9 +1,11 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Gosong_model extends CI_Model {
+class Gosong_model extends CI_Model
+{
 
 	public function rules()
 	{
@@ -17,18 +19,18 @@ class Gosong_model extends CI_Model {
 
 	public function insert()
 	{
-        // Ambil data dari session
+		// Ambil data dari session
 		$username = $this->session->userdata('username');
 		$nama_produksi = $this->session->userdata('produksi_data')['nama_produksi'] ?? '';
 		$plant = $this->session->userdata('plant');
 
-        // Ambil data dari form
+		// Ambil data dari form
 		$date = $this->input->post('date');
 		$shift_main = $this->input->post('shift_main');
 		$shift_group = $this->input->post('shift_group');
 		$shift = $shift_main . $shift_group;
 
-        // Simpan total_berat sebagai float 3 digit di belakang koma
+		// Simpan total_berat sebagai float 3 digit di belakang koma
 		$total_berat = number_format((float)$this->input->post('total_berat'), 3, '.', '');
 
 		$data = [
@@ -51,19 +53,19 @@ class Gosong_model extends CI_Model {
 
 	public function update($uuid)
 	{
-        // Ambil data dari session
+		// Ambil data dari session
 		$username = $this->session->userdata('username');
 
-        // Ambil data dari form
+		// Ambil data dari form
 		$date = $this->input->post('date');
 		$shift_main = $this->input->post('shift_main');
 		$shift_group = $this->input->post('shift_group');
 		$shift = $shift_main . $shift_group;
 
-        // Simpan total_berat sebagai float 3 digit di belakang koma
+		// Simpan total_berat sebagai float 3 digit di belakang koma
 		$total_berat = number_format((float)$this->input->post('total_berat'), 3, '.', '');
 
-		$old_data = $this->db->get_where('roti_gosong', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('roti_gosong', ['uuid' => $uuid])->row_array();
 
 		$data = [
 			'username' => $username,
@@ -75,7 +77,7 @@ class Gosong_model extends CI_Model {
 
 		$this->db->update('roti_gosong', $data, ['uuid' => $uuid]);
 
-		$new_data = $this->db->get_where('roti_gosong', ['uuid'=>$uuid])->row_array();
+		$new_data = $this->db->get_where('roti_gosong', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
 			$this->activity_logger->log_activity(
@@ -93,7 +95,7 @@ class Gosong_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Status',
@@ -123,13 +125,12 @@ class Gosong_model extends CI_Model {
 		);
 
 		$this->db->update('roti_gosong', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -159,8 +160,7 @@ class Gosong_model extends CI_Model {
 		);
 
 		$this->db->update('roti_gosong', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -178,8 +178,8 @@ class Gosong_model extends CI_Model {
 
 	public function get_by_uuid_roti_gosong($uuid_array)
 	{
-		if (empty($uuid_array)) { 
-			return false; 
+		if (empty($uuid_array)) {
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -189,28 +189,87 @@ class Gosong_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
-	} 
+			return $query->result();
+		}
+		return false;
+	}
 
 	public function get_by_uuid_roti_gosong_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, nama_produksi, tgl_update_produksi, status_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('roti_gosong');
 
-		$data_roti_gosong = $query->row();  
-		return $data_roti_gosong; 
+		$data_roti_gosong = $query->row();
+		return $data_roti_gosong;
 	}
 
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('roti_gosong', ['plant' => $plant])->result();
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+
+		return $this->db->get('roti_gosong')->result();
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('roti_gosong')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('roti_gosong')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('roti_gosong')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return [];
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('roti_gosong')->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -228,7 +287,7 @@ class Gosong_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -249,7 +308,7 @@ class Gosong_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
@@ -262,13 +321,11 @@ class Gosong_model extends CI_Model {
 	public function get_by_month($tahun, $bulan, $plant)
 	{
 		return $this->db
-		->where('YEAR(date)', $tahun)
-		->where('MONTH(date)', $bulan)
-		->where('plant', $plant)
-		->order_by('date', 'ASC')
-		->get('roti_gosong')
-		->result();
+			->where('YEAR(date)', $tahun)
+			->where('MONTH(date)', $bulan)
+			->where('plant', $plant)
+			->order_by('date', 'ASC')
+			->get('roti_gosong')
+			->result();
 	}
-
-
 }

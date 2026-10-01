@@ -1,20 +1,23 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-class Produksi extends MY_Controller {
+class Produksi extends MY_Controller
+{
 
 	public function __construct()
 	{
 		parent::__construct();
 
 		$this->load->library('form_validation');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('produksi_model');
 		$this->load->model('packing_model');
 		$this->load->model('produk_model');
-		if(!$this->auth_model->current_user()){
+		$this->load->library('audit_library');
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
@@ -27,17 +30,17 @@ class Produksi extends MY_Controller {
 		$plant = $this->session->userdata('plant');
 		$keyword = $this->input->get('keyword');
 
-    // Hitung total data
+		// Hitung total data
 		$total_rows = $this->produksi_model->count_all_by_plant($plant, $keyword);
 
-    // Konfigurasi pagination
+		// Konfigurasi pagination
 		$config['base_url'] = base_url('produksi');
 		$config['total_rows'] = $total_rows;
 		$config['per_page'] = 10;
-		$config['page_query_string'] = TRUE; 
-		$config['reuse_query_string'] = TRUE; 
+		$config['page_query_string'] = TRUE;
+		$config['reuse_query_string'] = TRUE;
 
-    // Styling bootstrap
+		// Styling bootstrap
 		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
 		$config['full_tag_close'] = '</ul>';
 		$config['attributes'] = ['class' => 'page-link'];
@@ -52,7 +55,7 @@ class Produksi extends MY_Controller {
 
 		$this->pagination->initialize($config);
 
-		$page = $this->input->get('per_page'); 
+		$page = $this->input->get('per_page');
 		$start = ($page) ? $page : 0;
 
 		$data = [
@@ -61,7 +64,7 @@ class Produksi extends MY_Controller {
 			'keyword' => $keyword
 		];
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi', $data);
 	}
 
@@ -71,7 +74,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-detail', $data);
 	}
 
@@ -102,7 +105,7 @@ class Produksi extends MY_Controller {
 			'produk_list' => $produk_list
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-tambah', $data);
 	}
 
@@ -157,7 +160,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi');
 			}
@@ -167,7 +170,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-edit', $data);
 	}
 
@@ -200,7 +203,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi');
 			}
@@ -210,7 +213,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-bahan', $data);
 	}
 
@@ -225,7 +228,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi');
 			}
@@ -235,7 +238,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-mixing', $data);
 	}
 
@@ -250,7 +253,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi');
 			}
@@ -260,7 +263,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-fermentasi', $data);
 	}
 
@@ -275,7 +278,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi');
 			}
@@ -285,7 +288,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-baking', $data);
 	}
 
@@ -300,7 +303,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi');
 			}
@@ -310,7 +313,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-stalling', $data);
 	}
 
@@ -352,7 +355,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi');
 			}
@@ -362,7 +365,7 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'produksi'; 
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-drying', $data);
 	}
 
@@ -400,7 +403,7 @@ class Produksi extends MY_Controller {
 
 			$result = $this->produksi_model->pack($uuid);
 
-        // ✅ Jika upload gagal
+			// ✅ Jika upload gagal
 			if (!$result['status']) {
 
 				$data = [
@@ -412,12 +415,12 @@ class Produksi extends MY_Controller {
 				return $this->render('form/produksi/produksi-packing', $data);
 			}
 
-        // ✅ Jika sukses
+			// ✅ Jika sukses
 			$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 			redirect('produksi');
 		}
 
-    // ✅ Jika validasi form gagal
+		// ✅ Jika validasi form gagal
 		$data = [
 			'produksi' => $this->produksi_model->get_by_uuid($uuid)
 		];
@@ -426,17 +429,17 @@ class Produksi extends MY_Controller {
 		$this->render('form/produksi/produksi-packing', $data);
 	}
 
-	public function verifikasi() 
+	public function verifikasi()
 	{
 		$data = array(
 			'produksi' => $this->produksi_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-produksi'; 
+		$this->active_nav = 'verifikasi-produksi';
 		$this->render('form/produksi/produksi-verifikasi', $data);
 	}
 
-	public function status($uuid) 
+	public function status($uuid)
 	{
 		$rules = $this->produksi_model->rules_verifikasi();
 		$this->form_validation->set_rules($rules);
@@ -447,7 +450,7 @@ class Produksi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Verifikasi Produksi berhasil di Update');
 				redirect('produksi/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Verifikasi Produksi gagal di Update');
 				redirect('produksi/verifikasi');
 			}
@@ -457,8 +460,57 @@ class Produksi extends MY_Controller {
 			'produksi' => $this->produksi_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-produksi'; 
+		$this->active_nav = 'verifikasi-produksi';
 		$this->render('form/produksi/produksi-status', $data);
+	}
+
+	public function copy_to_audit($uuid)
+	{
+		if (empty($uuid)) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'UUID data tidak ditemukan.'
+			);
+
+			redirect('produksi/verifikasi');
+			return;
+		}
+
+		$audit_uuid = $this->audit_library->copy_to_audit(
+			'mixing',
+			$uuid
+		);
+
+		if (!$audit_uuid) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Produksi tidak ditemukan atau gagal dibuat sebagai Audit.'
+			);
+
+			redirect('produksi/verifikasi');
+			return;
+		}
+
+		$this->session->set_flashdata(
+			'success_msg',
+			'Data Verifikasi Produksi berhasil dikirim ke Audit.'
+		);
+
+		redirect('produksi/verifikasi');
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'produksi' => $this->produksi_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'verifikasi-produksi';
+
+		$this->render(
+			'form/produksi/produksi-audit',
+			$data
+		);
 	}
 
 	// public function diketahui()
@@ -502,7 +554,7 @@ class Produksi extends MY_Controller {
 
 	public function cetak()
 	{
-    // Ambil tanggal dan nama produk dari form
+		// Ambil tanggal dan nama produk dari form
 		$tanggal = $this->input->post('tanggal');
 		$nama_produk = $this->input->post('nama_produk');
 
@@ -520,7 +572,7 @@ class Produksi extends MY_Controller {
 
 		if (!$produksi_data || !$produksi_data_verif) {
 			$this->session->set_flashdata('error_msg', 'Data tidak ditemukan untuk tanggal yang dipilih.');
-			redirect('produksi/verifikasi'); 
+			redirect('produksi/verifikasi');
 		}
 
 		$this->load->model('pegawai_model');
@@ -531,7 +583,7 @@ class Produksi extends MY_Controller {
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
-		$pdf->setPrintHeader(false); 
+		$pdf->setPrintHeader(false);
 		$pdf->AddPage();
 
 		$maxColumnsPerPage = 4;
@@ -590,7 +642,7 @@ class Produksi extends MY_Controller {
 				$pdf->Cell(40, 4, $item->kode_produksi, 1, 0, 'C');
 			}
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -604,8 +656,8 @@ class Produksi extends MY_Controller {
 				$pdf->Cell(10, 4, 'Sens', 1, 0, 'C');
 			}
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(20, 4, 'Kode', 1, 0, 'C'); 
-				$pdf->Cell(10, 4, 'Kg', 1, 0, 'C'); 
+				$pdf->Cell(20, 4, 'Kode', 1, 0, 'C');
+				$pdf->Cell(10, 4, 'Kg', 1, 0, 'C');
 				$pdf->Cell(10, 4, 'Sens', 1, 0, 'C');
 			}
 
@@ -625,8 +677,8 @@ class Produksi extends MY_Controller {
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
 				$pdf->Cell(20, 4, '', 1, 0, 'C');
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -642,8 +694,8 @@ class Produksi extends MY_Controller {
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
 				$pdf->Cell(20, 4, '', 1, 0, 'C');
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -659,7 +711,7 @@ class Produksi extends MY_Controller {
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
 				$pdf->Cell(20, 4, '', 1, 0, 'C');
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
 				$pdf->Cell(10, 4, '', 1, 0, 'C');
 			}
 
@@ -675,9 +727,9 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(20, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(20, 4, '', 1, 0, 'C');
 				$pdf->Cell(10, 4, '', 1, 0, 'C');
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
 			}
 			$pdf->Ln();
 
@@ -726,8 +778,8 @@ class Produksi extends MY_Controller {
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
 				$pdf->Cell(20, 4, '', 1, 0, 'C');
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -743,8 +795,8 @@ class Produksi extends MY_Controller {
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
 				$pdf->Cell(20, 4, '', 1, 0, 'C');
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
-				$pdf->Cell(10, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
+				$pdf->Cell(10, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -760,7 +812,7 @@ class Produksi extends MY_Controller {
 				$pdf->Cell(40, 4, $item->mix_dough_waktu_1, 1, 0, 'C');
 			}
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -774,7 +826,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -796,11 +848,11 @@ class Produksi extends MY_Controller {
 			$emptyColumns = 4 - $dataCount;
 
 			foreach ($chunk as $item) {
-				$pdf->Cell(40, 4, $item->mix_dough_suhu_ruang. ' / '. $item->mix_dough_rh_ruang, 1, 0, 'C');
+				$pdf->Cell(40, 4, $item->mix_dough_suhu_ruang . ' / ' . $item->mix_dough_rh_ruang, 1, 0, 'C');
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -813,7 +865,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -830,7 +882,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -843,7 +895,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -857,7 +909,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -871,7 +923,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -885,7 +937,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -911,11 +963,11 @@ class Produksi extends MY_Controller {
 			$emptyColumns = 4 - $dataCount;
 
 			foreach ($chunk as $item) {
-				$pdf->Cell(40, 4, $item->electric_baking_mesin. ' / '. $item->electric_baking_expand, 1, 0, 'C');
+				$pdf->Cell(40, 4, $item->electric_baking_mesin . ' / ' . $item->electric_baking_expand, 1, 0, 'C');
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -925,7 +977,7 @@ class Produksi extends MY_Controller {
 			$pdf->SetFont('times', '', 7);
 			$pdf->Cell(35, 4, 'Kematangan', 1, 0, 'L');
 
-			$pdf->SetFont('dejavusans', '', 7);	
+			$pdf->SetFont('dejavusans', '', 7);
 			$dataCount = count($chunk);
 			$emptyColumns = 4 - $dataCount;
 
@@ -934,13 +986,13 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->SetFont('times', '', 7);
 			$pdf->Ln();
 			$pdf->Cell(35, 4, 'Rasa', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);	
+			$pdf->SetFont('dejavusans', '', 7);
 			$dataCount = count($chunk);
 			$emptyColumns = 4 - $dataCount;
 
@@ -955,7 +1007,7 @@ class Produksi extends MY_Controller {
 			$pdf->SetFont('times', '', 7);
 			$pdf->Ln();
 			$pdf->Cell(35, 4, 'Aroma', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);	
+			$pdf->SetFont('dejavusans', '', 7);
 			$dataCount = count($chunk);
 			$emptyColumns = 4 - $dataCount;
 
@@ -964,13 +1016,13 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->SetFont('times', '', 7);
 			$pdf->Ln();
 			$pdf->Cell(35, 4, 'Tekstur', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);	
+			$pdf->SetFont('dejavusans', '', 7);
 			$dataCount = count($chunk);
 			$emptyColumns = 4 - $dataCount;
 
@@ -984,7 +1036,7 @@ class Produksi extends MY_Controller {
 			$pdf->SetFont('times', '', 7);
 			$pdf->Ln();
 			$pdf->Cell(35, 4, 'Warna', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);	
+			$pdf->SetFont('dejavusans', '', 7);
 			$dataCount = count($chunk);
 			$emptyColumns = 4 - $dataCount;
 
@@ -993,7 +1045,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln(6);
@@ -1023,7 +1075,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -1035,7 +1087,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -1045,7 +1097,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -1060,7 +1112,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -1070,7 +1122,7 @@ class Produksi extends MY_Controller {
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -1088,31 +1140,31 @@ class Produksi extends MY_Controller {
 			$pdf->Ln();
 			$pdf->SetFont('times', '', 7);
 			$pdf->Cell(35, 4, 'Hasil', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);    
+			$pdf->SetFont('dejavusans', '', 7);
 			foreach ($chunk as $item) {
 				$pdf->Cell(40, 4, ($item->produk_hasil == 'oke') ? '✔' : '✘', 1, 0, 'C');
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->SetFont('times', '', 7);
 			$pdf->Ln();
 			$pdf->Cell(35, 4, 'Rasa', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);    
+			$pdf->SetFont('dejavusans', '', 7);
 			foreach ($chunk as $item) {
 				$pdf->Cell(40, 4, ($item->produk_rasa == 'oke') ? '✔' : '✘', 1, 0, 'C');
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->SetFont('times', '', 7);
 			$pdf->Ln();
 			$pdf->Cell(35, 4, 'Aroma', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);    
+			$pdf->SetFont('dejavusans', '', 7);
 			foreach ($chunk as $item) {
 				$pdf->Cell(40, 4, ($item->produk_aroma == 'oke') ? '✔' : '✘', 1, 0, 'C');
 			}
@@ -1125,7 +1177,7 @@ class Produksi extends MY_Controller {
 			$pdf->Ln();
 
 			$pdf->Cell(35, 4, 'Tekstur', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);    
+			$pdf->SetFont('dejavusans', '', 7);
 			foreach ($chunk as $item) {
 				$pdf->Cell(40, 4, ($item->produk_tekstur == 'oke') ? '✔' : '✘', 1, 0, 'C');
 			}
@@ -1138,13 +1190,13 @@ class Produksi extends MY_Controller {
 			$pdf->Ln();
 
 			$pdf->Cell(35, 4, 'Warna', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);    
+			$pdf->SetFont('dejavusans', '', 7);
 			foreach ($chunk as $item) {
 				$pdf->Cell(40, 4, ($item->produk_warna == 'oke') ? '✔' : '✘', 1, 0, 'C');
 			}
 
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->Ln();
@@ -1162,15 +1214,15 @@ class Produksi extends MY_Controller {
 			$pdf->MultiCell(35, $rowHeight, 'Best Before', 1, 'L', false, 0, '', '', true, 0, false, true, $rowHeight, 'M');
 			$pdf->Ln();
 
-			$pdf->SetY($pdf->GetY() - $totalHeight); 
-			$pdf->SetX(44); 
+			$pdf->SetY($pdf->GetY() - $totalHeight);
+			$pdf->SetX(44);
 
 			foreach ($chunk as $item) {
 				$imagePath = FCPATH . 'uploads/' . $item->gambar_kode_kemasan;
 				if (file_exists($imagePath)) {
 					$x = $pdf->GetX();
 					$y = $pdf->GetY();
-					$pdf->MultiCell(40, $totalHeight, '', 1, 'C', false, 0); 
+					$pdf->MultiCell(40, $totalHeight, '', 1, 'C', false, 0);
 					$pdf->Image($imagePath, $x + 5, $y + 1.5, 30, 14);
 				} else {
 					$pdf->MultiCell(40, $totalHeight, 'Tidak ada gambar', 1, 'C', false, 0);
@@ -1183,45 +1235,45 @@ class Produksi extends MY_Controller {
 			$pdf->Ln();
 			$pdf->SetFont('times', '', 7);
 			$pdf->Cell(35, 4, 'Kondisi Kemasan', 1, 0, 'L');
-			$pdf->SetFont('dejavusans', '', 7);  
+			$pdf->SetFont('dejavusans', '', 7);
 			foreach ($chunk as $item) {
 				$kondisi = ($item->packing_kondisi_kemasan == 1) ? '✔' : '✘';
 				$pdf->Cell(40, 4, $kondisi, 1, 0, 'C');
 			}
 			for ($i = 0; $i < $emptyColumns; $i++) {
-				$pdf->Cell(40, 4, '', 1, 0, 'C'); 
+				$pdf->Cell(40, 4, '', 1, 0, 'C');
 			}
 
 			$pdf->SetFont('times', 'I', 7);
-			$pdf->Cell(330, 5, 'QB 06/00', 0, 1, 'R'); 
+			$pdf->Cell(330, 5, 'QB 06/00', 0, 1, 'R');
 
 			$pdf->Ln();
 			$pdf->SetFont('times', '', 7);
 			$tanggal_update = $data['produksi']->tgl_update;
-			$update = new DateTime($tanggal_update); 
+			$update = new DateTime($tanggal_update);
 			$update_tanggal = $update->format('d-m-Y | H:i');
 
 			$tanggal_update = $data['produksi']->tgl_update_prod;
-			$update_prod = new DateTime($tanggal_update); 
+			$update_prod = new DateTime($tanggal_update);
 			$update_tanggal_prod = $update_prod->format('d-m-Y | H:i');
 
 			$status_verifikasi = true;
 			foreach ($produksi_data as $item) {
 				if ($item->status_spv != '1') {
 					$status_verifikasi = false;
-					break; 
+					break;
 				}
 			}
 
-			$pdf->SetY($pdf->GetY() + 2); 
+			$pdf->SetY($pdf->GetY() + 2);
 			$pdf->SetFont('dejavusans', '', 5);
 			$pdf->MultiCell(0, 7, "✓ : Ok\n✗ : Tidak Ok", 0, 'L');
 
-			$pdf->SetY($pdf->GetY() + 2); 
-			$pdf->Cell(5, 3, 'Catatan : ', 0, 1, 'L'); 
+			$pdf->SetY($pdf->GetY() + 2);
+			$pdf->Cell(5, 3, 'Catatan : ', 0, 1, 'L');
 			foreach ($produksi_data as $item) {
 				if (!empty($item->catatan)) {
-					$pdf->Cell(8, 0, '', 0, 0, 'L'); 
+					$pdf->Cell(8, 0, '', 0, 0, 'L');
 					$pdf->Cell(200, 0, ' - ' . $item->catatan, 0, 1, 'L');
 				}
 			}
@@ -1255,38 +1307,38 @@ class Produksi extends MY_Controller {
 			}
 
 			$qc_nama_text = !empty($nama_qc)
-			? implode(', ', array_unique($nama_qc))
-			: '-';
+				? implode(', ', array_unique($nama_qc))
+				: '-';
 
 			$qc_tanggal = $qc_created_at
-			? (new DateTime($qc_created_at))->format('d-m-Y | H:i')
-			: '-';
+				? (new DateTime($qc_created_at))->format('d-m-Y | H:i')
+				: '-';
 
 			$qr_qc_text = "Dibuat secara digital oleh,\n"
-			. $qc_nama_text . "\n"
-			. "QC Inspector\n"
-			. $qc_tanggal;
+				. $qc_nama_text . "\n"
+				. "QC Inspector\n"
+				. $qc_tanggal;
 
 			$qr_produksi_text = null;
 
 			if (!empty($data['produksi']->nama_produksi) && !empty($data['produksi']->tgl_update_prod)) {
 				$prod_tanggal = (new DateTime($data['produksi']->tgl_update_prod ?? $data['produksi']->tgl_update_prod))
-				->format('d-m-Y | H:i');
+					->format('d-m-Y | H:i');
 
 				$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $data['produksi']->nama_produksi . "\n"
-				. "Foreman/Forelady Produksi\n"
-				. $prod_tanggal;
+					. $data['produksi']->nama_produksi . "\n"
+					. "Foreman/Forelady Produksi\n"
+					. $prod_tanggal;
 			}
 
 			$spv_tanggal = !empty($data['produksi']->tgl_update)
-			? (new DateTime($data['produksi']->tgl_update))->format('d-m-Y | H:i')
-			: '-';
+				? (new DateTime($data['produksi']->tgl_update))->format('d-m-Y | H:i')
+				: '-';
 
 			$qr_spv_text = "Disetujui secara digital oleh,\n"
-			. ($nama_lengkap_spv ?: $data['produksi']->nama_spv) . "\n"
-			. "Supervisor QC Bread Crumb\n"
-			. $spv_tanggal;
+				. ($nama_lengkap_spv ?: $data['produksi']->nama_spv) . "\n"
+				. "Supervisor QC Bread Crumb\n"
+				. $spv_tanggal;
 
 			if ($status_verifikasi) {
 				$pdf->SetFont('times', '', 8);
@@ -1296,7 +1348,7 @@ class Produksi extends MY_Controller {
 				$pdf->Cell(45, 5, 'Diketahui Oleh,', 0, 0, 'C');
 				$pdf->SetXY(150, $y_ttd);
 				$pdf->Cell(45, 5, 'Disetujui Oleh,', 0, 1, 'C');
-				$pdf->write2DBarcode($qr_qc_text, 'QRCODE,L', 35,$y_ttd + 5, $qr_size, $qr_size, null, 'N');
+				$pdf->write2DBarcode($qr_qc_text, 'QRCODE,L', 35, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
 				if ($qr_produksi_text) {
 					$pdf->write2DBarcode($qr_produksi_text, 'QRCODE,L', 100, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
 				}
@@ -1328,6 +1380,398 @@ class Produksi extends MY_Controller {
 		$produk = $this->produksi_model->get_produk_by_tanggal($tanggal);
 		header('Content-Type: application/json');
 		echo json_encode($produk);
+	}
+
+	public function cetak_audit()
+	{
+		// Ambil tanggal dari form
+		$tanggal = $this->input->post('tanggal');
+
+		if (empty($tanggal)) {
+			show_error('Tanggal harus diisi', 404);
+		}
+
+		$plant = $this->session->userdata('plant');
+
+		$produksi_data = $this->produksi_model->get_audit_by_date(
+			$tanggal,
+			$plant
+		);
+
+		if (empty($produksi_data)) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data audit tidak ditemukan untuk tanggal yang dipilih.'
+			);
+
+			redirect('produksi/audit');
+		}
+
+		$data['produksi'] = $produksi_data[0];
+
+		$this->load->model('pegawai_model');
+
+		$nama_qc = $this->pegawai_model->get_nama_lengkap(
+			$data['produksi']->username
+		);
+
+		$nama_prod = $this->pegawai_model->get_nama_lengkap(
+			$data['produksi']->nama_produksi
+		);
+
+		$nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap(
+			$data['produksi']->nama_spv
+		);
+
+		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
+
+		$pdf = new TCPDF(
+			PDF_PAGE_ORIENTATION,
+			PDF_UNIT,
+			'LEGAL',
+			true,
+			'UTF-8',
+			false
+		);
+
+		$pdf->setPrintHeader(false);
+		$pdf->AddPage();
+
+		$maxColumnsPerPage = 4;
+		$chunks = array_chunk($produksi_data, $maxColumnsPerPage);
+
+		foreach ($chunks as $chunkIndex => $chunk) {
+
+			if ($chunkIndex > 0) {
+				$pdf->AddPage();
+			}
+
+			$pdf->SetMargins(9, 10, 8);
+			$pdf->SetFont('times', 'B', 13);
+
+			$logo_path = FCPATH . 'assets/img/logo.jpg';
+
+			if (file_exists($logo_path)) {
+				$pdf->Image($logo_path, 10, 10, 35);
+			} else {
+				$pdf->Write(7, "Logo tidak ditemukan\n");
+			}
+
+			$pdf->Write(11, "\n");
+
+			$pdf->MultiCell(
+				0,
+				5,
+				'VERIFIKASI PROSES PRODUKSI - AUDIT',
+				0,
+				'C'
+			);
+
+			$pdf->Ln(5);
+
+			setlocale(
+				LC_TIME,
+				'id_ID.UTF-8',
+				'id_ID',
+				'indonesian'
+			);
+
+			$tanggal_data = $data['produksi']->date;
+
+			$date = new DateTime($tanggal_data);
+
+			$formatted_date = date(
+				'l, d F Y',
+				$date->getTimestamp()
+			);
+
+			$formatted_date2 = date(
+				'l, d F Y',
+				$date->getTimestamp()
+			);
+
+			$pdf->SetFont('times', '', 8);
+			$pdf->SetX(8);
+
+			$pdf->Write(
+				0,
+				'Tanggal: ' . $formatted_date
+			);
+
+			$pdf->SetX($pdf->GetX() + 10);
+
+			$pdf->Write(
+				0,
+				'Shift: ' . $data['produksi']->shift
+			);
+
+			$pdf->SetX($pdf->GetX() + 10);
+
+			$pdf->Write(
+				0,
+				'Produk: ' . $data['produksi']->nama_produk
+			);
+
+			$pdf->Ln(4);
+
+
+			/*
+        |--------------------------------------------------------------------------
+        | BODY PDF PRODUKSI
+        |--------------------------------------------------------------------------
+        | Tempelkan seluruh isi body PDF dari cetak() normal di sini.
+        | Semua penggunaan:
+        |   $produksi_data
+        |   $data['produksi']
+        |   $chunk
+        | tetap sama.
+        |
+        | Yang berubah hanya sumber data menjadi data audit
+        | dan judul PDF menjadi "- AUDIT".
+        |--------------------------------------------------------------------------
+        */
+
+
+			$pdf->SetFont('times', 'I', 7);
+
+			$pdf->Cell(
+				330,
+				5,
+				'QB 06/00',
+				0,
+				1,
+				'R'
+			);
+
+			$pdf->Ln();
+
+			$pdf->SetFont('times', '', 7);
+
+			$tanggal_update = $data['produksi']->tgl_update;
+
+			$update = new DateTime($tanggal_update);
+
+			$update_tanggal = $update->format(
+				'd-m-Y | H:i'
+			);
+
+			$tanggal_update = $data['produksi']->tgl_update_prod;
+
+			$update_prod = new DateTime($tanggal_update);
+
+			$update_tanggal_prod = $update_prod->format(
+				'd-m-Y | H:i'
+			);
+
+
+			// Status verifikasi audit
+			$status_verifikasi = true;
+
+			foreach ($produksi_data as $item) {
+
+				if ($item->status_spv != '1') {
+
+					$status_verifikasi = false;
+
+					break;
+				}
+			}
+
+
+			$pdf->SetY(
+				$pdf->GetY() + 2
+			);
+
+			$pdf->SetFont(
+				'dejavusans',
+				'',
+				5
+			);
+
+			$pdf->MultiCell(
+				0,
+				7,
+				"✓ : Ok\n✗ : Tidak Ok",
+				0,
+				'L'
+			);
+
+
+			$pdf->SetY(
+				$pdf->GetY() + 2
+			);
+
+			$pdf->Cell(
+				5,
+				3,
+				'Catatan : ',
+				0,
+				1,
+				'L'
+			);
+
+			foreach ($produksi_data as $item) {
+
+				if (!empty($item->catatan)) {
+
+					$pdf->Cell(
+						8,
+						0,
+						'',
+						0,
+						0,
+						'L'
+					);
+
+					$pdf->Cell(
+						200,
+						0,
+						' - ' . $item->catatan,
+						0,
+						1,
+						'L'
+					);
+				}
+			}
+
+
+			$y_ttd   = $pdf->GetY() + 6;
+			$qr_size = 15;
+
+			$qc_usernames  = [];
+			$qc_created_at = null;
+
+
+			foreach ($produksi_data as $item) {
+
+				if (!empty($item->username)) {
+
+					$qc_usernames[] = $item->username;
+				}
+
+				if (
+					!$qc_created_at &&
+					!empty($item->created_at)
+				) {
+
+					$qc_created_at = $item->created_at;
+				}
+			}
+
+
+			$qc_usernames = array_unique(
+				$qc_usernames
+			);
+
+
+			$nama_qc = [];
+
+			foreach ($qc_usernames as $username) {
+
+				$nama = $this->pegawai_model
+					->get_nama_lengkap($username);
+
+				if (!empty($nama)) {
+
+					$nama_qc[] = $nama;
+				}
+			}
+
+
+			$qc_nama_text = !empty($nama_qc)
+				? implode(
+					', ',
+					array_unique($nama_qc)
+				)
+				: '-';
+
+
+			$qc_tanggal = $qc_created_at
+				? (new DateTime($qc_created_at))
+				->format('d-m-Y | H:i')
+				: '-';
+
+
+			$qr_qc_text =
+				"Dibuat secara digital oleh,\n"
+				. $qc_nama_text . "\n"
+				. "QC Inspector\n"
+				. $qc_tanggal;
+
+
+			$qr_produksi_text = null;
+
+
+			if (
+				!empty($data['produksi']->nama_produksi) &&
+				!empty($data['produksi']->tgl_update_prod)
+			) {
+
+				$prod_tanggal = (
+					new DateTime(
+						$data['produksi']->tgl_update_prod
+					)
+				)->format('d-m-Y | H:i');
+
+
+				$qr_produksi_text =
+					"Diketahui secara digital oleh,\n"
+					. $data['produksi']->nama_produksi . "\n"
+					. "Foreman/Forelady Produksi\n"
+					. $prod_tanggal;
+			}
+
+
+			$spv_tanggal = !empty($data['produksi']->tgl_update)
+				? (
+					new DateTime(
+						$data['produksi']->tgl_update
+					)
+				)->format('d-m-Y | H:i')
+				: '-';
+
+
+			$qr_spv_text =
+				"Disetujui secara digital oleh,\n"
+				. (
+					$nama_lengkap_spv
+					?: $data['produksi']->nama_spv
+				) . "\n"
+				. "Supervisor QC Bread Crumb\n"
+				. $spv_tanggal;
+
+
+			if ($status_verifikasi) {
+
+				// QR signature
+				// Gunakan blok QR yang sama persis
+				// dari cetak() normal di bagian ini.
+
+			} else {
+
+				// Data Belum Diverifikasi
+				// Gunakan blok yang sama persis
+				// dari cetak() normal di bagian ini.
+			}
+
+
+			$pdf->SetTextColor(
+				0,
+				0,
+				0
+			);
+
+			$pdf->setPrintFooter(false);
+		}
+
+
+		$filename =
+			"Verifikasi_Produksi_Audit_{$formatted_date2}.pdf";
+
+		$pdf->Output(
+			$filename,
+			'I'
+		);
 	}
 
 	public function export_excel()
@@ -1400,7 +1844,4 @@ class Produksi extends MY_Controller {
 		$writer->save('php://output');
 		exit;
 	}
-
-
 }
-

@@ -21,6 +21,7 @@ class Proses extends MY_Controller
 		$this->load->model('packing_model');
 		$this->load->model('produk_model');
 		$this->load->model('pegawai_model');
+		$this->load->library('audit_library');
 		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
@@ -243,6 +244,57 @@ class Proses extends MY_Controller
 
 		$this->active_nav = 'verifikasi-proses';
 		$this->render('form/proses/proses-status', $data);
+	}
+
+	public function copy_to_audit($uuid)
+	{
+		if (empty($uuid)) {
+
+			$this->session->set_flashdata(
+				'error_msg',
+				'UUID data tidak ditemukan.'
+			);
+
+			redirect('proses/verifikasi');
+			return;
+		}
+
+		$audit_uuid = $this->audit_library->copy_to_audit(
+			'mixing',
+			$uuid
+		);
+
+		if (!$audit_uuid) {
+
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Proses tidak ditemukan atau gagal dibuat sebagai Audit.'
+			);
+
+			redirect('proses/verifikasi');
+			return;
+		}
+
+		$this->session->set_flashdata(
+			'success_msg',
+			'Data Proses berhasil dikirim ke Audit.'
+		);
+
+		redirect('proses/verifikasi');
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'proses' => $this->proses_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'verifikasi-proses';
+
+		$this->render(
+			'form/proses/proses-audit',
+			$data
+		);
 	}
 
 	public function cetak()

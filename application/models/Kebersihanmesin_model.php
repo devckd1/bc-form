@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Kebersihanmesin_model extends CI_Model {
-	
+class Kebersihanmesin_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -15,14 +17,14 @@ class Kebersihanmesin_model extends CI_Model {
 			],
 			[
 				'field' => 'shift',
-				'label' => 'Shift', 
+				'label' => 'Shift',
 				'rules' => 'required'
 			],
 			[
 				'field' => 'mesin',
 				'label' => 'Things',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'perbaikan',
 				'label' => 'Type of Repair',
@@ -89,8 +91,7 @@ class Kebersihanmesin_model extends CI_Model {
 		);
 
 		$this->db->insert('kebersihan_mesin', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function update($uuid)
@@ -106,7 +107,7 @@ class Kebersihanmesin_model extends CI_Model {
 		$spare_part = $this->input->post('spare_part');
 		$keterangan = $this->input->post('keterangan');
 
-		$old_data = $this->db->get_where('kebersihan_mesin', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('kebersihan_mesin', ['uuid' => $uuid])->row_array();
 
 		$data = array(
 			'username' => $username,
@@ -120,32 +121,31 @@ class Kebersihanmesin_model extends CI_Model {
 			'spare_part' => $spare_part,
 			'keterangan' => $keterangan,
 
-			'modified_at' => date("Y-m-d H:i:s") 
+			'modified_at' => date("Y-m-d H:i:s")
 		);
 
 		$this->db->update('kebersihan_mesin', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('kebersihan_mesin', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('kebersihan_mesin', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus kebersihan_mesin_logs
+			// simpan log ke tabel khusus kebersihan_mesin_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'kebersihan_mesin_logs', // nama tabel log khusus kebersihan_mesin
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'kebersihan_mesin_logs', // nama tabel log khusus kebersihan_mesin
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -155,7 +155,7 @@ class Kebersihanmesin_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -174,13 +174,12 @@ class Kebersihanmesin_model extends CI_Model {
 		);
 
 		$this->db->update('kebersihan_mesin', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -190,7 +189,7 @@ class Kebersihanmesin_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -209,8 +208,7 @@ class Kebersihanmesin_model extends CI_Model {
 		);
 
 		$this->db->update('kebersihan_mesin', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -229,7 +227,7 @@ class Kebersihanmesin_model extends CI_Model {
 	public function get_by_uuid_kebersihanmesin($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -239,28 +237,33 @@ class Kebersihanmesin_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_kebersihanmesin_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, nama_produksi, status_produksi, tgl_update_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('kebersihan_mesin');
 
-		$data_kebersihan_mesin = $query->row();  
-		return $data_kebersihan_mesin; 
+		$data_kebersihan_mesin = $query->row();
+		return $data_kebersihan_mesin;
 	}
 
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('kebersihan_mesin', ['plant' => $plant])->result();
+
+		return $this->db->get_where('kebersihan_mesin', [
+			'plant'    => $plant,
+			'is_audit' => 0
+		])->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -278,7 +281,7 @@ class Kebersihanmesin_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -296,14 +299,14 @@ class Kebersihanmesin_model extends CI_Model {
 
 		return false;
 	}
-	
+
 	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, nama_produksi, status_produksi, tgl_update_produksi');
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -315,5 +318,51 @@ class Kebersihanmesin_model extends CI_Model {
 		$query = $this->db->get('kebersihan_mesin');
 
 		return $query->row();
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('kebersihan_mesin')->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('kebersihan_mesin')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('kebersihan_mesin')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('kebersihan_mesin')
+			->result();
 	}
 }

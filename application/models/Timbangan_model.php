@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Timbangan_model extends CI_Model {
-	
+class Timbangan_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -104,7 +106,7 @@ class Timbangan_model extends CI_Model {
 		);
 
 		$this->db->insert('timbangan', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function update($uuid)
@@ -119,7 +121,7 @@ class Timbangan_model extends CI_Model {
 		$peneraan_standar = $this->input->post('peneraan_standar');
 		$keterangan = $this->input->post('keterangan');
 		$catatan = $this->input->post('catatan');
-		$old_data = $this->db->get_where('timbangan', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('timbangan', ['uuid' => $uuid])->row_array();
 		$pukul = $this->input->post('pukul');
 		$hasil = $this->input->post('hasil');
 
@@ -144,32 +146,31 @@ class Timbangan_model extends CI_Model {
 			'keterangan' => $keterangan,
 			'catatan' => $catatan,
 
-			'modified_at' => date("Y-m-d H:i:s") 
+			'modified_at' => date("Y-m-d H:i:s")
 		);
 
 		$this->db->update('timbangan', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('timbangan', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('timbangan', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus timbangan_logs
+			// simpan log ke tabel khusus timbangan_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'timbangan_logs', // nama tabel log khusus timbangan
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'timbangan_logs', // nama tabel log khusus timbangan
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -179,7 +180,7 @@ class Timbangan_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -198,13 +199,12 @@ class Timbangan_model extends CI_Model {
 		);
 
 		$this->db->update('timbangan', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -214,7 +214,7 @@ class Timbangan_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -233,7 +233,7 @@ class Timbangan_model extends CI_Model {
 		);
 
 		$this->db->update('timbangan', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -252,7 +252,7 @@ class Timbangan_model extends CI_Model {
 	public function get_by_uuid_timbangan($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -262,28 +262,33 @@ class Timbangan_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_timbangan_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, nama_produksi, tgl_update_produksi, status_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('timbangan');
 
-		$data_timbangan = $query->row();  
-		return $data_timbangan; 
+		$data_timbangan = $query->row();
+		return $data_timbangan;
 	}
 
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('timbangan', ['plant' => $plant])->result();
+
+		return $this->db->get_where('timbangan', [
+			'plant'    => $plant,
+			'is_audit' => 0
+		])->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -291,7 +296,7 @@ class Timbangan_model extends CI_Model {
 		$this->db->where('uuid', $uuid);
 		return $this->db->delete('timbangan');
 	}
-	
+
 	public function get_by_date($tanggal, $plant = null, $shift = null)
 	{
 		if (empty($tanggal)) {
@@ -340,5 +345,53 @@ class Timbangan_model extends CI_Model {
 		return $query->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
 
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('timbangan')->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('timbangan')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('timbangan')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant, $shift = null)
+	{
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('timbangan')->result();
+	}
 }

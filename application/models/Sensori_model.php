@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Sensori_model extends CI_Model {
+class Sensori_model extends CI_Model
+{
 
 	protected $table = 'sensori_fg';
-	
+
 	public function rules()
 	{
 		return [
@@ -75,7 +77,7 @@ class Sensori_model extends CI_Model {
 			'nama_produk' => $nama_produk,
 			'tindakan' => $tindakan,
 			'catatan' => $catatan,
-			'produk' => json_encode($produk), 
+			'produk' => json_encode($produk),
 			'status_spv' => $status_spv,
 			'nama_produksi' => $nama_produksi,
 			'status_produksi' => $status_produksi
@@ -95,7 +97,7 @@ class Sensori_model extends CI_Model {
 		$rasa = $this->input->post('rasa');
 		$aroma = $this->input->post('aroma');
 		$kenampakan = $this->input->post('kenampakan');
-		$old_data = $this->db->get_where('sensori_fg', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('sensori_fg', ['uuid' => $uuid])->row_array();
 		$date = $this->input->post('date');
 		$nama_produk = $this->input->post('nama_produk');
 		$tindakan = $this->input->post('tindakan');
@@ -130,7 +132,7 @@ class Sensori_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('sensori_fg', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'sensori_fg_logs',
@@ -148,7 +150,7 @@ class Sensori_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -177,13 +179,12 @@ class Sensori_model extends CI_Model {
 		);
 
 		$this->db->update('sensori_fg', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -212,8 +213,7 @@ class Sensori_model extends CI_Model {
 		);
 
 		$this->db->update('sensori_fg', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -225,8 +225,11 @@ class Sensori_model extends CI_Model {
 
 	public function get_by_uuid($uuid)
 	{
-		$data = $this->db->get_where('sensori_fg', array('uuid' => $uuid))->row();
-		return $data;
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('sensori_fg')
+			->row();
 	}
 
 	public function get_bagian_by_uuid($uuid)
@@ -243,38 +246,55 @@ class Sensori_model extends CI_Model {
 	public function get_by_uuid_sensori($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
 		$this->db->where_in('uuid', $uuid_array);
+		$this->db->where('is_audit', 0);
 		$query = $this->db->get('sensori_fg');
 
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_sensori_verif($uuid_array)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, status_produksi, tgl_update_produksi');
+		$this->db->select('
+		nama_spv,
+		tgl_update_spv,
+		username,
+		date,
+		nama_produksi,
+		status_produksi,
+		tgl_update_produksi
+	');
+
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->where('is_audit', 0);
+
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
+
 		$query = $this->db->get('sensori_fg');
 
-		$data_sensori = $query->row();  
-		return $data_sensori; 
+		return $query->row();
 	}
 
 	public function get_data_by_plant()
 	{
+		$this->db->where('is_audit', 0);
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('sensori_fg', ['plant' => $plant])->result();
+
+		return $this->db
+			->get_where('sensori_fg', ['plant' => $plant])
+			->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -283,6 +303,7 @@ class Sensori_model extends CI_Model {
 		return $this->db->delete('sensori_fg');
 	}
 
+	// Data operasional
 	public function get_by_date($tanggal, $plant = null)
 	{
 		if (empty($tanggal)) {
@@ -290,15 +311,41 @@ class Sensori_model extends CI_Model {
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
+
 		$query = $this->db->get('sensori_fg');
 
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
+		if ($query->num_rows() > 0) {
+			return $query->result();
+		}
+
+		return false;
+	}
+
+
+	// Data Audit
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('date', 'ASC');
+
+		$query = $this->db->get('sensori_fg');
 
 		if ($query->num_rows() > 0) {
 			return $query->result();
@@ -309,18 +356,64 @@ class Sensori_model extends CI_Model {
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, status_produksi, tgl_update_produksi');
+		$this->db->select('
+		nama_spv,
+		tgl_update_spv,
+		username,
+		date,
+		nama_produksi,
+		status_produksi,
+		tgl_update_produksi
+	');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
+
 		$query = $this->db->get('sensori_fg');
 
 		return $query->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('sensori_fg')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sensori_fg')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sensori_fg')
+			->row();
+	}
 }

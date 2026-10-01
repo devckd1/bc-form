@@ -3,22 +3,31 @@
 		<h1 class="h3 mb-2 text-gray-800">Daftar Pemeriksaan Suhu Ruang</h1>
 	</div>
 
-	<?php if($this->session->flashdata('success_msg')): ?>
+	<?php if ($this->session->flashdata('success_msg')): ?>
 		<div class="alert alert-success text-center">
 			<i class="fas fa-check"></i>
 			<?= $this->session->flashdata('success_msg') ?>
 		</div>
 	<?php endif ?>
 
-	<?php if($this->session->flashdata('error_msg')): ?>
+	<?php if ($this->session->flashdata('error_msg')): ?>
 		<div class="alert alert-danger text-center">
 			<i class="fas fa-times"></i>
 			<?= $this->session->flashdata('error_msg') ?>
 		</div>
-	<?php endif ?> 
+	<?php endif ?>
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
+			<div class="form-group text-right">
+				<a href="<?= base_url('suhu/audit'); ?>"
+					class="btn btn-info btn-sm">
+
+					<i class="fas fa-clipboard-check mr-1"></i>
+					Data Audit
+
+				</a>
+			</div>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
 					<thead>
@@ -36,12 +45,12 @@
 						</tr>
 					</thead>
 					<tbody>
-						<?php 
+						<?php
 						$no = 1;
-						foreach($suhu as $val) {
+						foreach ($suhu as $val) {
 							$datetime = new datetime($val->date);
 							$datetime = $datetime->format('d-m-Y');
-							?>
+						?>
 							<tr>
 								<td class="text-center"><?= $no; ?></td>
 								<td><?= $datetime . " / " . $val->shift; ?></td>
@@ -73,12 +82,23 @@
 									?>
 								</td>
 								<td class="text-center">
-									<a href="<?= base_url('suhu/status/'.$val->uuid);?>" class="btn btn-warning btn-icon-split">
+
+									<a href="<?= base_url('suhu/status/' . $val->uuid); ?>"
+										class="btn btn-warning btn-icon-split">
 										<span class="text">Verifikasi</span>
 									</a>
+
+									<?php
+									$audit = $this->suhu_model->get_audit_by_source_uuid($val->uuid);
+									?>
+										<a href="<?= base_url('suhu/copy-to-audit/' . $val->uuid); ?>"
+											class="btn btn-info btn-icon-split"
+											onclick="return confirm('Kirim data ini ke Audit?')">
+											<span class="text">Kirim Audit</span>
+										</a>
 								</td>
 							</tr>
-							<?php 
+						<?php
 							$no++;
 						}
 						?>
@@ -104,28 +124,28 @@
 				<!-- EXCEL CIKANDE -->
 				<?php if ($plant_uuid === '651ac623-5e48-44cc-b2f6-5d622603f53c'): ?>
 					<button type="submit"
-					formaction="<?= base_url('suhu/export-excel') ?>"
-					class="btn btn-primary mr-2">
-					<i class="fas fa-file-excel"></i> Export Excel
-				</button>
-			<?php endif; ?>
+						formaction="<?= base_url('suhu/export-excel') ?>"
+						class="btn btn-primary mr-2">
+						<i class="fas fa-file-excel"></i> Export Excel
+					</button>
+				<?php endif; ?>
 
-			<!-- EXCEL SALATIGA -->
-			<?php if ($plant_uuid === '1eb341e0-1ec4-4484-ba8f-32d23352b84d'): ?>
-				<button type="submit"
-				formaction="<?= base_url('suhu/export-excel-salatiga') ?>"
-				class="btn btn-primary">
-				<i class="fas fa-file-excel"></i> Export Excel
-			</button>
-		<?php endif; ?>
-	</form>
+				<!-- EXCEL SALATIGA -->
+				<?php if ($plant_uuid === '1eb341e0-1ec4-4484-ba8f-32d23352b84d'): ?>
+					<button type="submit"
+						formaction="<?= base_url('suhu/export-excel-salatiga') ?>"
+						class="btn btn-primary">
+						<i class="fas fa-file-excel"></i> Export Excel
+					</button>
+				<?php endif; ?>
+			</form>
 
-</div>
-</div>
+		</div>
+	</div>
 </div>
 </div>
 
-<style> 
+<style>
 	th {
 		background-color: #f8f9fc;
 	}

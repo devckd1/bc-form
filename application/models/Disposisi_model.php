@@ -1,19 +1,22 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Disposisi_model extends CI_Model {
+class Disposisi_model extends CI_Model
+{
 
-	public function __construct() {
+	public function __construct()
+	{
 		parent::__construct();
 		$this->load->library('activity_logger');
 	}
 
-	
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -21,14 +24,14 @@ class Disposisi_model extends CI_Model {
 			],
 			[
 				'field' => 'nomor',
-				'label' => 'Number', 
+				'label' => 'Number',
 				'rules' => 'required'
 			],
 			[
 				'field' => 'kepada',
 				'label' => 'Dear',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'disposisi',
 				'label' => 'Disposition',
@@ -89,8 +92,7 @@ class Disposisi_model extends CI_Model {
 		);
 
 		$this->db->insert('disposisi', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function update($uuid)
@@ -105,8 +107,8 @@ class Disposisi_model extends CI_Model {
 		$catatan = $this->input->post('catatan');
 		$cc = $this->input->post('cc');
 
-        // ambil data lama sebelum update
-		$old_data = $this->db->get_where('disposisi', ['uuid'=>$uuid])->row_array();
+		// ambil data lama sebelum update
+		$old_data = $this->db->get_where('disposisi', ['uuid' => $uuid])->row_array();
 
 		$data = array(
 			'username' => $username,
@@ -118,23 +120,23 @@ class Disposisi_model extends CI_Model {
 			'uraian_disposisi' => $uraian_disposisi,
 			'catatan' => $catatan,
 			'cc' => $cc,
-			'modified_at' => date("Y-m-d H:i:s") 
+			'modified_at' => date("Y-m-d H:i:s")
 		);
 
 		$this->db->update('disposisi', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('disposisi', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('disposisi', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus disposisi_logs
+			// simpan log ke tabel khusus disposisi_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'disposisi_logs', // nama tabel log khusus disposisi
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'disposisi_logs', // nama tabel log khusus disposisi
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
@@ -173,7 +175,7 @@ class Disposisi_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -183,7 +185,7 @@ class Disposisi_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -202,13 +204,12 @@ class Disposisi_model extends CI_Model {
 		);
 
 		$this->db->update('disposisi', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -218,7 +219,7 @@ class Disposisi_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -237,8 +238,7 @@ class Disposisi_model extends CI_Model {
 		);
 
 		$this->db->update('disposisi', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -257,7 +257,7 @@ class Disposisi_model extends CI_Model {
 	public function get_by_uuid_disposisi($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -267,28 +267,79 @@ class Disposisi_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_disposisi_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, nomor, kepada, disposisi, dasar_disposisi, uraian_disposisi, catatan, cc');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('disposisi');
 
-		$data_disposisi = $query->row();  
-		return $data_disposisi; 
+		$data_disposisi = $query->row();
+		return $data_disposisi;
 	}
 
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('disposisi', ['plant' => $plant])->result();
+
+		return $this->db->get_where('disposisi', [
+			'plant'    => $plant,
+			'is_audit' => 0
+		])->result();
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('disposisi')->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('disposisi')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('disposisi')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('disposisi')
+			->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -296,5 +347,4 @@ class Disposisi_model extends CI_Model {
 		$this->db->where('uuid', $uuid);
 		return $this->db->delete('disposisi');
 	}
-
 }

@@ -1,10 +1,12 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Retain_model extends CI_Model {
-	
+class Retain_model extends CI_Model
+{
+
 	public function rules()
 	{
 		return [
@@ -17,17 +19,17 @@ class Retain_model extends CI_Model {
 				'field' => 'plant',
 				'label' => 'Plant',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'sample_type',
 				'label' => 'Type of Sample',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'sample_storage',
 				'label' => 'Storage of Sample',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'catatan',
 				'label' => 'Notes'
@@ -43,7 +45,7 @@ class Retain_model extends CI_Model {
 		$plant = $this->input->post('plant');
 		$sample_type = $this->input->post('sample_type');
 		$sample_storage = $this->input->post('sample_storage');
-		$description = $this->input->post('description'); 
+		$description = $this->input->post('description');
 		$catatan = $this->input->post('catatan');
 		$status_spv = "0";
 
@@ -54,7 +56,7 @@ class Retain_model extends CI_Model {
 			'plant' => $plant,
 			'sample_type' => $sample_type,
 			'sample_storage' => $sample_storage,
-			'description' => json_encode($description), 
+			'description' => json_encode($description),
 			'catatan' => $catatan,
 			'status_spv' => $status_spv
 		);
@@ -70,9 +72,9 @@ class Retain_model extends CI_Model {
 		$plant = $this->input->post('plant');
 		$sample_type = $this->input->post('sample_type');
 		$sample_storage = $this->input->post('sample_storage');
-		$description = $this->input->post('description'); 
+		$description = $this->input->post('description');
 		$catatan = $this->input->post('catatan');
-		$old_data = $this->db->get_where('retain', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('retain', ['uuid' => $uuid])->row_array();
 		$data = array(
 			'username' => $username,
 			'date' => $date,
@@ -86,18 +88,18 @@ class Retain_model extends CI_Model {
 
 		$this->db->update('retain', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('retain', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('retain', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus retain_logs
+			// simpan log ke tabel khusus retain_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'retain_logs', // nama tabel log khusus retain
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'retain_logs', // nama tabel log khusus retain
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
@@ -105,7 +107,7 @@ class Retain_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -115,7 +117,7 @@ class Retain_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -134,13 +136,12 @@ class Retain_model extends CI_Model {
 		);
 
 		$this->db->update('retain', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -150,7 +151,7 @@ class Retain_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -170,10 +171,9 @@ class Retain_model extends CI_Model {
 		);
 
 		$this->db->update('retain', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
-	
+
 	public function get_all()
 	{
 		$this->db->order_by('a.created_at', 'DESC');
@@ -195,7 +195,8 @@ class Retain_model extends CI_Model {
 		return $this->db->get()->row();
 	}
 
-	public function get_plant($uuid) {
+	public function get_plant($uuid)
+	{
 		$this->db->where('plant', $uuid);
 		$query = $this->db->get('retain');
 		return $query->result_array();
@@ -210,7 +211,7 @@ class Retain_model extends CI_Model {
 	public function get_by_uuid_retain($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -220,9 +221,9 @@ class Retain_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_retain_verif($uuid_array)
@@ -231,7 +232,7 @@ class Retain_model extends CI_Model {
 		$this->db->from('retain');
 		$this->db->join('plant', 'plant.uuid = retain.plant', 'left');
 		$this->db->where_in('retain.uuid', $uuid_array);
-		$this->db->order_by('retain.tgl_update_spv', 'DESC');   
+		$this->db->order_by('retain.tgl_update_spv', 'DESC');
 		$query = $this->db->get();
 
 		return $query->result();
@@ -241,19 +242,71 @@ class Retain_model extends CI_Model {
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('a.created_at', 'DESC');
-		$this->db->select('a.*, b.plant AS nama_plant'); 
+		$this->db->select('a.*, b.plant AS nama_plant');
 		$this->db->from('retain a');
 		$this->db->join('plant b', 'a.plant = b.uuid', 'left');
 
 		$plant = $this->session->userdata('plant');
-		$this->db->where('a.plant', $plant); 
+
+		$this->db->where('a.plant', $plant);
+		$this->db->where('a.is_audit', 0);
 
 		return $this->db->get()->result();
 	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->select('a.*, b.plant AS nama_plant');
+		$this->db->from('retain a');
+		$this->db->join('plant b', 'a.plant = b.uuid', 'left');
+
+		$this->db->where('a.plant', $plant);
+		$this->db->where('a.is_audit', 1);
+		$this->db->order_by('a.created_at', 'DESC');
+
+		return $this->db->get()->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('retain')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('retain')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('retain')
+			->result();
+	}
+
 	public function delete_by_uuid($uuid)
 	{
 		$this->db->where('uuid', $uuid);
 		return $this->db->delete('retain');
 	}
-
 }

@@ -1,9 +1,11 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Larutan_model extends CI_Model {
+class Larutan_model extends CI_Model
+{
 
 	// protected $table = 'larutan';
 	public function rules()
@@ -34,7 +36,7 @@ class Larutan_model extends CI_Model {
 		$status_spv = "0";
 		$status_produksi = "1";
 
-	// Ambil data array dari form
+		// Ambil data array dari form
 		$bahan = $this->input->post('bahan');
 		$kadar = $this->input->post('kadar');
 		$bahan_kimia = $this->input->post('bahan_kimia');
@@ -61,7 +63,7 @@ class Larutan_model extends CI_Model {
 			];
 		}
 
-	// Simpan satu baris data ke DB, nama_bahan disimpan dalam bentuk JSON
+		// Simpan satu baris data ke DB, nama_bahan disimpan dalam bentuk JSON
 		$data = [
 			'uuid' => Uuid::uuid4()->toString(),
 			'username' => $username,
@@ -98,7 +100,7 @@ class Larutan_model extends CI_Model {
 		$tindakan      = $this->input->post('tindakan');
 		$verifikasi    = $this->input->post('verifikasi');
 
-		$old_data = $this->db->get_where('larutan', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('larutan', ['uuid' => $uuid])->row_array();
 
 		$nama_bahan = [];
 
@@ -108,7 +110,7 @@ class Larutan_model extends CI_Model {
 				'kadar'       => $kadar[$i],
 				'bahan_kimia' => $bahan_kimia[$i],
 				'air_bersih'  => $air_bersih[$i],
-				'volume_akhir'=> $volume_akhir[$i],
+				'volume_akhir' => $volume_akhir[$i],
 				'kebutuhan'   => $kebutuhan[$i],
 				'keterangan'  => isset($keterangan[$i]) ? 'Sesuai' : '',
 				'tindakan'    => $tindakan[$i],
@@ -132,7 +134,7 @@ class Larutan_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('larutan', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'larutan_logs',
@@ -150,7 +152,7 @@ class Larutan_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -179,13 +181,12 @@ class Larutan_model extends CI_Model {
 		);
 
 		$this->db->update('larutan', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -214,8 +215,7 @@ class Larutan_model extends CI_Model {
 		);
 
 		$this->db->update('larutan', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -245,7 +245,7 @@ class Larutan_model extends CI_Model {
 	public function get_by_uuid_larutan($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -255,28 +255,33 @@ class Larutan_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_larutan_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, shift, status_produksi, tgl_update_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('larutan');
 
-		$data_sensori = $query->row();  
-		return $data_sensori; 
+		$data_sensori = $query->row();
+		return $data_sensori;
 	}
 
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('larutan', ['plant' => $plant])->result();
+
+		return $this->db->get_where('larutan', [
+			'plant'    => $plant,
+			'is_audit' => 0
+		])->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -294,7 +299,7 @@ class Larutan_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -312,14 +317,14 @@ class Larutan_model extends CI_Model {
 
 		return false;
 	}
-	
+
 	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, shift, status_produksi, tgl_update_produksi');
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -333,5 +338,49 @@ class Larutan_model extends CI_Model {
 		return $query->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
 
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('larutan')->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('larutan')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('larutan')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('larutan')
+			->result();
+	}
 }

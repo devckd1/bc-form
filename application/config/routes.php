@@ -93,6 +93,9 @@ $route['pengayakan/diketahui'] = 'form/pengayakan/diketahui';
 $route['pengayakan/statusprod/(:any)'] = 'form/pengayakan/statusprod/$1';
 $route['pengayakan/delete/(:any)'] = 'form/pengayakan/delete/$1';
 $route['pengayakan/logs'] = 'form/pengayakan_logs/index';
+$route['pengayakan/copy-to-audit/(:any)'] = 'form/pengayakan/copy_to_audit/$1';
+$route['pengayakan/audit'] = 'form/pengayakan/audit';
+$route['pengayakan/cetak-audit'] = 'form/pengayakan/cetak_audit';
 
 $route['produksi'] = 'form/produksi';
 $route['produksi/tambah'] = 'form/produksi/tambah';
@@ -115,6 +118,9 @@ $route['produksi/delete/(:any)'] = 'form/produksi/delete/$1';
 $route['produksi/get_produk_by_tanggal'] = 'form/produksi/get_produk_by_tanggal';
 $route['produksi/export_excel'] = 'form/produksi/export_excel';
 $route['produksi/logs'] = 'form/produksi_logs/index';
+$route['produksi/copy-to-audit/(:any)'] = 'form/produksi/copy_to_audit/$1';
+$route['produksi/audit'] = 'form/produksi/audit';
+$route['produksi/cetak-audit'] = 'form/produksi/cetak_audit';
 
 $route['proses'] = 'form/proses';
 $route['proses/tambah'] = 'form/proses/tambah';
@@ -127,6 +133,8 @@ $route['proses/status/(:any)'] = 'form/proses/status/$1';
 $route['proses/delete/(:any)'] = 'form/proses/delete/$1';
 $route['proses/logs'] = 'form/proses_logs/index';
 $route['proses/export_excel'] = 'form/proses/export_excel';
+$route['proses/copy-to-audit/(:any)'] = 'form/proses/copy_to_audit/$1';
+$route['proses/audit'] = 'form/proses/audit';
 
 $route['metal'] = 'form/metal';
 $route['metal/tambah'] = 'form/metal/tambah';
@@ -141,6 +149,9 @@ $route['metal/diketahui'] = 'form/metal/diketahui';
 $route['metal/statusprod/(:any)'] = 'form/metal/statusprod/$1';
 $route['metal/delete/(:any)'] = 'form/metal/delete/$1';
 $route['metal/logs'] = 'form/metal_logs/index';
+$route['metal/copy-to-audit/(:any)'] = 'form/metal/copy_to_audit/$1';
+$route['metal/audit'] = 'form/metal/audit';
+$route['metal/cetak-audit'] = 'form/metal/cetak_audit';
 
 $route['falserejection'] = 'form/falserejection';
 $route['falserejection/tambah'] = 'form/falserejection/tambah';
@@ -166,6 +177,9 @@ $route['kontaminasi/statusprod/(:any)'] = 'form/kontaminasi/statusprod/$1';
 $route['kontaminasi/delete/(:any)'] = 'form/kontaminasi/delete/$1';
 $route['kontaminasi/logs'] = 'form/kontaminasi_logs/index';
 $route['kontaminasi/export_excel'] = 'form/kontaminasi/export_excel';
+$route['kontaminasi/copy-to-audit/(:any)'] = 'form/kontaminasi/copy_to_audit/$1';
+$route['kontaminasi/audit'] = 'form/kontaminasi/audit';
+$route['kontaminasi/cetak-audit'] = 'form/kontaminasi/cetak_audit';
 
 $route['kekuatanmagnet'] = 'form/kekuatanmagnet';
 $route['kekuatanmagnet/tambah'] = 'form/kekuatanmagnet/tambah';
@@ -202,6 +216,9 @@ $route['thermometer/diketahui'] = 'form/thermometer/diketahui';
 $route['thermometer/statusprod/(:any)'] = 'form/thermometer/statusprod/$1';
 $route['thermometer/delete/(:any)'] = 'form/thermometer/delete/$1';
 $route['thermometer/logs'] = 'form/thermometer_logs/index';
+$route['thermometer/copy-to-audit/(:any)'] = 'form/thermometer/copy_to_audit/$1';
+$route['thermometer/audit'] = 'form/thermometer/audit';
+$route['thermometer/cetak-audit'] = 'form/thermometer/cetak_audit';
 
 $route['timbangan'] = 'form/timbangan';
 $route['timbangan/tambah'] = 'form/timbangan/tambah';
@@ -214,6 +231,9 @@ $route['timbangan/diketahui'] = 'form/timbangan/diketahui';
 $route['timbangan/statusprod/(:any)'] = 'form/timbangan/statusprod/$1';
 $route['timbangan/delete/(:any)'] = 'form/timbangan/delete/$1';
 $route['timbangan/logs'] = 'form/timbangan_logs/index';
+$route['timbangan/copy-to-audit/(:any)'] = 'form/timbangan/copy_to_audit/$1';
+$route['timbangan/audit'] = 'form/timbangan/audit';
+$route['timbangan/cetak-audit'] = 'form/timbangan/cetak_audit';
 
 $route['releasepacking'] = 'form/releasepacking';
 $route['releasepacking/tambah'] = 'form/releasepacking/tambah';
@@ -226,6 +246,9 @@ $route['releasepacking/diketahui'] = 'form/releasepacking/diketahui';
 $route['releasepacking/statusprod/(:any)'] = 'form/releasepacking/statusprod/$1';
 $route['releasepacking/delete/(:any)'] = 'form/releasepacking/delete/$1';
 $route['releasepacking/logs'] = 'form/releasepacking_logs/index';
+$route['releasepacking/copy-to-audit/(:any)'] = 'form/releasepacking/copy_to_audit/$1';
+$route['releasepacking/audit'] = 'form/releasepacking/audit';
+$route['releasepacking/cetak-audit'] = 'form/releasepacking/cetak_audit';
 
 $route['pengemasan'] = 'form/pengemasan';
 $route['pengemasan/tambah'] = 'form/pengemasan/tambah';
@@ -251,6 +274,9 @@ $route['chiller/diketahui'] = 'form/chiller/diketahui';
 $route['chiller/statusprod/(:any)'] = 'form/chiller/statusprod/$1';
 $route['chiller/export-excel'] = 'form/chiller/export_excel';
 $route['chiller/logs'] = 'form/chiller_logs/index';
+$route['chiller/audit'] = 'form/chiller/audit';
+$route['chiller/copy-to-audit/(:any)'] = 'form/chiller/copy_to_audit/$1';
+$route['chiller/cetak-audit'] = 'form/chiller/cetak_audit';
 
 $route['sanitasi'] = 'form/sanitasi';
 $route['sanitasi/tambah'] = 'form/sanitasi/tambah';
@@ -263,6 +289,9 @@ $route['sanitasi/diketahui'] = 'form/sanitasi/diketahui';
 $route['sanitasi/statusprod/(:any)'] = 'form/sanitasi/statusprod/$1';
 $route['sanitasi/delete/(:any)'] = 'form/sanitasi/delete/$1';
 $route['sanitasi/logs'] = 'form/sanitasi_logs/index';
+$route['sanitasi/audit'] = 'form/sanitasi/audit';
+$route['sanitasi/cetak-audit'] = 'form/sanitasi/cetak_audit';
+$route['sanitasi/copy-to-audit/(:any)'] = 'form/sanitasi/copy_to_audit/$1';
 
 $route['ketidaksesuaian'] = 'form/ketidaksesuaian';
 $route['ketidaksesuaian/tambah'] = 'form/ketidaksesuaian/tambah';
@@ -287,6 +316,9 @@ $route['pemusnahan/diketahui'] = 'form/pemusnahan/diketahui';
 $route['pemusnahan/statusprod/(:any)'] = 'form/pemusnahan/statusprod/$1';
 $route['pemusnahan/delete/(:any)'] = 'form/pemusnahan/delete/$1';
 $route['pemusnahan/logs'] = 'form/pemusnahan_logs/index';
+$route['pemusnahan/copy-to-audit/(:any)'] = 'form/pemusnahan/copy_to_audit/$1';
+$route['pemusnahan/audit'] = 'form/pemusnahan/audit';
+$route['pemusnahan/cetak-audit'] = 'form/pemusnahan/cetak_audit';
 
 $route['kondisikerja'] = 'form/kondisikerja';
 $route['kondisikerja/tambah'] = 'form/kondisikerja/tambah';
@@ -299,6 +331,9 @@ $route['kondisikerja/diketahui'] = 'form/kondisikerja/diketahui';
 $route['kondisikerja/statusprod/(:any)'] = 'form/kondisikerja/statusprod/$1';
 $route['kondisikerja/delete/(:any)'] = 'form/kondisikerja/delete/$1';
 $route['kondisikerja/logs'] = 'form/kondisikerja_logs/index';
+$route['kondisikerja/copy-to-audit/(:any)'] = 'form/kondisikerja/copy_to_audit/$1';
+$route['kondisikerja/audit'] = 'form/kondisikerja/audit';
+$route['kondisikerja/cetak-audit'] = 'form/kondisikerja/cetak_audit';
 
 $route['retain'] = 'form/retain';
 $route['retain/tambah'] = 'form/retain/tambah';
@@ -311,6 +346,8 @@ $route['retain/diketahui'] = 'form/retain/diketahui';
 $route['retain/statusprod/(:any)'] = 'form/retain/statusprod/$1';
 $route['retain/delete/(:any)'] = 'form/retain/delete/$1';
 $route['retain/logs'] = 'form/retain_logs/index';
+$route['retain/copy-to-audit/(:any)'] = 'form/retain/copy_to_audit/$1';
+$route['retain/audit'] = 'form/retain/audit';
 
 $route['kebersihankaryawan'] = 'form/kebersihankaryawan';
 $route['kebersihankaryawan/tambah'] = 'form/kebersihankaryawan/tambah';
@@ -323,6 +360,9 @@ $route['kebersihankaryawan/diketahui'] = 'form/kebersihankaryawan/diketahui';
 $route['kebersihankaryawan/statusprod/(:any)'] = 'form/kebersihankaryawan/statusprod/$1';
 $route['kebersihankaryawan/delete/(:any)'] = 'form/kebersihankaryawan/delete/$1';
 $route['kebersihankaryawan/logs'] = 'form/kebersihankaryawan_logs/index';
+$route['kebersihankaryawan/copy-to-audit/(:any)'] = 'form/kebersihankaryawan/copy_to_audit/$1';
+$route['kebersihankaryawan/audit'] = 'form/kebersihankaryawan/audit';
+$route['kebersihankaryawan/cetak-audit'] = 'form/kebersihankaryawan/cetak_audit';
 
 $route['kebersihanperalatan'] = 'form/kebersihanperalatan';
 $route['kebersihanperalatan/tambah'] = 'form/kebersihanperalatan/tambah';
@@ -335,6 +375,9 @@ $route['kebersihanperalatan/diketahui'] = 'form/kebersihanperalatan/diketahui';
 $route['kebersihanperalatan/statusprod/(:any)'] = 'form/kebersihanperalatan/statusprod/$1';
 $route['kebersihanperalatan/delete/(:any)'] = 'form/kebersihanperalatan/delete/$1';
 $route['kebersihanperalatan/logs'] = 'form/kebersihanperalatan_logs/index';
+$route['kebersihanperalatan/copy-to-audit/(:any)'] = 'form/kebersihanperalatan/copy_to_audit/$1';
+$route['kebersihanperalatan/audit'] = 'form/kebersihanperalatan/audit';
+$route['kebersihanperalatan/cetak-audit'] = 'form/kebersihanperalatan/cetak_audit';
 
 $route['penerimaankemasan'] = 'form/penerimaankemasan';
 $route['penerimaankemasan/tambah'] = 'form/penerimaankemasan/tambah';
@@ -345,6 +388,9 @@ $route['penerimaankemasan/status/(:any)'] = 'form/penerimaankemasan/status/$1';
 $route['penerimaankemasan/cetak'] = 'form/penerimaankemasan/cetak';
 $route['penerimaankemasan/delete/(:any)'] = 'form/penerimaankemasan/delete/$1';
 $route['penerimaankemasan/logs'] = 'form/penerimaankemasan_logs/index';
+$route['penerimaankemasan/copy-to-audit/(:any)'] = 'form/penerimaankemasan/copy_to_audit/$1';
+$route['penerimaankemasan/audit'] = 'form/penerimaankemasan/audit';
+$route['penerimaankemasan/cetak-audit'] = 'form/penerimaankemasan/cetak_audit';
 
 $route['pemeriksaanpengiriman'] = 'form/pemeriksaanpengiriman';
 $route['pemeriksaanpengiriman/tambah'] = 'form/pemeriksaanpengiriman/tambah';
@@ -375,6 +421,9 @@ $route['pemeriksaanchemical/status/(:any)'] = 'form/pemeriksaanchemical/status/$
 $route['pemeriksaanchemical/cetak'] = 'form/pemeriksaanchemical/cetak';
 $route['pemeriksaanchemical/delete/(:any)'] = 'form/pemeriksaanchemical/delete/$1';
 $route['pemeriksaanchemical/logs'] = 'form/pemeriksaanchemical_logs/index';
+$route['pemeriksaanchemical/copy-to-audit/(:any)'] = 'form/pemeriksaanchemical/copy_to_audit/$1';
+$route['pemeriksaanchemical/audit'] = 'form/pemeriksaanchemical/audit';
+$route['pemeriksaanchemical/cetak-audit'] = 'form/pemeriksaanchemical/cetak_audit';
 
 $route['seasoning'] = 'form/seasoning';
 $route['seasoning/tambah'] = 'form/seasoning/tambah';
@@ -385,6 +434,12 @@ $route['seasoning/status/(:any)'] = 'form/seasoning/status/$1';
 $route['seasoning/cetak'] = 'form/seasoning/cetak';
 $route['seasoning/delete/(:any)'] = 'form/seasoning/delete/$1';
 $route['seasoning/logs'] = 'form/seasoning_logs/index';
+$route['seasoning/audit'] = 'form/seasoning/audit';
+$route['seasoning/copy-to-audit/(:any)'] = 'form/seasoning/copy_to_audit/$1';
+$route['seasoning/audit'] = 'form/seasoning/audit';
+$route['seasoning/edit-audit/(:any)'] = 'form/seasoning/edit_audit/$1';
+$route['seasoning/cetak'] = 'form/seasoning/cetak';
+$route['seasoning/cetak_audit'] = 'form/seasoning/cetak_audit';
 
 $route['kebersihanruang'] = 'form/kebersihanruang';
 $route['kebersihanruang/tambah'] = 'form/kebersihanruang/tambah';
@@ -398,6 +453,9 @@ $route['kebersihanruang/statusprod/(:any)'] = 'form/kebersihanruang/statusprod/$
 $route['kebersihanruang/delete/(:any)'] = 'form/kebersihanruang/delete/$1';
 $route['kebersihanruang/logs'] = 'form/kebersihanruang_logs/index';
 $route['kebersihanruang/export_excel'] = 'form/kebersihanruang/export_excel';
+$route['kebersihanruang/audit'] = 'form/kebersihanruang/audit';
+$route['kebersihanruang/copy-to-audit/(:any)'] = 'form/kebersihanruang/copy_to_audit/$1';
+$route['kebersihanruang/cetak-audit'] = 'form/kebersihanruang/cetak_audit';
 
 $route['sanitasiwarehouse'] = 'form/sanitasiwarehouse';
 $route['sanitasiwarehouse/tambah'] = 'form/sanitasiwarehouse/tambah';
@@ -410,6 +468,9 @@ $route['sanitasiwarehouse/diketahui'] = 'form/sanitasiwarehouse/diketahui';
 $route['sanitasiwarehouse/statuswh/(:any)'] = 'form/sanitasiwarehouse/statuswh/$1';
 $route['sanitasiwarehouse/delete/(:any)'] = 'form/sanitasiwarehouse/delete/$1';
 $route['sanitasiwarehouse/logs'] = 'form/sanitasiwarehouse_logs/index';
+$route['sanitasiwarehouse/copy-to-audit/(:any)'] = 'form/sanitasiwarehouse/copy_to_audit/$1';
+$route['sanitasiwarehouse/audit'] = 'form/sanitasiwarehouse/audit';
+$route['sanitasiwarehouse/cetak-audit'] = 'form/sanitasiwarehouse/cetak_audit';
 
 $route['loading'] = 'form/loading';
 $route['loading/tambah'] = 'form/loading/tambah';
@@ -422,6 +483,8 @@ $route['loading/diketahui'] = 'form/loading/diketahui';
 $route['loading/statuswh/(:any)'] = 'form/loading/statuswh/$1';
 $route['loading/delete/(:any)'] = 'form/loading/delete/$1';
 $route['loading/logs'] = 'form/loading_logs/index';
+$route['loading/copy-to-audit/(:any)'] = 'form/loading/copy_to_audit/$1';
+$route['loading/audit'] = 'form/loading/audit';
 
 $route['disposisi'] = 'form/disposisi';
 $route['disposisi/tambah'] = 'form/disposisi/tambah';
@@ -434,6 +497,8 @@ $route['disposisi/diketahui'] = 'form/disposisi/diketahui';
 $route['disposisi/statusprod/(:any)'] = 'form/disposisi/statusprod/$1';
 $route['disposisi/delete/(:any)'] = 'form/disposisi/delete/$1';
 $route['disposisi/logs'] = 'form/disposisi_logs/index';
+$route['disposisi/copy-to-audit/(:any)'] = 'form/disposisi/copy_to_audit/$1';
+$route['disposisi/audit'] = 'form/disposisi/audit';
 
 $route['magnettrap'] = 'form/magnettrap';
 $route['magnettrap/tambah'] = 'form/magnettrap/tambah';
@@ -459,6 +524,9 @@ $route['kebersihanmesin/diketahui'] = 'form/kebersihanmesin/diketahui';
 $route['kebersihanmesin/statusprod/(:any)'] = 'form/kebersihanmesin/statusprod/$1';
 $route['kebersihanmesin/delete/(:any)'] = 'form/kebersihanmesin/delete/$1';
 $route['kebersihanmesin/logs'] = 'form/kebersihanmesin_logs/index';
+$route['kebersihanmesin/copy-to-audit/(:any)'] = 'form/kebersihanmesin/copy_to_audit/$1';
+$route['kebersihanmesin/audit'] = 'form/kebersihanmesin/audit';
+$route['kebersihanmesin/cetak-audit'] = 'form/kebersihanmesin/cetak_audit';
 
 $route['sensori'] = 'form/sensori';
 $route['sensori/tambah'] = 'form/sensori/tambah';
@@ -471,6 +539,9 @@ $route['sensori/diketahui'] = 'form/sensori/diketahui';
 $route['sensori/statusprod/(:any)'] = 'form/sensori/statusprod/$1';
 $route['sensori/delete/(:any)'] = 'form/sensori/delete/$1';
 $route['sensori/logs'] = 'form/sensori_logs/index';
+$route['sensori/copy-to-audit/(:any)'] = 'form/sensori/copy_to_audit/$1';
+$route['sensori/audit'] = 'form/sensori/audit';
+$route['sensori/cetak-audit'] = 'form/sensori/cetak_audit';
 
 $route['reagen'] = 'form/reagen';
 $route['reagen/tambah'] = 'form/reagen/tambah';
@@ -496,6 +567,9 @@ $route['residu/status/(:any)'] = 'form/residu/status/$1';
 $route['residu/cetak'] = 'form/residu/cetak';
 $route['residu/delete/(:any)'] = 'form/residu/delete/$1';
 $route['residu/logs'] = 'form/residu_logs/index';
+$route['residu/copy-to-audit/(:any)'] = 'form/residu/copy_to_audit/$1';
+$route['residu/audit'] = 'form/residu/audit';
+$route['residu/cetak-audit'] = 'form/residu/cetak_audit';
 
 $route['larutan'] = 'form/larutan';
 $route['larutan/tambah'] = 'form/larutan/tambah';
@@ -508,6 +582,9 @@ $route['larutan/diketahui'] = 'form/larutan/diketahui';
 $route['larutan/statusprod/(:any)'] = 'form/larutan/statusprod/$1';
 $route['larutan/delete/(:any)'] = 'form/larutan/delete/$1';
 $route['larutan/logs'] = 'form/larutan_logs/index';
+$route['larutan/copy-to-audit/(:any)'] = 'form/larutan/copy_to_audit/$1';
+$route['larutan/audit'] = 'form/larutan/audit';
+$route['larutan/cetak-audit'] = 'form/larutan/cetak_audit';
 
 $route['analisis'] = 'form/analisis';
 $route['analisis/tambah'] = 'form/analisis/tambah';
@@ -524,6 +601,9 @@ $route['analisis/statuslab/(:any)'] = 'form/analisis/statuslab/$1';
 $route['analisis/ajax-detail/(:any)'] = 'form/analisis/ajax_detail/$1';
 $route['analisis/delete/(:any)'] = 'form/analisis/delete/$1';
 $route['analisis/logs'] = 'form/analisis_logs/index';
+$route['analisis/copy-to-audit/(:any)'] = 'form/analisis/copy_to_audit/$1';
+$route['analisis/audit'] = 'form/analisis/audit';
+$route['analisis/cetak-audit'] = 'form/analisis/cetak_audit';
 
 $route['inventaris'] = 'form/inventaris';
 $route['inventaris/tambah'] = 'form/inventaris/tambah';
@@ -535,6 +615,8 @@ $route['inventaris/cetak'] = 'form/inventaris/cetak';
 $route['inventaris/check/(:any)'] = 'form/inventaris/check/$1';
 $route['inventaris/delete/(:any)'] = 'form/inventaris/delete/$1';
 $route['inventaris/logs'] = 'form/inventaris_logs/index';
+$route['inventaris/copy-to-audit/(:any)'] = 'form/inventaris/copy_to_audit/$1';
+$route['inventaris/audit'] = 'form/inventaris/audit';
 
 $route['pecahbelah'] = 'form/pecahbelah';
 $route['pecahbelah/tambah'] = 'form/pecahbelah/tambah';
@@ -548,6 +630,9 @@ $route['pecahbelah/statusprod/(:any)'] = 'form/pecahbelah/statusprod/$1';
 $route['pecahbelah/check/(:any)'] = 'form/pecahbelah/check/$1';
 $route['pecahbelah/delete/(:any)'] = 'form/pecahbelah/delete/$1';
 $route['pecahbelah/logs'] = 'form/pecahbelah_logs/index';
+$route['pecahbelah/copy-to-audit/(:any)'] = 'form/pecahbelah/copy_to_audit/$1';
+$route['pecahbelah/audit'] = 'form/pecahbelah/audit';
+$route['pecahbelah/cetak-audit'] = 'form/pecahbelah/cetak_audit';
 
 $route['suhu'] = 'form/suhu';
 $route['suhu/tambah'] = 'form/suhu/tambah';
@@ -562,6 +647,9 @@ $route['suhu/delete/(:any)'] = 'form/suhu/delete/$1';
 $route['suhu/export-excel'] = 'form/suhu/export_excel';
 $route['suhu/export-excel-salatiga'] = 'form/suhu/export_excel_salatiga';
 $route['suhu/logs'] = 'form/suhu_logs/index';
+$route['suhu/audit'] = 'form/suhu/audit';
+$route['suhu/cetak_audit'] = 'form/suhu/cetak_audit';
+$route['suhu/copy-to-audit/(:any)'] = 'form/suhu/copy_to_audit/$1';
 
 $route['gosong'] = 'form/gosong';
 $route['gosong/tambah'] = 'form/gosong/tambah';
@@ -576,6 +664,9 @@ $route['gosong/delete/(:any)'] = 'form/gosong/delete/$1';
 $route['gosong/export-excel'] = 'form/gosong/export_excel';
 $route['gosong/logs'] = 'form/gosong_logs/index';
 $route['gosong/export_excel'] = 'form/gosong/export_excel';
+$route['gosong/copy-to-audit/(:any)'] = 'form/gosong/copy_to_audit/$1';
+$route['gosong/audit'] = 'form/gosong/audit';
+$route['gosong/cetak-audit'] = 'form/gosong/cetak_audit';
 
 // rotes iot 
 $route['iot/suhu/(:any)'] = 'iot/suhu/$1';

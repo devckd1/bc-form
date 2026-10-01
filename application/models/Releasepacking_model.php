@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Releasepacking_model extends CI_Model {
-	
+class Releasepacking_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -22,7 +24,7 @@ class Releasepacking_model extends CI_Model {
 				'field' => 'kode_produksi',
 				'label' => 'Product Code',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'best_before',
 				'label' => 'Best Before',
@@ -67,8 +69,7 @@ class Releasepacking_model extends CI_Model {
 		);
 
 		$this->db->insert('release_packing', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function update($uuid)
@@ -80,7 +81,7 @@ class Releasepacking_model extends CI_Model {
 		$best_before = $this->input->post('best_before');
 		$jumlah = $this->input->post('jumlah');
 		$keterangan = $this->input->post('keterangan');
-		$old_data = $this->db->get_where('release_packing', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('release_packing', ['uuid' => $uuid])->row_array();
 		$data = array(
 			'username' => $username,
 			'date' => $date,
@@ -90,32 +91,31 @@ class Releasepacking_model extends CI_Model {
 			'jumlah' => $jumlah,
 			'keterangan' => $keterangan,
 
-			'modified_at' => date("Y-m-d H:i:s") 
+			'modified_at' => date("Y-m-d H:i:s")
 		);
 
 		$this->db->update('release_packing', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('release_packing', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('release_packing', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus release_packing_logs
+			// simpan log ke tabel khusus release_packing_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'release_packing_logs', // nama tabel log khusus release_packing
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'release_packing_logs', // nama tabel log khusus release_packing
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -125,7 +125,7 @@ class Releasepacking_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -144,13 +144,12 @@ class Releasepacking_model extends CI_Model {
 		);
 
 		$this->db->update('release_packing', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -160,7 +159,7 @@ class Releasepacking_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -179,58 +178,73 @@ class Releasepacking_model extends CI_Model {
 		);
 
 		$this->db->update('release_packing', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
 	{
+		$this->db->where('is_audit', 0);
 		$this->db->order_by('created_at', 'DESC');
-		$data = $this->db->get('release_packing')->result();
-		return $data;
+
+		return $this->db
+			->get('release_packing')
+			->result();
 	}
 
 	public function get_by_uuid($uuid)
 	{
-		$data = $this->db->get_where('release_packing', array('uuid' => $uuid))->row();
-		return $data;
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('release_packing')
+			->row();
 	}
 
 	public function get_by_uuid_releasepacking($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
-		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
 		$this->db->where_in('uuid', $uuid_array);
+		$this->db->where('is_audit', 0);
+
 		$query = $this->db->get('release_packing');
 
-		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
-
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+
+		return false;
 	}
 
 	public function get_by_uuid_releasepacking_verif($uuid_array)
 	{
+		if (empty($uuid_array)) {
+			return false;
+		}
+
 		$this->db->select('nama_spv, tgl_update_spv, username, date');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
+
 		$query = $this->db->get('release_packing');
 
-		$data_release_packing = $query->row();  
-		return $data_release_packing; 
+		return $query->row();
 	}
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('release_packing', ['plant' => $plant])->result();
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->get('release_packing')
+			->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -246,15 +260,15 @@ class Releasepacking_model extends CI_Model {
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
-		$query = $this->db->get('release_packing');
 
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
+		$query = $this->db->get('release_packing');
 
 		if ($query->num_rows() > 0) {
 			return $query->result();
@@ -267,16 +281,77 @@ class Releasepacking_model extends CI_Model {
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date');
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
+
 		$query = $this->db->get('release_packing');
 
 		return $query->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('release_packing')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('release_packing')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('release_packing')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('date', 'ASC');
+
+		$query = $this->db->get('release_packing');
+
+		if ($query->num_rows() > 0) {
+			return $query->result();
+		}
+
+		return false;
+	}
 }

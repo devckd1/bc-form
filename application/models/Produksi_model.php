@@ -1103,8 +1103,63 @@ class Produksi_model extends CI_Model
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('mixing', ['plant' => $plant])->result();
+
+		return $this->db->get_where('mixing', [
+			'plant'    => $plant,
+			'is_audit' => 0
+		])->result();
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('mixing')->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('mixing')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('mixing')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant, $shift = null)
+	{
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('mixing')->result();
 	}
 
 	public function count_all_by_plant($plant, $keyword = null)
@@ -1183,29 +1238,29 @@ class Produksi_model extends CI_Model
 			->row();
 	}
 
-public function get_produksi_by_plant_and_date($plant_uuid, $tanggal)
-{
-    return $this->db
-        ->where('plant', $plant_uuid)
-        ->where('date', $tanggal)
-        ->order_by('id', 'DESC')
-        ->limit(1)
-        ->get('mixing')
-        ->row();
-}
+	public function get_produksi_by_plant_and_date($plant_uuid, $tanggal)
+	{
+		return $this->db
+			->where('plant', $plant_uuid)
+			->where('date', $tanggal)
+			->order_by('id', 'DESC')
+			->limit(1)
+			->get('mixing')
+			->row();
+	}
 
-public function get_last_produksi_with_packing($plant_uuid)
-{
-    return $this->db
-        ->where('plant', $plant_uuid)
-        ->where('proses_packing IS NOT NULL', null, false)
-        ->where('proses_packing <>', '')
-        ->order_by('date', 'DESC')
-        ->order_by('id', 'DESC')
-        ->limit(1)
-        ->get('mixing')
-        ->row();
-}
+	public function get_last_produksi_with_packing($plant_uuid)
+	{
+		return $this->db
+			->where('plant', $plant_uuid)
+			->where('proses_packing IS NOT NULL', null, false)
+			->where('proses_packing <>', '')
+			->order_by('date', 'DESC')
+			->order_by('id', 'DESC')
+			->limit(1)
+			->get('mixing')
+			->row();
+	}
 
 	public function get_produk_by_tanggal($tanggal)
 	{
@@ -1224,4 +1279,6 @@ public function get_last_produksi_with_packing($plant_uuid)
 			'nama_produk' => $produk
 		])->result();
 	}
+
+	
 }

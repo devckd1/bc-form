@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Analisis_model extends CI_Model {
+class Analisis_model extends CI_Model
+{
 
 	protected $table = 'analisis_lab';
-	
+
 	public function rules()
 	{
 		return [
@@ -99,8 +101,8 @@ class Analisis_model extends CI_Model {
 		$best_before = $this->input->post('best_before');
 		$jumlah_sampel = $this->input->post('jumlah_sampel');
 
-  // ambil data lama sebelum update
-		$old_data = $this->db->get_where('analisis_lab', ['uuid'=>$uuid])->row_array();
+		// ambil data lama sebelum update
+		$old_data = $this->db->get_where('analisis_lab', ['uuid' => $uuid])->row_array();
 
 		$data = array(
 			'username' => $username,
@@ -117,18 +119,18 @@ class Analisis_model extends CI_Model {
 
 		$this->db->update('analisis_lab', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('analisis_lab', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('analisis_lab', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus analisis_logs
+			// simpan log ke tabel khusus analisis_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'analisis_logs', // nama tabel log khusus analisis_lab
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'analisis_logs', // nama tabel log khusus analisis_lab
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
@@ -162,7 +164,7 @@ class Analisis_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -191,13 +193,12 @@ class Analisis_model extends CI_Model {
 		);
 
 		$this->db->update('analisis_lab', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -226,13 +227,12 @@ class Analisis_model extends CI_Model {
 		);
 
 		$this->db->update('analisis_lab', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diterima()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_lab',
 				'label' => 'Status',
@@ -261,26 +261,34 @@ class Analisis_model extends CI_Model {
 		);
 
 		$this->db->update('analisis_lab', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
 	{
-		$this->db->order_by('created_at', 'DESC');
-		$data = $this->db->get('analisis_lab')->result();
-		return $data;
+		return $this->db
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->get('analisis_lab')
+			->result();
 	}
 
 	public function get_by_uuid($uuid)
 	{
-		$data = $this->db->get_where('analisis_lab', array('uuid' => $uuid))->row();
-		return $data;
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('analisis_lab')
+			->row();
 	}
 
 	public function get_bagian_by_uuid($uuid)
 	{
-		return $this->db->get_where('analisis_lab', ['uuid' => $uuid])->result_array();
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('analisis_lab')
+			->result_array();
 	}
 
 	public function get_details_by_uuid($uuid)
@@ -290,50 +298,81 @@ class Analisis_model extends CI_Model {
 
 	public function get_detail($uuid)
 	{
-		return $this->db->get_where('analisis_lab', ['uuid' => $uuid])->row();
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('analisis_lab')
+			->row();
 	}
 
 	public function get_by_uuid_analisis($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
-		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
 		$this->db->where_in('uuid', $uuid_array);
+		$this->db->where('is_audit', 0);
+
 		$query = $this->db->get('analisis_lab');
 
-		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
-
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+
+		return false;
 	}
 
 	public function get_by_uuid_analisis_verif($uuid_array)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, tipe_sampel, penyimpanan, nama_lab, tgl_update_lab, status_lab, catatan_lab, status_produksi, tgl_update_produksi');
-		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
-		$query = $this->db->get('analisis_lab');
+		if (empty($uuid_array)) {
+			return false;
+		}
 
-		$data_analisis = $query->row();  
-		return $data_analisis; 
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        nama_produksi,
+        tipe_sampel,
+        penyimpanan,
+        nama_lab,
+        tgl_update_lab,
+        status_lab,
+        catatan_lab,
+        status_produksi,
+        tgl_update_produksi
+    ');
+
+		$this->db->where_in('uuid', $uuid_array);
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
+
+		return $this->db
+			->get('analisis_lab')
+			->row();
 	}
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('analisis_lab', ['plant' => $plant])->result();
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->get('analisis_lab')
+			->result();
 	}
-	
+
 	public function delete_by_uuid($uuid)
 	{
-		$this->db->where('uuid', $uuid);
-		return $this->db->delete('analisis_lab');
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->delete('analisis_lab');
 	}
 
 	public function get_by_date($tanggal, $plant = null)
@@ -343,15 +382,15 @@ class Analisis_model extends CI_Model {
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
-		$query = $this->db->get('analisis_lab');
 
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
+		$query = $this->db->get('analisis_lab');
 
 		if ($query->num_rows() > 0) {
 			return $query->result();
@@ -362,19 +401,94 @@ class Analisis_model extends CI_Model {
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, tipe_sampel, penyimpanan, nama_lab, tgl_update_lab, status_lab, catatan_lab, status_produksi, tgl_update_produksi');
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        nama_produksi,
+        tipe_sampel,
+        penyimpanan,
+        nama_lab,
+        tgl_update_lab,
+        status_lab,
+        catatan_lab,
+        status_produksi,
+        tgl_update_produksi
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('analisis_lab');
 
-		return $query->row();
+		return $this->db
+			->get('analisis_lab')
+			->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
 
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('analisis_lab')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('analisis_lab')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('analisis_lab')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('date', 'ASC');
+
+		$query = $this->db->get('analisis_lab');
+
+		if ($query->num_rows() > 0) {
+			return $query->result();
+		}
+
+		return false;
+	}
 }

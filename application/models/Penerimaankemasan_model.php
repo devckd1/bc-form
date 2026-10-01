@@ -1,10 +1,12 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Penerimaankemasan_model extends CI_Model {
-	
+class Penerimaankemasan_model extends CI_Model
+{
+
 	public function rules()
 	{
 		return [
@@ -35,7 +37,7 @@ class Penerimaankemasan_model extends CI_Model {
 			['field' => 'penerimaan', 'label' => 'received'],
 			['field' => 'keterangan', 'label' => 'Notes']
 		];
-	} 
+	}
 
 	public function insert($file_name)
 	{
@@ -69,8 +71,8 @@ class Penerimaankemasan_model extends CI_Model {
 		$keterangan = $this->input->post('keterangan');
 		$status_spv = "0";
 
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
-		if(empty($kondisi_mobil)) {
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
 		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
@@ -141,9 +143,9 @@ class Penerimaankemasan_model extends CI_Model {
 		$coa = $this->input->post('coa');
 		$penerimaan = $this->input->post('penerimaan');
 		$keterangan = $this->input->post('keterangan');
-		$old_data = $this->db->get_where('penerimaan_kemasan', ['uuid'=>$uuid])->row_array();
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
-		if(empty($kondisi_mobil)) {
+		$old_data = $this->db->get_where('penerimaan_kemasan', ['uuid' => $uuid])->row_array();
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
 		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
@@ -183,15 +185,15 @@ class Penerimaankemasan_model extends CI_Model {
 		$this->db->where('uuid', $uuid);
 		$result = $this->db->update('penerimaan_kemasan', $data);
 
-		if(!$result){
+		if (!$result) {
 			log_message('error', 'Update gagal: ' . $this->db->last_query());
 			log_message('error', 'DB error: ' . json_encode($this->db->error()));
 		}
-		
+
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('penerimaan_kemasan', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'penerimaan_kemasan_logs',
@@ -208,8 +210,8 @@ class Penerimaankemasan_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
-			[ 
+		return [
+			[
 				'field' => 'status_spv',
 				'label' => 'Date',
 				'rules' => 'required'
@@ -237,13 +239,12 @@ class Penerimaankemasan_model extends CI_Model {
 		);
 
 		$this->db->update('penerimaan_kemasan', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -273,71 +274,95 @@ class Penerimaankemasan_model extends CI_Model {
 		);
 
 		$this->db->update('penerimaan_kemasan', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
 	{
+		$this->db->where('is_audit', 0);
 		$this->db->order_by('created_at', 'DESC');
-		$data = $this->db->get('penerimaan_kemasan')->result();
-		return $data;
+
+		return $this->db
+			->get('penerimaan_kemasan')
+			->result();
 	}
 
 	public function get_by_uuid($uuid)
 	{
-		$data = $this->db->get_where('penerimaan_kemasan', array('uuid' => $uuid))->row();
-		return $data;
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('penerimaan_kemasan')
+			->row();
 	}
 
 	public function get_by_uuid_penerimaankemasan($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
-		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
 		$this->db->where_in('uuid', $uuid_array);
+		$this->db->where('is_audit', 0);
+
 		$query = $this->db->get('penerimaan_kemasan');
 
-		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
-
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+
+		return false;
 	}
 
 	public function get_by_uuid_penerimaankemasan_verif($uuid_array)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, shift');
+		if (empty($uuid_array)) {
+			return false;
+		}
+
+		$this->db->select(
+			'nama_spv, tgl_update_spv, username, date, shift'
+		);
+
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
+
 		$query = $this->db->get('penerimaan_kemasan');
 
-		$data_penerimaan_kemasan = $query->row();  
-		return $data_penerimaan_kemasan; 
+		return $query->row();
 	}
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('penerimaan_kemasan', ['plant' => $plant])->result();
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->get('penerimaan_kemasan')
+			->result();
 	}
 
-	public function get_latest_kemasan() {
-		$user_plant = $this->session->userdata('plant'); 
+	public function get_latest_kemasan()
+	{
+		$user_plant = $this->session->userdata('plant');
 
-		$this->db->select('jenis_kemasan, kode_produksi, pemasok, jumlah_datang');
+		$this->db->select(
+			'jenis_kemasan, kode_produksi, pemasok, jumlah_datang'
+		);
+
 		$this->db->from('penerimaan_kemasan');
-		$this->db->where('plant', $user_plant); 
+
+		$this->db->where('plant', $user_plant);
+		$this->db->where('is_audit', 0);
+
 		$this->db->order_by('created_at', 'DESC');
 		$this->db->limit(10);
 
-		$query = $this->db->get();
-		return $query->result_array();
+		return $this->db->get()->result_array();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -353,15 +378,15 @@ class Penerimaankemasan_model extends CI_Model {
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
-		$query = $this->db->get('penerimaan_kemasan');
 
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
+		$query = $this->db->get('penerimaan_kemasan');
 
 		if ($query->num_rows() > 0) {
 			return $query->result();
@@ -372,19 +397,82 @@ class Penerimaankemasan_model extends CI_Model {
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, created_at');
+		$this->db->select(
+			'nama_spv, tgl_update_spv, username, date, shift, created_at'
+		);
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
+
 		$query = $this->db->get('penerimaan_kemasan');
 
 		return $query->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
 
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('penerimaan_kemasan')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('penerimaan_kemasan')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('penerimaan_kemasan')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('date', 'ASC');
+
+		$query = $this->db->get('penerimaan_kemasan');
+
+		if ($query->num_rows() > 0) {
+			return $query->result();
+		}
+
+		return false;
+	}
 }

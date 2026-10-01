@@ -66,6 +66,15 @@
 						</tr>
 					</tbody>
 				</table>
+				<div class="form-group text-right">
+					<a href="<?= base_url('kebersihankaryawan/audit'); ?>"
+						class="btn btn-info btn-sm shadow-sm">
+
+						<i class="fas fa-clipboard-check mr-1"></i>
+						Data Audit
+
+					</a>
+				</div>
 			</div>
 
 			<div class="table-responsive">
@@ -125,9 +134,21 @@
 									?>
 								</td>
 								<td class="text-center">
-									<a href="<?= base_url('kebersihankaryawan/status/' . $val->uuid) ?>" class="btn btn-warning btn-icon-split">
+									<a href="<?= base_url('kebersihankaryawan/status/' . $val->uuid) ?>" class="btn btn-warning btn-icon-split btn-sm">
 										<span class="text">Verifikasi</span>
 									</a>
+
+									<?php if ((int)$val->is_audit === 0): ?>
+
+										<a href="<?= base_url('kebersihankaryawan/copy-to-audit/' . $val->uuid); ?>"
+											class="btn btn-info btn-icon-split btn-sm">
+											<span class="text">
+												Kirim Audit
+											</span>
+
+										</a>
+
+									<?php endif; ?>
 								</td>
 							</tr>
 						<?php endforeach ?>

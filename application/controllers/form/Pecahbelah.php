@@ -19,6 +19,7 @@ class Pecahbelah extends MY_Controller
 		$this->load->model('auth_model');
 		$this->load->model('pecahbelah_model');
 		$this->load->model('bendapecah_model');
+		$this->load->library('audit_library');
 		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
@@ -168,6 +169,55 @@ class Pecahbelah extends MY_Controller
 
 		$this->active_nav = 'verifikasi-pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-status', $data);
+	}
+
+	public function copy_to_audit($uuid)
+	{
+		if (empty($uuid)) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'UUID data tidak ditemukan.'
+			);
+
+			redirect('pecahbelah/verifikasi');
+			return;
+		}
+
+		$audit_uuid = $this->audit_library->copy_to_audit(
+			'benda_pecah',
+			$uuid
+		);
+
+		if (!$audit_uuid) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pecah Belah tidak ditemukan atau gagal dibuat sebagai Audit.'
+			);
+
+			redirect('pecahbelah/verifikasi');
+			return;
+		}
+
+		$this->session->set_flashdata(
+			'success_msg',
+			'Data Pecah Belah berhasil dikirim ke Audit.'
+		);
+
+		redirect('pecahbelah/verifikasi');
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'pecahbelah' => $this->pecahbelah_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'verifikasi-pecahbelah';
+
+		$this->render(
+			'form/pecahbelah/pecahbelah-audit',
+			$data
+		);
 	}
 
 	// public function diketahui()
@@ -534,6 +584,576 @@ class Pecahbelah extends MY_Controller
 		}
 		$pdf->setPrintFooter(false);
 		$filename = "Checklist pecahbelah Peralatan QC_{$formatted_date2}.pdf";
+		$pdf->Output($filename, 'I');
+	}
+
+	public function cetak_audit()
+	{
+		$tanggal = $this->input->post('tanggal');
+
+		if (empty($tanggal)) {
+			show_error('Tanggal wajib dipilih', 404);
+		}
+
+		$plant = $this->session->userdata('plant');
+
+		$allData = [];
+
+		foreach ([1, 2, 3] as $shift) {
+
+			$detail = $this->pecahbelah_model
+				->get_audit_by_date($tanggal, $plant, $shift);
+
+			$verif = $detail;
+
+			if (!empty($detail)) {
+
+				$allData[] = [
+					'shift'  => $shift,
+					'detail' => $detail,
+					'verif'  => $verif
+				];
+			}
+		}
+
+		if (empty($allData)) {
+			show_error('Data audit tidak ditemukan', 404);
+		}
+
+		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
+
+		$pdf = new TCPDF(
+			PDF_PAGE_ORIENTATION,
+			PDF_UNIT,
+			'LEGAL',
+			true,
+			'UTF-8',
+			false
+		);
+
+		$pdf->setPrintHeader(false);
+		$pdf->setPrintFooter(false);
+		$pdf->SetMargins(10, 14, 10);
+
+		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
+
+		$date = new DateTime($tanggal);
+		$formatted_date  = date('l, d F Y', $date->getTimestamp());
+		$formatted_date2 = date('l, d F Y', $date->getTimestamp());
+
+		$this->load->model('pegawai_model');
+
+		foreach ($allData as $shiftData) {
+
+			$pdf->AddPage();
+
+			$pdf->SetFont('times', 'B', 10);
+
+			$logo_path = FCPATH . 'assets/img/cpi-logo.png';
+
+			if (file_exists($logo_path)) {
+				$pdf->Image($logo_path, 10, 10, 10);
+			}
+
+			$pdf->SetFont('times', 'B', 7);
+
+			$pdf->SetXY(25, 10);
+			$pdf->Cell(0, 3, 'PT. CHAROEN POKPHAND INDONESIA', 0, 1);
+
+			$pdf->SetXY(25, 13);
+			$pdf->Cell(0, 3, 'FOOD DIVISION', 0, 1);
+
+			$pdf->Ln(4);
+
+			$pdf->SetFont('times', 'B', 10);
+			$pdf->MultiCell(
+				0,
+				5,
+				'PEMERIKSAAN BENDA MUDAH PECAH - AUDIT',
+				0,
+				'C'
+			);
+
+			$pdf->Ln(3);
+
+			$shift = $shiftData['shift'];
+
+			$data['pecahbelah'] = !empty($shiftData['verif'])
+				? $shiftData['verif'][0]
+				: null;
+
+			$pecahbelah_data = $shiftData['detail'];
+
+			// ===========================
+			// JAM
+			// ===========================
+			if (!empty($data['pecahbelah'])) {
+
+				$awal = $data['pecahbelah']->created_at;
+				$jam_awal = date('H:i', strtotime($awal));
+
+				$akhir = !empty($data['pecahbelah']->modified_at)
+					? $data['pecahbelah']->modified_at
+					: $data['pecahbelah']->created_at;
+
+				$jam_akhir = date('H:i', strtotime($akhir));
+			} else {
+
+				$jam_awal  = '-';
+				$jam_akhir = '-';
+			}
+
+			$pdf->SetFont('times', 'B', 10);
+
+			$pdf->Cell(
+				95,
+				6,
+				'Tanggal : ' . $formatted_date,
+				0,
+				0,
+				'L'
+			);
+
+			$pdf->Cell(
+				0,
+				6,
+				'Shift : ' . $shift,
+				0,
+				1,
+				'L'
+			);
+
+			$pdf->Ln(2);
+
+			// ===========================
+			// HEADER TABEL
+			// ===========================
+
+			$pdf->SetFont('times', '', 10);
+
+			$pdf->Cell(10, 10, 'No.', 1, 0, 'C');
+			$pdf->Cell(40, 10, 'Nama Barang', 1, 0, 'C');
+			$pdf->Cell(40, 10, 'Area / Pemilik', 1, 0, 'C');
+			$pdf->Cell(20, 10, 'Jumlah', 1, 0, 'C');
+			$pdf->Cell(40, 5, 'Kondisi', 1, 0, 'C');
+			$pdf->Cell(40, 10, 'Keterangan', 1, 0, 'C');
+			$pdf->Cell(10, 5, '', 0, 1, 'C');
+
+			$pdf->SetFont('times', '', 8);
+
+			$pdf->Cell(110, 10, '', 0, 0, 'L');
+			$pdf->Cell(20, 5, 'Awal : ' . $jam_awal, 1, 0, 'C');
+			$pdf->Cell(20, 5, 'Akhir : ' . $jam_akhir, 1, 0, 'C');
+			$pdf->Cell(40, 0, '', 0, 0, 'C');
+			$pdf->Cell(10, 5, '', 0, 1, 'C');
+
+			// ===========================
+			// DATA
+			// ===========================
+
+			$no = 1;
+
+			foreach ($pecahbelah_data as $pecahbelah_item) {
+
+				$pdf->SetFont('times', '', 9);
+
+				$pecahbelah = json_decode($pecahbelah_item->benda_pecah);
+
+				if ($pecahbelah && is_array($pecahbelah)) {
+
+					foreach ($pecahbelah as $item) {
+
+						$nama_barang = isset($item->nama_barang)
+							? $item->nama_barang
+							: '-';
+
+						$area = isset($item->area)
+							? $item->area
+							: '-';
+
+						$pemilik = isset($item->pemilik)
+							? $item->pemilik
+							: '-';
+
+						$jumlah = isset($item->jumlah)
+							? $item->jumlah
+							: '-';
+
+						$kondisi_awal = isset($item->kondisi_awal)
+							? $item->kondisi_awal
+							: '-';
+
+						$kondisi_akhir = isset($item->kondisi_akhir)
+							? $item->kondisi_akhir
+							: '-';
+
+						$keterangan = isset($item->keterangan)
+							? $item->keterangan
+							: '-';
+
+						$pdf->SetFont('times', '', 8);
+
+						$height_nama_barang =
+							$pdf->getStringHeight(40, $nama_barang);
+
+						$height_area_pemilik =
+							$pdf->getStringHeight(
+								40,
+								"$area / $pemilik"
+							);
+
+						$height_keterangan =
+							$pdf->getStringHeight(40, $keterangan);
+
+						$row_height = max(
+							$height_nama_barang,
+							$height_area_pemilik,
+							$height_keterangan,
+							5
+						);
+
+						$pdf->MultiCell(
+							10,
+							$row_height,
+							$no,
+							1,
+							'C',
+							false,
+							0
+						);
+
+						$pdf->MultiCell(
+							40,
+							$row_height,
+							$nama_barang,
+							1,
+							'L',
+							false,
+							0
+						);
+
+						$pdf->MultiCell(
+							40,
+							$row_height,
+							"$area / $pemilik",
+							1,
+							'L',
+							false,
+							0
+						);
+
+						$pdf->MultiCell(
+							20,
+							$row_height,
+							$jumlah,
+							1,
+							'C',
+							false,
+							0
+						);
+
+						$pdf->MultiCell(
+							20,
+							$row_height,
+							$kondisi_awal,
+							1,
+							'C',
+							false,
+							0
+						);
+
+						$pdf->MultiCell(
+							20,
+							$row_height,
+							$kondisi_akhir,
+							1,
+							'C',
+							false,
+							0
+						);
+
+						$pdf->MultiCell(
+							40,
+							$row_height,
+							$keterangan,
+							1,
+							'L',
+							false,
+							1
+						);
+
+						$no++;
+					}
+				}
+			}
+
+			// ===========================
+			// FOOTER FORM
+			// ===========================
+
+			$pdf->SetFont('times', 'BI', 8);
+			$pdf->Cell(
+				190,
+				5,
+				'QB 04/00',
+				0,
+				1,
+				'R'
+			);
+
+			$pdf->SetY($pdf->GetY() + 3);
+
+			$pdf->SetFont('dejavusans', '', 6);
+
+			$pdf->MultiCell(
+				0,
+				4,
+				"✓ : Ok, kondisi masih utuh, tidak pecah\n✗ : Tidak Ok, kondisi tidak utuh, pecah / retak",
+				0,
+				'L'
+			);
+
+			// ===========================
+			// NAMA PEGAWAI
+			// ===========================
+
+			if (!empty($data['pecahbelah'])) {
+
+				$data['pecahbelah']->nama_lengkap_qc =
+					$this->pegawai_model->get_nama_lengkap(
+						$data['pecahbelah']->username
+					);
+
+				$data['pecahbelah']->nama_lengkap_spv =
+					$this->pegawai_model->get_nama_lengkap(
+						$data['pecahbelah']->nama_spv
+					);
+
+				$data['pecahbelah']->nama_lengkap_produksi =
+					$this->pegawai_model->get_nama_lengkap(
+						$data['pecahbelah']->nama_produksi
+					);
+			}
+
+			$y_after_keterangan = $pdf->GetY();
+
+			// ===========================
+			// STATUS VERIFIKASI AUDIT
+			// ===========================
+
+			$status_verifikasi = true;
+
+			foreach ($pecahbelah_data as $item) {
+
+				if ($item->status_spv != '1') {
+					$status_verifikasi = false;
+					break;
+				}
+			}
+
+			$pdf->SetFont('times', '', 8);
+			$pdf->SetTextColor(0, 0, 0);
+
+			if ($status_verifikasi && !empty($data['pecahbelah'])) {
+
+				$y_verifikasi = $y_after_keterangan;
+
+				// ===========================
+				// QC
+				// ===========================
+
+				$pdf->SetXY(25, $y_verifikasi + 5);
+
+				$pdf->Cell(
+					35,
+					5,
+					'Dibuat Oleh,',
+					0,
+					0,
+					'C'
+				);
+
+				$pdf->SetXY(25, $y_verifikasi + 10);
+
+				$pdf->SetFont('times', 'U', 8);
+
+				$pdf->Cell(
+					35,
+					5,
+					$data['pecahbelah']->nama_lengkap_qc,
+					0,
+					1,
+					'C'
+				);
+
+				$pdf->SetFont('times', '', 8);
+
+				$pdf->Cell(
+					65,
+					5,
+					'QC Inspector',
+					0,
+					0,
+					'C'
+				);
+
+				// ===========================
+				// PRODUKSI
+				// ===========================
+
+				$pdf->SetXY(90, $y_verifikasi + 5);
+
+				$pdf->Cell(
+					35,
+					5,
+					'Diketahui Oleh,',
+					0,
+					0,
+					'C'
+				);
+
+				if (
+					$data['pecahbelah']->status_produksi == 1 &&
+					!empty($data['pecahbelah']->nama_produksi)
+				) {
+
+					$update_tanggal_produksi =
+						(new DateTime(
+							$data['pecahbelah']->tgl_update_produksi
+						))->format('d-m-Y | H:i');
+
+					$pdf->SetFont('times', 'U', 8);
+
+					$pdf->SetXY(90, $y_verifikasi + 10);
+
+					$pdf->Cell(
+						35,
+						5,
+						$data['pecahbelah']->nama_lengkap_produksi,
+						0,
+						1,
+						'C'
+					);
+
+					$pdf->SetFont('times', '', 8);
+
+					$pdf->SetXY(90, $y_verifikasi + 15);
+
+					$pdf->Cell(
+						35,
+						5,
+						'Foreman/Forelady Produksi',
+						0,
+						1,
+						'C'
+					);
+
+					$pdf->SetXY(90, $y_verifikasi + 20);
+
+					$pdf->Cell(
+						35,
+						5,
+						$update_tanggal_produksi,
+						0,
+						0,
+						'C'
+					);
+				} else {
+
+					$pdf->SetFont('times', '', 8);
+
+					$pdf->SetXY(90, $y_verifikasi + 10);
+
+					$pdf->Cell(
+						35,
+						5,
+						'Belum Diverifikasi',
+						0,
+						0,
+						'C'
+					);
+				}
+
+				// ===========================
+				// SPV
+				// ===========================
+
+				$pdf->SetXY(150, $y_verifikasi + 5);
+
+				$pdf->Cell(
+					49,
+					5,
+					'Disetujui Oleh,',
+					0,
+					0,
+					'C'
+				);
+
+				$update_tanggal =
+					(new DateTime(
+						$data['pecahbelah']->tgl_update_spv
+					))->format('d-m-Y | H:i');
+
+				$qr_text =
+					"Diverifikasi secara digital oleh,\n" .
+					$data['pecahbelah']->nama_lengkap_spv .
+					"\nSPV QC Bread Crumb\n" .
+					$update_tanggal;
+
+				$pdf->write2DBarcode(
+					$qr_text,
+					'QRCODE,L',
+					167,
+					$y_verifikasi + 10,
+					15,
+					15,
+					null,
+					'N'
+				);
+
+				$pdf->SetXY(150, $y_verifikasi + 24);
+
+				$pdf->Cell(
+					49,
+					5,
+					'Supervisor QC',
+					0,
+					0,
+					'C'
+				);
+			} else {
+
+				$pdf->SetTextColor(255, 0, 0);
+
+				$pdf->SetFont('times', '', 8);
+
+				$pdf->SetXY(
+					100,
+					$y_after_keterangan
+				);
+
+				$pdf->Cell(
+					80,
+					5,
+					'Data Belum Diverifikasi',
+					0,
+					0,
+					'C'
+				);
+
+				$pdf->SetTextColor(0, 0, 0);
+
+				$pdf->Ln(10);
+			}
+
+			$pdf->Ln(8);
+		}
+
+		$pdf->setPrintFooter(false);
+
+		$filename =
+			"Checklist_pecahbelah_Peralatan_QC_Audit_{$formatted_date2}.pdf";
+
 		$pdf->Output($filename, 'I');
 	}
 }

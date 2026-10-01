@@ -1,22 +1,26 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Thermometer extends MY_Controller {
+class Thermometer extends MY_Controller
+{
 
 	public function __construct()
 	{
 		parent::__construct();
 
 		$this->load->library('form_validation');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('thermometer_model');
 		$this->load->model('list_thermometer_model');
 		$this->load->model('pegawai_model');
-		if(!$this->auth_model->current_user()){
+		$this->load->library('audit_library');
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
@@ -27,7 +31,7 @@ class Thermometer extends MY_Controller {
 			'thermometer' => $this->thermometer_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'thermometer'; 
+		$this->active_nav = 'thermometer';
 		$this->render('form/thermometer/thermometer', $data);
 	}
 
@@ -37,7 +41,7 @@ class Thermometer extends MY_Controller {
 			'thermometer' => $this->thermometer_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'thermometer'; 
+		$this->active_nav = 'thermometer';
 		$this->render('form/thermometer/thermometer-detail', $data);
 	}
 
@@ -63,7 +67,7 @@ class Thermometer extends MY_Controller {
 
 	public function tambah()
 	{
-    // Ambil data list thermometer
+		// Ambil data list thermometer
 		$data['list_thermo'] = $this->list_thermometer_model->get_by_plant();
 
 		$rules = $this->thermometer_model->rules();
@@ -82,22 +86,22 @@ class Thermometer extends MY_Controller {
 			}
 		}
 
-		$this->active_nav = 'thermometer'; 
+		$this->active_nav = 'thermometer';
 		$this->render('form/thermometer/thermometer-tambah', $data);
 	}
 
 	public function edit($uuid)
 	{
-    // Ambil list thermometer (SAMA seperti tambah)
+		// Ambil list thermometer (SAMA seperti tambah)
 		$data['list_thermo'] = $this->db
-		->order_by('kode_thermometer', 'ASC')
-		->get('list_thermometer')
-		->result();
+			->order_by('kode_thermometer', 'ASC')
+			->get('list_thermometer')
+			->result();
 
-    // Ambil data yang mau diedit
+		// Ambil data yang mau diedit
 		$data['thermometer'] = $this->thermometer_model->get_by_uuid($uuid);
 
-    // Kalau data tidak ditemukan
+		// Kalau data tidak ditemukan
 		if (!$data['thermometer']) {
 			show_404();
 		}
@@ -106,7 +110,7 @@ class Thermometer extends MY_Controller {
 		$this->form_validation->set_rules($rules);
 
 		if ($this->form_validation->run() == TRUE) {
-			
+
 			$update = $this->thermometer_model->update($uuid);
 
 			if ($update) {
@@ -118,7 +122,7 @@ class Thermometer extends MY_Controller {
 			redirect('thermometer');
 		}
 
-		$this->active_nav = 'thermometer'; 
+		$this->active_nav = 'thermometer';
 		$this->render('form/thermometer/thermometer-edit', $data);
 	}
 
@@ -139,14 +143,14 @@ class Thermometer extends MY_Controller {
 
 		redirect('thermometer');
 	}
-	
+
 	public function verifikasi()
 	{
 		$data = array(
 			'thermometer' => $this->thermometer_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-thermometer'; 
+		$this->active_nav = 'verifikasi-thermometer';
 		$this->render('form/thermometer/thermometer-verifikasi', $data);
 	}
 
@@ -161,7 +165,7 @@ class Thermometer extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Peneraan Thermometer berhasil di Update');
 				redirect('thermometer/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Peneraan Thermometer gagal di Update');
 				redirect('thermometer/verifikasi');
 			}
@@ -171,8 +175,57 @@ class Thermometer extends MY_Controller {
 			'thermometer' => $this->thermometer_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-thermometer'; 
+		$this->active_nav = 'verifikasi-thermometer';
 		$this->render('form/thermometer/thermometer-status', $data);
+	}
+
+	public function copy_to_audit($uuid)
+	{
+		if (empty($uuid)) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'UUID data tidak ditemukan.'
+			);
+
+			redirect('thermometer/verifikasi');
+			return;
+		}
+
+		$audit_uuid = $this->audit_library->copy_to_audit(
+			'thermometer',
+			$uuid
+		);
+
+		if (!$audit_uuid) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Thermometer tidak ditemukan atau gagal dibuat sebagai Audit.'
+			);
+
+			redirect('thermometer/verifikasi');
+			return;
+		}
+
+		$this->session->set_flashdata(
+			'success_msg',
+			'Data Peneraan Thermometer berhasil dikirim ke Audit.'
+		);
+
+		redirect('thermometer/verifikasi');
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'thermometer' => $this->thermometer_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'verifikasi-thermometer';
+
+		$this->render(
+			'form/thermometer/thermometer-audit',
+			$data
+		);
 	}
 
 	// public function diketahui()
@@ -235,7 +288,7 @@ class Thermometer extends MY_Controller {
 			show_error('Data tidak ditemukan untuk tanggal dan shift ini.', 404);
 		}
 
-    // 🔹 Merge data berdasarkan model + kode_thermo + area + shift
+		// 🔹 Merge data berdasarkan model + kode_thermo + area + shift
 		$merged = [];
 		foreach ($thermo_data as $row) {
 			$hasil_array = json_decode($row->peneraan_hasil, true);
@@ -272,7 +325,7 @@ class Thermometer extends MY_Controller {
 
 		$merged_data = array_values($merged);
 
-    // === Mulai cetak PDF ===
+		// === Mulai cetak PDF ===
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
 		$pdf->setPrintHeader(false);
@@ -280,13 +333,13 @@ class Thermometer extends MY_Controller {
 		$pdf->SetMargins(17, 16, 15);
 		$pdf->AddPage('L', 'LEGAL');
 
-    // Judul
+		// Judul
 		$pdf->SetFont('times', 'B', 15);
 		$logo_path = FCPATH . 'assets/img/logo.jpg';
 		if (file_exists($logo_path)) {
 			$pdf->Image($logo_path, 17, 14, 45);
 		}
-        // Judul dan Header
+		// Judul dan Header
 		$pdf->Image(FCPATH . 'assets/img/logo.jpg', 17, 14, 45);
 		$pdf->Write(9, "\n");
 		$pdf->MultiCell(0, 5, 'PENERAAN THERMOMETER', 0, 'C');
@@ -299,7 +352,7 @@ class Thermometer extends MY_Controller {
 		$pdf->Write(0, 'Tanggal: ' . $formatted_date . " | Shift: " . $shift);
 		$pdf->Ln(5);
 
-    // === Table Header ===
+		// === Table Header ===
 		$pdf->SetFont('times', '', 11);
 		$pdf->Cell(10, 15, 'No', 1, 0, 'C');
 		$pdf->Cell(32, 15, 'Jenis Thermometer', 1, 0, 'C');
@@ -309,7 +362,7 @@ class Thermometer extends MY_Controller {
 		$pdf->Cell(30, 15, 'Keterangan', 1, 0, 'C');
 		$pdf->Cell(10, 5, '', 0, 1, 'C');
 
-    // Baris sub-header
+		// Baris sub-header
 		$pdf->SetFont('times', '', 9);
 		$pdf->Cell(94, 10, '', 0, 0, 'C');
 		for ($i = 1; $i <= 6; $i++) {
@@ -326,7 +379,7 @@ class Thermometer extends MY_Controller {
 		$pdf->Cell(64, 0, '', 0, 0, 'C');
 		$pdf->Cell(10, 5, '', 0, 1, 'C');
 
-    // === Isi Tabel ===
+		// === Isi Tabel ===
 		$no = 1;
 		foreach ($merged_data as $data) {
 			$pdf->SetFont('times', '', 10);
@@ -350,13 +403,13 @@ class Thermometer extends MY_Controller {
 		}
 
 		$pdf->SetFont('times', 'I', 7);
-		$pdf->Cell(310, 5, 'QB 05/00', 0, 1, 'R'); 
+		$pdf->Cell(310, 5, 'QB 05/00', 0, 1, 'R');
 
-    // === Bagian TTD & QR ===
+		// === Bagian TTD & QR ===
 		$y_ttd = $pdf->GetY() + 6;
 		$qr_size = 15;
 
-    // Cek status verifikasi
+		// Cek status verifikasi
 		$status_verifikasi = true;
 		foreach ($thermo_data as $item) {
 			if ($item->status_spv != '1') {
@@ -370,21 +423,21 @@ class Thermometer extends MY_Controller {
 		$thermo_verif->nama_lengkap_produksi  = $thermo_verif->nama_produksi;
 
 		$qr_qc_text = "Dibuat secara digital oleh,\n"
-		. $thermo_verif->nama_lengkap_qc . "\nQC Inspector\n"
-		. (new DateTime($thermo_verif->created_at))->format('d-m-Y | H:i');
+			. $thermo_verif->nama_lengkap_qc . "\nQC Inspector\n"
+			. (new DateTime($thermo_verif->created_at))->format('d-m-Y | H:i');
 
 		$qr_produksi_text = null;
 		if (!empty($thermo_verif->nama_lengkap_produksi) && !empty($thermo_verif->tgl_update_produksi)) {
 			$prod_tanggal = (new DateTime($thermo_verif->tgl_update_produksi))->format('d-m-Y | H:i');
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-			. $thermo_verif->nama_lengkap_produksi . "\nForeman/Forelady Produksi\n" . $prod_tanggal;
+				. $thermo_verif->nama_lengkap_produksi . "\nForeman/Forelady Produksi\n" . $prod_tanggal;
 		}
 
 		$spv_tanggal = !empty($thermo_verif->tgl_update_spv)
-		? (new DateTime($thermo_verif->tgl_update_spv))->format('d-m-Y | H:i')
-		: '-';
+			? (new DateTime($thermo_verif->tgl_update_spv))->format('d-m-Y | H:i')
+			: '-';
 		$qr_spv_text = "Disetujui secara digital oleh,\n"
-		. $thermo_verif->nama_lengkap_spv . "\nSupervisor QC Bread Crumb\n" . $spv_tanggal;
+			. $thermo_verif->nama_lengkap_spv . "\nSupervisor QC Bread Crumb\n" . $spv_tanggal;
 
 		if ($status_verifikasi) {
 			$pdf->SetFont('times', '', 8);
@@ -413,10 +466,429 @@ class Thermometer extends MY_Controller {
 			$pdf->SetTextColor(0, 0, 0);
 		}
 
-    // Output PDF
+		// Output PDF
 		$formatted_date2 = (new DateTime($thermo_verif->date))->format('Y-m-d');
 		$filename = "Peneraan_Thermometer_{$formatted_date2}_Shift{$shift}.pdf";
 		$pdf->Output($filename, 'I');
 	}
 
+	public function cetak_audit()
+	{
+		$tanggal = $this->input->post('tanggal');
+		$shift   = $this->input->post('shift');
+
+		if (empty($tanggal) || empty($shift)) {
+			show_error('Tanggal dan shift harus dipilih', 404);
+		}
+
+		$plant = $this->session->userdata('plant');
+		if (empty($plant)) {
+			show_error('Plant tidak ditemukan di session.', 403);
+		}
+
+		$thermo_data = $this->thermometer_model->get_audit_by_date(
+			$tanggal,
+			$plant,
+			$shift
+		);
+
+		if (!$thermo_data) {
+			show_error('Data audit tidak ditemukan untuk tanggal dan shift ini.', 404);
+		}
+
+		// Ambil data verifikasi dari data audit
+		$thermo_verif = $thermo_data[0];
+
+		// 🔹 Merge data berdasarkan model + kode_thermo + area + shift
+		$merged = [];
+
+		foreach ($thermo_data as $row) {
+
+			$hasil_array = json_decode($row->peneraan_hasil, true);
+
+			if (!is_array($hasil_array)) {
+				continue;
+			}
+
+			foreach ($hasil_array as $hasil) {
+
+				$model     = $hasil['model'] ?? '-';
+				$kode      = $hasil['kode_thermo'] ?? '-';
+				$area      = $hasil['area'] ?? '-';
+				$pukul     = $hasil['pukul'] ?? '';
+				$standar   = $hasil['standar'] ?? '';
+				$hasil_uji = $hasil['hasil'] ?? '';
+
+				$key = "{$model}|{$kode}|{$area}|{$shift}";
+
+				if (!isset($merged[$key])) {
+					$merged[$key] = [
+						'model'              => $model,
+						'kode_thermo'        => $kode,
+						'area'               => $area,
+						'checks'             => [],
+						'tindakan_perbaikan' => $row->tindakan_perbaikan ?? '-',
+						'keterangan'         => $row->keterangan ?? '-'
+					];
+				}
+
+				$merged[$key]['checks'][] = [
+					'pukul'   => $pukul,
+					'standar' => $standar,
+					'hasil'   => $hasil_uji
+				];
+			}
+		}
+
+		$merged_data = array_values($merged);
+
+		// === Mulai cetak PDF ===
+		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
+
+		$pdf = new TCPDF(
+			PDF_PAGE_ORIENTATION,
+			PDF_UNIT,
+			'LEGAL',
+			true,
+			'UTF-8',
+			false
+		);
+
+		$pdf->setPrintHeader(false);
+		$pdf->setPrintFooter(false);
+		$pdf->SetMargins(17, 16, 15);
+		$pdf->AddPage('L', 'LEGAL');
+
+		// === Judul ===
+		$pdf->SetFont('times', 'B', 15);
+
+		$logo_path = FCPATH . 'assets/img/logo.jpg';
+
+		if (file_exists($logo_path)) {
+			$pdf->Image($logo_path, 17, 14, 45);
+		}
+
+		$pdf->Image(FCPATH . 'assets/img/logo.jpg', 17, 14, 45);
+
+		$pdf->Write(9, "\n");
+
+		$pdf->MultiCell(
+			0,
+			5,
+			'PENERAAN THERMOMETER - AUDIT',
+			0,
+			'C'
+		);
+
+		$pdf->Ln(5);
+
+		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
+
+		$date = new DateTime($thermo_verif->date);
+
+		$formatted_date = date(
+			'l, d F Y',
+			$date->getTimestamp()
+		);
+
+		$pdf->SetFont('times', '', 10);
+
+		$pdf->Write(
+			0,
+			'Tanggal: ' . $formatted_date . ' | Shift: ' . $shift
+		);
+
+		$pdf->Ln(5);
+
+		// === Table Header ===
+		$pdf->SetFont('times', '', 11);
+
+		$pdf->Cell(10, 15, 'No', 1, 0, 'C');
+		$pdf->Cell(32, 15, 'Jenis Thermometer', 1, 0, 'C');
+		$pdf->Cell(52, 15, 'Kode / Area', 1, 0, 'C');
+		$pdf->Cell(162, 5, 'Hasil Peneraan', 1, 0, 'C');
+		$pdf->Cell(34, 15, 'Tindakan Perbaikan', 1, 0, 'C');
+		$pdf->Cell(30, 15, 'Keterangan', 1, 0, 'C');
+		$pdf->Cell(10, 5, '', 0, 1, 'C');
+
+		// === Sub Header ===
+		$pdf->SetFont('times', '', 9);
+
+		$pdf->Cell(94, 10, '', 0, 0, 'C');
+
+		for ($i = 1; $i <= 6; $i++) {
+			$pdf->Cell(27, 5, 'Check-' . $i, 1, 0, 'C');
+		}
+
+		$pdf->Cell(64, 5, '', 0, 1, 'C');
+
+		$pdf->Cell(94, 5, '', 0, 0, 'C');
+
+		for ($i = 0; $i < 6; $i++) {
+			$pdf->Cell(9, 5, 'Pukul', 1, 0, 'C');
+			$pdf->Cell(9, 5, 'Std', 1, 0, 'C');
+			$pdf->Cell(9, 5, 'Hasil', 1, 0, 'C');
+		}
+
+		$pdf->Cell(64, 0, '', 0, 0, 'C');
+		$pdf->Cell(10, 5, '', 0, 1, 'C');
+
+		// === Isi Tabel ===
+		$no = 1;
+
+		foreach ($merged_data as $data) {
+
+			$pdf->SetFont('times', '', 10);
+
+			$pdf->Cell(10, 8, $no++, 1, 0, 'C');
+
+			$pdf->Cell(
+				32,
+				8,
+				$data['model'],
+				1,
+				0,
+				'C'
+			);
+
+			$pdf->Cell(
+				52,
+				8,
+				$data['kode_thermo'] . ' / ' . $data['area'],
+				1,
+				0,
+				'C'
+			);
+
+			$pdf->SetFont('times', '', 8);
+
+			for ($i = 0; $i < 6; $i++) {
+
+				$p = $data['checks'][$i]['pukul'] ?? '';
+				$s = $data['checks'][$i]['standar'] ?? '';
+				$h = $data['checks'][$i]['hasil'] ?? '';
+
+				$pdf->Cell(9, 8, $p, 1, 0, 'C');
+				$pdf->Cell(9, 8, $s, 1, 0, 'C');
+				$pdf->Cell(9, 8, $h, 1, 0, 'C');
+			}
+
+			$pdf->Cell(
+				34,
+				8,
+				$data['tindakan_perbaikan'],
+				1,
+				0,
+				'C'
+			);
+
+			$pdf->Cell(
+				30,
+				8,
+				$data['keterangan'],
+				1,
+				0,
+				'C'
+			);
+
+			$pdf->Ln();
+		}
+
+		$pdf->SetFont('times', 'I', 7);
+		$pdf->Cell(310, 5, 'QB 05/00', 0, 1, 'R');
+
+		// === Bagian TTD & QR ===
+		$y_ttd   = $pdf->GetY() + 6;
+		$qr_size = 15;
+
+		// Status verifikasi dari DATA AUDIT
+		$status_verifikasi = true;
+
+		foreach ($thermo_data as $item) {
+			if ($item->status_spv != '1') {
+				$status_verifikasi = false;
+				break;
+			}
+		}
+
+		$thermo_verif->nama_lengkap_qc =
+			$this->pegawai_model->get_nama_lengkap(
+				$thermo_verif->username
+			);
+
+		$thermo_verif->nama_lengkap_spv =
+			$this->pegawai_model->get_nama_lengkap(
+				$thermo_verif->nama_spv
+			);
+
+		$thermo_verif->nama_lengkap_produksi =
+			$thermo_verif->nama_produksi;
+
+		// === QR QC ===
+		$qr_qc_text =
+			"Dibuat secara digital oleh,\n"
+			. $thermo_verif->nama_lengkap_qc
+			. "\nQC Inspector\n"
+			. (new DateTime($thermo_verif->created_at))
+			->format('d-m-Y | H:i');
+
+		// === QR Produksi ===
+		$qr_produksi_text = null;
+
+		if (
+			!empty($thermo_verif->nama_lengkap_produksi)
+			&& !empty($thermo_verif->tgl_update_produksi)
+		) {
+
+			$prod_tanggal =
+				(new DateTime($thermo_verif->tgl_update_produksi))
+				->format('d-m-Y | H:i');
+
+			$qr_produksi_text =
+				"Diketahui secara digital oleh,\n"
+				. $thermo_verif->nama_lengkap_produksi
+				. "\nForeman/Forelady Produksi\n"
+				. $prod_tanggal;
+		}
+
+		// === QR SPV ===
+		$spv_tanggal = !empty($thermo_verif->tgl_update_spv)
+			? (new DateTime($thermo_verif->tgl_update_spv))
+			->format('d-m-Y | H:i')
+			: '-';
+
+		$qr_spv_text =
+			"Disetujui secara digital oleh,\n"
+			. $thermo_verif->nama_lengkap_spv
+			. "\nSupervisor QC Bread Crumb\n"
+			. $spv_tanggal;
+
+		// === Tampilkan TTD ===
+		if ($status_verifikasi) {
+
+			$pdf->SetFont('times', '', 8);
+
+			$pdf->SetXY(20, $y_ttd);
+			$pdf->Cell(
+				45,
+				5,
+				'Dibuat Oleh,',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(85, $y_ttd);
+			$pdf->Cell(
+				130,
+				5,
+				'Diketahui Oleh,',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(150, $y_ttd);
+			$pdf->Cell(
+				220,
+				5,
+				'Disetujui Oleh,',
+				0,
+				1,
+				'C'
+			);
+
+			$pdf->write2DBarcode(
+				$qr_qc_text,
+				'QRCODE,L',
+				35,
+				$y_ttd + 5,
+				$qr_size,
+				$qr_size,
+				null,
+				'N'
+			);
+
+			if ($qr_produksi_text) {
+				$pdf->write2DBarcode(
+					$qr_produksi_text,
+					'QRCODE,L',
+					143,
+					$y_ttd + 5,
+					$qr_size,
+					$qr_size,
+					null,
+					'N'
+				);
+			}
+
+			$pdf->write2DBarcode(
+				$qr_spv_text,
+				'QRCODE,L',
+				253,
+				$y_ttd + 5,
+				$qr_size,
+				$qr_size,
+				null,
+				'N'
+			);
+
+			$pdf->SetXY(20, $y_ttd + 20);
+			$pdf->Cell(
+				45,
+				5,
+				'QC Inspector',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(85, $y_ttd + 20);
+			$pdf->Cell(
+				130,
+				5,
+				'Foreman/Forelady Produksi',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(150, $y_ttd + 20);
+			$pdf->Cell(
+				220,
+				5,
+				'Supervisor QC',
+				0,
+				1,
+				'C'
+			);
+		} else {
+
+			$pdf->SetFont('times', '', 8);
+			$pdf->SetTextColor(255, 0, 0);
+
+			$pdf->SetXY(80, $y_ttd);
+
+			$pdf->Cell(
+				80,
+				6,
+				'Data Belum Diverifikasi',
+				0,
+				1,
+				'C'
+			);
+
+			$pdf->SetTextColor(0, 0, 0);
+		}
+
+		// === Output PDF ===
+		$formatted_date2 =
+			(new DateTime($thermo_verif->date))
+			->format('Y-m-d');
+
+		$filename =
+			"Peneraan_Thermometer_Audit_{$formatted_date2}_Shift{$shift}.pdf";
+
+		$pdf->Output($filename, 'I');
+	}
 }

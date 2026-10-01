@@ -21,6 +21,17 @@
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
+			<div class="form-group text-right">
+
+				<a href="<?= base_url('proses/audit'); ?>"
+					class="btn btn-info btn-sm">
+
+					<i class="fas fa-clipboard-check mr-1"></i>
+					Data Audit
+
+				</a>
+
+			</div>
 			<div class="table-responsive">
 				<!-- <form action="<?= base_url('proses/cetak') ?>" method="post" id="form_cetak_pdf"> -->
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
@@ -69,6 +80,25 @@
 									<a href="<?= base_url('proses/status/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split">
 										<span class="text">Verifikasi</span>
 									</a>
+									<?php if ((int)$val->is_audit === 0): ?>
+
+										<a href="<?= base_url('proses/copy-to-audit/' . $val->uuid); ?>"
+											class="btn btn-info btn-icon-split btn-sm">
+
+											<span class="text">
+												<i class="fas fa-paper-plane mr-1"></i>
+												Kirim Audit
+											</span>
+
+										</a>
+
+									<?php else: ?>
+
+										<span class="badge badge-success ml-1">
+											Sudah Diaudit
+										</span>
+
+									<?php endif; ?>
 								</td>
 							</tr>
 						<?php

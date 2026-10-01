@@ -21,6 +21,15 @@
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
+			<div class="form-group text-right">
+				<a href="<?= base_url('sanitasi/audit'); ?>"
+					class="btn btn-info btn-sm">
+
+					<i class="fas fa-clipboard-check mr-1"></i>
+					Data Audit
+
+				</a>
+			</div>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
 					<thead>
@@ -103,9 +112,29 @@
 								</td>
 
 								<td class="text-center">
-									<a href="<?= base_url('sanitasi/status/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split">
-										<span class="text">Verifikasi</span>
+
+									<a href="<?= base_url('sanitasi/status/' . $val->uuid); ?>"
+										class="btn btn-warning btn-icon-split btn-sm">
+
+										<span class="text">
+											Verifikasi
+										</span>
+
 									</a>
+
+									<?php if ((int)$val->is_audit === 0): ?>
+
+										<a href="<?= base_url('sanitasi/copy-to-audit/' . $val->uuid); ?>"
+											class="btn btn-info btn-icon-split btn-sm">
+
+											<span class="text">
+												Kirim Audit
+											</span>
+
+										</a>
+
+									<?php endif; ?>
+
 								</td>
 							</tr>
 						<?php endforeach ?>

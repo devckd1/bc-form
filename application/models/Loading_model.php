@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Loading_model extends CI_Model {
+class Loading_model extends CI_Model
+{
 
 	protected $table = 'loading';
-	
+
 	public function rules()
 	{
 		return [
@@ -74,7 +76,7 @@ class Loading_model extends CI_Model {
 		$tujuan = $this->input->post('tujuan');
 		$no_segel = $this->input->post('no_segel');
 
-    // Daftar kondisi mobil (slug => label)
+		// Daftar kondisi mobil (slug => label)
 		$kondisi_mobil_list = [
 			'bersih' => 'Bersih',
 			'bocor' => 'Bocor',
@@ -88,14 +90,14 @@ class Loading_model extends CI_Model {
 			'tidak_ada_aktivitas_binatang' => 'Tidak ada Aktivitas Binatang'
 		];
 
-    // Ambil data dari form
+		// Ambil data dari form
 		$kondisi_mobil_post = $this->input->post('keterangan_kondisi');
 		$kondisi_mobil = [];
 		foreach ($kondisi_mobil_list as $key => $label) {
 			$kondisi_mobil[$key] = $kondisi_mobil_post[$key] ?? '';
 		}
 
-    // Loading produk
+		// Loading produk
 		$nama_produk     = $this->input->post('nama_produk');
 		$kondisi_produk  = $this->input->post('kondisi_produk');
 		$kondisi_kemasan = $this->input->post('kondisi_kemasan');
@@ -146,7 +148,7 @@ class Loading_model extends CI_Model {
 		$username = $this->session->userdata('username');
 		$old_data = $this->db->get_where('loading', ['uuid' => $uuid])->row_array();
 
-    // Gunakan key slug yang sama seperti insert
+		// Gunakan key slug yang sama seperti insert
 		$kondisi_mobil_list = [
 			'bersih' => 'Bersih',
 			'bocor' => 'Bocor',
@@ -160,14 +162,14 @@ class Loading_model extends CI_Model {
 			'tidak_ada_aktivitas_binatang' => 'Tidak ada Aktivitas Binatang'
 		];
 
-    // Ambil data dari form
+		// Ambil data dari form
 		$kondisi_mobil_post = $this->input->post('keterangan_kondisi');
 		$kondisi_mobil = [];
 		foreach ($kondisi_mobil_list as $key => $label) {
 			$kondisi_mobil[$key] = $kondisi_mobil_post[$key] ?? '';
 		}
 
-    // Loading produk
+		// Loading produk
 		$nama_produk     = $this->input->post('nama_produk');
 		$kondisi_produk  = $this->input->post('kondisi_produk');
 		$kondisi_kemasan = $this->input->post('kondisi_kemasan');
@@ -218,7 +220,7 @@ class Loading_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -247,13 +249,12 @@ class Loading_model extends CI_Model {
 		);
 
 		$this->db->update('loading', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_wh',
 				'label' => 'Status',
@@ -282,26 +283,34 @@ class Loading_model extends CI_Model {
 		);
 
 		$this->db->update('loading', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
 	{
-		$this->db->order_by('created_at', 'DESC');
-		$data = $this->db->get('loading')->result();
-		return $data;
+		return $this->db
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->get('loading')
+			->result();
 	}
 
 	public function get_by_uuid($uuid)
-	{ 
-		$data = $this->db->get_where('loading', array('uuid' => $uuid))->row();
-		return $data;
+	{
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('loading')
+			->row();
 	}
 
 	public function get_bagian_by_uuid($uuid)
 	{
-		return $this->db->get_where('loading', ['uuid' => $uuid])->result_array();
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('loading')
+			->result_array();
 	}
 
 	public function get_details_by_uuid($uuid)
@@ -313,56 +322,123 @@ class Loading_model extends CI_Model {
 	public function get_by_uuid_loading($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
-		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
 		$this->db->where_in('uuid', $uuid_array);
+		$this->db->where('is_audit', 0);
+
 		$query = $this->db->get('loading');
 
-		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
-
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+
+		return false;
 	}
 
 	public function get_by_uuid_loading_verif($uuid_array)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_wh, shift, no_pol, start_loading, finish_loading, nama_supir, ekspedisi, tujuan, no_segel, status_wh, tgl_update_wh, created_at');
-		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
-		$query = $this->db->get('loading');
+		if (empty($uuid_array)) {
+			return false;
+		}
 
-		$data_loading = $query->row();  
-		return $data_loading; 
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        nama_wh,
+        shift,
+        no_pol,
+        start_loading,
+        finish_loading,
+        nama_supir,
+        ekspedisi,
+        tujuan,
+        no_segel,
+        status_wh,
+        tgl_update_wh,
+        created_at
+    ');
+
+		$this->db->where_in('uuid', $uuid_array);
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
+
+		return $this->db
+			->get('loading')
+			->row();
 	}
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('loading', ['plant' => $plant])->result();
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->get('loading')
+			->result();
 	}
 
-	public function get_latest_loading() {
-		$user_plant = $this->session->userdata('plant'); 
+	public function get_latest_loading()
+	{
+		$plant = $this->session->userdata('plant');
 
-		$this->db->select('date, start_loading, finish_loading, tujuan');
-		$this->db->from('loading');
-		$this->db->where('plant', $user_plant);
-		$this->db->order_by('created_at', 'DESC');
-		$this->db->limit(10);
-
-		$query = $this->db->get();
-		return $query->result_array();
+		return $this->db
+			->select('date, start_loading, finish_loading, tujuan')
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->limit(10)
+			->get('loading')
+			->result_array();
 	}
 
 	public function delete_by_uuid($uuid)
 	{
-		$this->db->where('uuid', $uuid);
-		return $this->db->delete('loading');
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->delete('loading');
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('loading')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('loading')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('loading')
+			->row();
 	}
 }

@@ -24,6 +24,7 @@ class Kebersihanruang extends MY_Controller
 		$this->load->library('session');
 		$this->load->model('auth_model');
 		$this->load->model('kebersihanruang_model');
+		$this->load->library('audit_library');
 		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
@@ -215,6 +216,56 @@ class Kebersihanruang extends MY_Controller
 
 		$this->active_nav = 'verifikasi-kebersihanruang';
 		$this->render('form/kebersihanruang/kebersihanruang-status', $data);
+	}
+
+	public function copy_to_audit($uuid)
+	{
+		if (empty($uuid)) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'UUID data tidak ditemukan.'
+			);
+
+			redirect('kebersihanruang/verifikasi');
+			return;
+		}
+
+		$audit_uuid = $this->audit_library->copy_to_audit(
+			'kebersihan_ruang',
+			$uuid
+		);
+
+		if (!$audit_uuid) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Kebersihan Ruang tidak ditemukan atau gagal dibuat sebagai Audit.'
+			);
+
+			redirect('kebersihanruang/verifikasi');
+			return;
+		}
+
+		$this->session->set_flashdata(
+			'success_msg',
+			'Data Kebersihan Ruang berhasil dikirim ke Audit.'
+		);
+
+		redirect('kebersihanruang/verifikasi');
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'kebersihanruang' =>
+			$this->kebersihanruang_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'verifikasi-kebersihanruang';
+
+		$this->render(
+			'form/kebersihanruang/kebersihanruang-audit',
+			$data
+		);
 	}
 
 	public function cetak()
@@ -501,6 +552,576 @@ class Kebersihanruang extends MY_Controller
 
 		$pdf->setPrintFooter(false);
 		$filename = "Kebersihan Ruang_{$formatted_date2}.pdf";
+		$pdf->Output($filename, 'I');
+	}
+
+	public function cetak_audit()
+	{
+		$tanggal = $this->input->post('tanggal');
+		$shift   = $this->input->post('shift');
+
+		if (empty($tanggal)) {
+			show_error('Tidak ada tanggal yang dipilih', 404);
+		}
+
+		$plant = $this->session->userdata('plant');
+
+		// =========================================================
+		// DATA AUDIT
+		// =========================================================
+		$kebersihanruang_data = $this->kebersihanruang_model->get_audit_by_date(
+			$tanggal,
+			$plant,
+			$shift
+		);
+
+		if (!$kebersihanruang_data) {
+			show_error(
+				'Data Audit tidak ditemukan, Pilih tanggal dan shift yang ingin dicetak',
+				404
+			);
+		}
+
+		$data['kebersihanruang'] = $kebersihanruang_data[0];
+
+		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
+
+		$pdf = new TCPDF(
+			PDF_PAGE_ORIENTATION,
+			PDF_UNIT,
+			'LEGAL',
+			true,
+			'UTF-8',
+			false
+		);
+
+		$pdf->setPrintHeader(false);
+		$pdf->SetMargins(10, 14, 10);
+		$pdf->AddPage();
+		$pdf->SetFont('times', 'B', 12);
+
+		// =========================================================
+		// LOGO
+		// =========================================================
+		$logo_path = FCPATH . 'assets/img/logo.jpg';
+
+		if (file_exists($logo_path)) {
+			$pdf->Image($logo_path, 10, 10, 38);
+		} else {
+			$pdf->Write(7, "Logo tidak ditemukan\n");
+		}
+
+		$pdf->Write(7, "\n");
+
+		// =========================================================
+		// JUDUL
+		// =========================================================
+		$pdf->MultiCell(
+			0,
+			5,
+			'KEBERSIHAN RUANG PRODUKSI - AUDIT',
+			0,
+			'C'
+		);
+
+		$pdf->Ln(5);
+
+		// =========================================================
+		// TANGGAL & SHIFT
+		// =========================================================
+		$tanggal_data = $data['kebersihanruang']->date;
+		$dt = new DateTime($tanggal_data);
+
+		$hari = [
+			'Sunday'    => 'Minggu',
+			'Monday'    => 'Senin',
+			'Tuesday'   => 'Selasa',
+			'Wednesday' => 'Rabu',
+			'Thursday'  => 'Kamis',
+			'Friday'    => 'Jumat',
+			'Saturday'  => 'Sabtu',
+		];
+
+		$bulan = [
+			1 => 'Januari',
+			'Februari',
+			'Maret',
+			'April',
+			'Mei',
+			'Juni',
+			'Juli',
+			'Agustus',
+			'September',
+			'Oktober',
+			'November',
+			'Desember'
+		];
+
+		$nama_hari  = $hari[$dt->format('l')];
+		$nama_bulan = $bulan[(int)$dt->format('m')];
+
+		$formatted_date =
+			$nama_hari . ', ' .
+			$dt->format('d') . ' ' .
+			$nama_bulan . ' ' .
+			$dt->format('Y');
+
+		$formatted_date2 =
+			$dt->format('d') . ' ' .
+			$nama_bulan . ' ' .
+			$dt->format('Y');
+
+		$pdf->SetFont('times', '', 9);
+		$pdf->SetX(10);
+
+		$pdf->Write(
+			0,
+			'Hari / Tanggal : ' . $formatted_date
+		);
+
+		$pdf->SetX($pdf->GetX() + 20);
+
+		$pdf->Write(
+			0,
+			'Shift: ' . $data['kebersihanruang']->shift
+		);
+
+		$pdf->Ln(5);
+
+		// =========================================================
+		// HEADER TABLE
+		// =========================================================
+		$pdf->SetFont('times', '', 10);
+
+		$pdf->Cell(55, 10, 'Lokasi', 1, 0, 'C');
+		$pdf->Cell(30, 5, 'Kondisi', 1, 0, 'C');
+		$pdf->Cell(55, 10, 'Problem', 1, 0, 'C');
+		$pdf->Cell(55, 10, 'Tindakan Koreksi', 1, 0, 'C');
+		$pdf->Cell(10, 5, '', 0, 1, 'C');
+
+		$pdf->Cell(55, 10, '', 0, 0, 'L');
+		$pdf->Cell(15, 5, 'Bersih', 1, 0, 'C');
+		$pdf->Cell(15, 5, 'Kotor', 1, 0, 'C');
+		$pdf->Cell(90, 5, '', 0, 1, 'C');
+
+		// =========================================================
+		// DATA AUDIT
+		// =========================================================
+		$no = 1;
+
+		foreach ($kebersihanruang_data as $kebersihanruang) {
+
+			$pdf->SetFont('times', '', 9);
+
+			$pdf->Cell(
+				5,
+				5,
+				$no,
+				1,
+				0,
+				'L'
+			);
+
+			$pdf->Cell(
+				190,
+				5,
+				$kebersihanruang->lokasi,
+				1,
+				1,
+				'L'
+			);
+
+			$detail = json_decode(
+				$kebersihanruang->detail
+			);
+
+			if ($detail && is_array($detail)) {
+
+				foreach ($detail as $detail_item) {
+
+					$bagian = isset($detail_item->bagian)
+						? $detail_item->bagian
+						: '-';
+
+					$kondisi_raw = isset($detail_item->kondisi)
+						? strtolower(trim($detail_item->kondisi))
+						: '';
+
+					$kondisi1 = '-';
+					$kondisi2 = '-';
+
+					$verifikasi = isset($detail_item->verifikasi)
+						? strtolower(trim($detail_item->verifikasi))
+						: null;
+
+					if (
+						$kondisi_raw === 'bersih' ||
+						$kondisi_raw === '0'
+					) {
+
+						$kondisi1 = '✔';
+					} else {
+
+						if ($verifikasi === 'bersih') {
+							$kondisi1 = '✔';
+						} elseif ($verifikasi === 'kotor') {
+							$kondisi2 = '✔';
+						} else {
+							$kondisi2 = $kondisi_raw ?: '-';
+						}
+					}
+
+					$problem = isset($detail_item->problem)
+						? $detail_item->problem
+						: '-';
+
+					$tindakan = isset($detail_item->tindakan)
+						? $detail_item->tindakan
+						: '-';
+
+					$pdf->SetFont('times', '', 8);
+
+					$pdf->Cell(
+						55,
+						4,
+						$bagian,
+						1,
+						0,
+						'L'
+					);
+
+					$pdf->SetFont('dejavusans', '', 8);
+
+					$pdf->Cell(
+						15,
+						4,
+						$kondisi1,
+						1,
+						0,
+						'C'
+					);
+
+					$pdf->SetFont('times', '', 8);
+
+					$pdf->Cell(
+						15,
+						4,
+						$kondisi2,
+						1,
+						0,
+						'C'
+					);
+
+					$pdf->Cell(
+						55,
+						4,
+						$problem,
+						1,
+						0,
+						'L'
+					);
+
+					$pdf->Cell(
+						55,
+						4,
+						$tindakan,
+						1,
+						1,
+						'L'
+					);
+				}
+			}
+
+			$no++;
+		}
+
+		// =========================================================
+		// FORM CODE
+		// =========================================================
+		$pdf->SetFont('times', 'I', 7);
+
+		$pdf->Cell(
+			190,
+			5,
+			'QB 01/00',
+			0,
+			1,
+			'R'
+		);
+
+		// =========================================================
+		// STATUS VERIFIKASI
+		// =========================================================
+		$status_verifikasi = true;
+
+		foreach ($kebersihanruang_data as $item) {
+
+			if ($item->status_spv != '1') {
+				$status_verifikasi = false;
+				break;
+			}
+		}
+
+		// =========================================================
+		// KETERANGAN
+		// =========================================================
+		$pdf->SetY($pdf->GetY() + 3);
+		$pdf->SetFont('dejavusans', '', 5);
+
+		$kiri =
+			"1 Berdebu\n" .
+			"2 Basah, ada genangan air\n" .
+			"3 Sisa produksi (remah-remah roti, tepung, sisa adonan)\n" .
+			"4 Noda (karat, cat, tinta)\n" .
+			"5 Pertumbuhan mikroorganisme (jamur, bau busuk, biofilm)\n" .
+			"6 Kontak / kontaminasi material non halal\n" .
+			"7 Higiene karyawan tidak sesuai GMP";
+
+		$kanan =
+			"✓ : Ok, sesuai SSOP, bersih, bebas najis / material non halal\n" .
+			"✗ : Tidak Ok, tidak sesuai SSOP\n" .
+			"-  : Tidak ada atau tidak digunakan";
+
+		$posY = $pdf->GetY();
+
+		$pdf->SetXY(10, $posY);
+		$pdf->MultiCell(90, 4, $kiri, 0, 'L');
+
+		$pdf->SetXY(105, $posY);
+		$pdf->MultiCell(90, 4, $kanan, 0, 'L');
+
+		// =========================================================
+		// PEGAWAI
+		// =========================================================
+		$this->load->model('pegawai_model');
+
+		$data['kebersihanruang']->nama_lengkap_qc =
+			$this->pegawai_model->get_nama_lengkap(
+				$data['kebersihanruang']->username
+			);
+
+		$data['kebersihanruang']->nama_lengkap_spv =
+			$this->pegawai_model->get_nama_lengkap(
+				$data['kebersihanruang']->nama_spv
+			);
+
+		$data['kebersihanruang']->nama_lengkap_produksi =
+			$data['kebersihanruang']->nama_produksi;
+
+		// =========================================================
+		// QR SIGNATURE
+		// =========================================================
+		$y_ttd   = $pdf->GetY() + 10;
+		$qr_size = 15;
+
+		$qc_usernames  = [];
+		$qc_created_at = null;
+
+		foreach ($kebersihanruang_data as $item) {
+
+			if (!empty($item->username)) {
+				$qc_usernames[] = $item->username;
+			}
+
+			if (!$qc_created_at && !empty($item->created_at)) {
+				$qc_created_at = $item->created_at;
+			}
+		}
+
+		$qc_usernames = array_unique($qc_usernames);
+
+		$qc_nama_lengkap = [];
+
+		foreach ($qc_usernames as $username) {
+
+			$nama = $this->pegawai_model->get_nama_lengkap(
+				$username
+			);
+
+			if (!empty($nama)) {
+				$qc_nama_lengkap[] = $nama;
+			}
+		}
+
+		$qc_nama_text = !empty($qc_nama_lengkap)
+			? implode(', ', array_unique($qc_nama_lengkap))
+			: '-';
+
+		$qc_tanggal = $qc_created_at
+			? (new DateTime($qc_created_at))->format('d-m-Y | H:i')
+			: '-';
+
+		$qr_qc_text =
+			"Dibuat secara digital oleh,\n" .
+			$qc_nama_text . "\n" .
+			"QC Inspector\n" .
+			$qc_tanggal;
+
+		// =========================================================
+		// PRODUKSI
+		// =========================================================
+		$qr_produksi_text = null;
+
+		if (
+			!empty($data['kebersihanruang']->nama_lengkap_produksi) &&
+			!empty($data['kebersihanruang']->tgl_update_produksi)
+		) {
+
+			$prod_tanggal = (new DateTime(
+				$data['kebersihanruang']->tgl_update_produksi
+			))->format('d-m-Y | H:i');
+
+			$qr_produksi_text =
+				"Diketahui secara digital oleh,\n" .
+				$data['kebersihanruang']->nama_lengkap_produksi . "\n" .
+				"Foreman/Forelady Produksi\n" .
+				$prod_tanggal;
+		}
+
+		// =========================================================
+		// SPV
+		// =========================================================
+		$spv_tanggal = !empty($data['kebersihanruang']->tgl_update_spv)
+			? (new DateTime(
+				$data['kebersihanruang']->tgl_update_spv
+			))->format('d-m-Y | H:i')
+			: '-';
+
+		$qr_spv_text =
+			"Disetujui secara digital oleh,\n" .
+			$data['kebersihanruang']->nama_lengkap_spv . "\n" .
+			"Supervisor QC Bread Crumb\n" .
+			$spv_tanggal;
+
+		// =========================================================
+		// TANDA TANGAN
+		// =========================================================
+		if ($status_verifikasi) {
+
+			$pdf->SetFont('times', '', 8);
+
+			$pdf->SetXY(20, $y_ttd);
+			$pdf->Cell(
+				45,
+				5,
+				'Dibuat Oleh,',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(85, $y_ttd);
+			$pdf->Cell(
+				45,
+				5,
+				'Diketahui Oleh,',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(150, $y_ttd);
+			$pdf->Cell(
+				45,
+				5,
+				'Disetujui Oleh,',
+				0,
+				1,
+				'C'
+			);
+
+			$pdf->write2DBarcode(
+				$qr_qc_text,
+				'QRCODE,L',
+				35,
+				$y_ttd + 5,
+				$qr_size,
+				$qr_size,
+				null,
+				'N'
+			);
+
+			if ($qr_produksi_text) {
+
+				$pdf->write2DBarcode(
+					$qr_produksi_text,
+					'QRCODE,L',
+					100,
+					$y_ttd + 5,
+					$qr_size,
+					$qr_size,
+					null,
+					'N'
+				);
+			}
+
+			$pdf->write2DBarcode(
+				$qr_spv_text,
+				'QRCODE,L',
+				165,
+				$y_ttd + 5,
+				$qr_size,
+				$qr_size,
+				null,
+				'N'
+			);
+
+			$pdf->SetXY(20, $y_ttd + 20);
+			$pdf->Cell(
+				45,
+				5,
+				'QC Inspector',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(85, $y_ttd + 20);
+			$pdf->Cell(
+				45,
+				5,
+				'Foreman/Forelady Produksi',
+				0,
+				0,
+				'C'
+			);
+
+			$pdf->SetXY(150, $y_ttd + 20);
+			$pdf->Cell(
+				45,
+				5,
+				'Supervisor QC',
+				0,
+				1,
+				'C'
+			);
+		} else {
+
+			$pdf->SetFont('times', '', 8);
+			$pdf->SetTextColor(255, 0, 0);
+
+			$pdf->SetXY(80, $y_ttd);
+
+			$pdf->Cell(
+				80,
+				6,
+				'Data Belum Diverifikasi',
+				0,
+				1,
+				'C'
+			);
+
+			$pdf->SetTextColor(0, 0, 0);
+		}
+
+		// =========================================================
+		// OUTPUT
+		// =========================================================
+		$pdf->setPrintFooter(false);
+
+		$filename =
+			"Kebersihan Ruang_Audit_{$formatted_date2}.pdf";
+
 		$pdf->Output($filename, 'I');
 	}
 

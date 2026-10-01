@@ -1,11 +1,14 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Inventaris extends MY_Controller {
+class Inventaris extends MY_Controller
+{
 
 	public function __construct()
 	{
@@ -13,10 +16,11 @@ class Inventaris extends MY_Controller {
 
 		$this->load->library('form_validation');
 		$this->load->library('session');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('inventaris_model');
 		$this->load->model('alatqc_model');
-		if(!$this->auth_model->current_user()){
+		$this->load->library('audit_library');
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
@@ -27,7 +31,7 @@ class Inventaris extends MY_Controller {
 			'inventaris' => $this->inventaris_model->get_data_by_plant(),
 		);
 
-		$this->active_nav = 'inventaris'; 
+		$this->active_nav = 'inventaris';
 		$this->render('form/inventaris/inventaris', $data);
 	}
 
@@ -37,7 +41,7 @@ class Inventaris extends MY_Controller {
 			'inventaris' => $this->inventaris_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'inventaris'; 
+		$this->active_nav = 'inventaris';
 		$this->render('form/inventaris/inventaris-detail', $data);
 	}
 
@@ -61,7 +65,7 @@ class Inventaris extends MY_Controller {
 			'alat_list' => $this->alatqc_model->get_all()
 		);
 
-		$this->active_nav = 'inventaris'; 
+		$this->active_nav = 'inventaris';
 		$this->render('form/inventaris/inventaris-tambah', $data);
 	}
 
@@ -86,7 +90,7 @@ class Inventaris extends MY_Controller {
 			'inventaris' => $this->inventaris_model->get_by_uuid($uuid),
 		];
 
-		$this->active_nav = 'inventaris'; 
+		$this->active_nav = 'inventaris';
 		$this->render('form/inventaris/inventaris-edit', $data);
 	}
 
@@ -110,18 +114,18 @@ class Inventaris extends MY_Controller {
 
 	public function check($uuid)
 	{
-    // Ensure the 'kondisi_akhir' field exists and is an array
+		// Ensure the 'kondisi_akhir' field exists and is an array
 		$kondisi_akhir_data = $this->input->post('kondisi_akhir');
 
 		if ($kondisi_akhir_data && is_array($kondisi_akhir_data)) {
-        // Loop to apply validation rules for each kondisi_akhir input
+			// Loop to apply validation rules for each kondisi_akhir input
 			foreach ($kondisi_akhir_data as $key => $val) {
 				$this->form_validation->set_rules("kondisi_akhir[$key]", 'Kondisi Akhir', 'required|in_list[Tidak Tersedia,Baik,Rusak,Hilang,Bersih,Kotor,Habis,Baik Bersih Masih]');
 			}
 		}
 
 		if ($this->form_validation->run() == TRUE) {
-        // If validation passes, update the data
+			// If validation passes, update the data
 			$update = $this->inventaris_model->update_check($uuid);
 
 			if ($update) {
@@ -133,12 +137,12 @@ class Inventaris extends MY_Controller {
 			redirect('inventaris');
 		}
 
-    // If validation fails or it's the first request, load the data
+		// If validation fails or it's the first request, load the data
 		$data = [
 			'inventaris' => $this->inventaris_model->get_by_uuid($uuid)
 		];
 
-		$this->active_nav = 'inventaris'; 
+		$this->active_nav = 'inventaris';
 		$this->render('form/inventaris/inventaris-check', $data);
 	}
 
@@ -149,7 +153,7 @@ class Inventaris extends MY_Controller {
 			'inventaris' => $this->inventaris_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-inventaris'; 
+		$this->active_nav = 'verifikasi-inventaris';
 		$this->render('form/inventaris/inventaris-verifikasi', $data);
 	}
 
@@ -165,7 +169,7 @@ class Inventaris extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Checklist Inventaris Peralatan QC Bread Crumb berhasil di Update');
 				redirect('inventaris/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Checklist Inventaris Peralatan QC Bread Crumb gagal di Update');
 				redirect('inventaris/verifikasi');
 			}
@@ -175,13 +179,65 @@ class Inventaris extends MY_Controller {
 			'inventaris' => $this->inventaris_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-inventaris'; 
+		$this->active_nav = 'verifikasi-inventaris';
 		$this->render('form/inventaris/inventaris-status', $data);
+	}
+
+	public function copy_to_audit($uuid)
+	{
+		if (empty($uuid)) {
+
+			$this->session->set_flashdata(
+				'error_msg',
+				'UUID data tidak ditemukan.'
+			);
+
+			redirect('inventaris/verifikasi');
+			return;
+		}
+
+		$audit_uuid = $this->audit_library->copy_to_audit(
+			'inventaris',
+			$uuid
+		);
+
+		if (!$audit_uuid) {
+
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Inventaris tidak ditemukan atau gagal dibuat sebagai Audit.'
+			);
+
+			redirect('inventaris/verifikasi');
+			return;
+		}
+
+		$this->session->set_flashdata(
+			'success_msg',
+			'Data Inventaris berhasil dikirim ke Audit.'
+		);
+
+		redirect('inventaris/verifikasi');
+	}
+
+
+	public function audit()
+	{
+		$data = array(
+			'inventaris' => $this->inventaris_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'verifikasi-inventaris';
+
+		$this->render(
+			'form/inventaris/inventaris-audit',
+			$data
+		);
 	}
 
 	public function cetak()
 	{
-		$selected_items = $this->input->post('checkbox'); 
+		$selected_items = $this->input->post('checkbox');
 
 		log_message('debug', 'UUID yang dipilih: ' . print_r($selected_items, true));
 
@@ -203,7 +259,7 @@ class Inventaris extends MY_Controller {
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
-		$pdf->setPrintHeader(false); 
+		$pdf->setPrintHeader(false);
 		$pdf->SetMargins(10, 14, 10);
 		$pdf->AddPage();
 		$pdf->SetFont('times', 'B', 10);
@@ -267,12 +323,12 @@ class Inventaris extends MY_Controller {
 					$height_keterangan = $pdf->getStringHeight(40, $keterangan);
 					$row_height = max($height_nama_alat, $height_keterangan, 5);
 
-					$pdf->MultiCell(10, $row_height, $no, 1, 'C', false, 0); 
+					$pdf->MultiCell(10, $row_height, $no, 1, 'C', false, 0);
 					$pdf->MultiCell(70, $row_height, $nama_alat, 1, 'L', false, 0);
-					$pdf->MultiCell(20, $row_height, $jumlah, 1, 'C', false, 0); 
-					$pdf->MultiCell(26, $row_height, $kondisi_awal, 1, 'C', false, 0); 
-					$pdf->MultiCell(26, $row_height, $kondisi_akhir, 1, 'C', false, 0); 
-					$pdf->MultiCell(40, $row_height, $keterangan, 1, 'L', false, 1); 
+					$pdf->MultiCell(20, $row_height, $jumlah, 1, 'C', false, 0);
+					$pdf->MultiCell(26, $row_height, $kondisi_awal, 1, 'C', false, 0);
+					$pdf->MultiCell(26, $row_height, $kondisi_akhir, 1, 'C', false, 0);
+					$pdf->MultiCell(40, $row_height, $keterangan, 1, 'L', false, 1);
 
 					$no++;
 				}
@@ -293,7 +349,7 @@ class Inventaris extends MY_Controller {
 
 		$nama_spv = $data['inventaris']->nama_spv;
 		$tanggal_update = $data['inventaris']->tgl_update_spv;
-		$update = new DateTime($tanggal_update); 
+		$update = new DateTime($tanggal_update);
 		$update_tanggal = $update->format('d-m-Y | H:i');
 
 		$status_verifikasi = true;
@@ -301,7 +357,7 @@ class Inventaris extends MY_Controller {
 		foreach ($inventaris_data as $item) {
 			if ($item->status_spv != '1') {
 				$status_verifikasi = false;
-				break; 
+				break;
 			}
 		}
 
@@ -332,17 +388,16 @@ class Inventaris extends MY_Controller {
 			$pdf->SetXY(150, $y_verifikasi + 10);
 			$pdf->Cell(49, 5, 'Disetujui oleh,', 0, 0, 'C');
 			$qr_text = 'Diverifikasi secara digital oleh,' . "\n"
-			. $data['inventaris']->nama_lengkap_spv . "\n"
-			. 'SPV QC Bread Crumb' . "\n"
-			. $update_tanggal;
+				. $data['inventaris']->nama_lengkap_spv . "\n"
+				. 'SPV QC Bread Crumb' . "\n"
+				. $update_tanggal;
 
 			$pdf->write2DBarcode($qr_text, 'QRCODE,L', 167, $y_verifikasi + 15, 15, 15, null, 'N');
 
 			$pdf->SetXY(150, $y_verifikasi + 30);
 			$pdf->Cell(49, 5, 'Supervisor QC', 0, 0, 'C');
-
 		} else {
-			$pdf->SetTextColor(255, 0, 0); 
+			$pdf->SetTextColor(255, 0, 0);
 			$pdf->SetFont('times', '', 8);
 			$pdf->SetXY(100, $y_after_keterangan);
 			$pdf->Cell(80, 5, 'Data Belum Diverifikasi', 0, 0, 'C');
@@ -353,4 +408,3 @@ class Inventaris extends MY_Controller {
 		$pdf->Output($filename, 'I');
 	}
 }
-

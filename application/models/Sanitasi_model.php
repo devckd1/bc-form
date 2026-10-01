@@ -341,8 +341,13 @@ class Sanitasi_model extends CI_Model
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('sanitasi', ['plant' => $plant])->result();
+
+		return $this->db->get_where('sanitasi', [
+			'plant'    => $plant,
+			'is_audit' => 0
+		])->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -368,6 +373,55 @@ class Sanitasi_model extends CI_Model
 		log_message('debug', 'QUERY SANITASI: ' . $this->db->last_query());
 
 		return $query->result();
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('sanitasi')->result();
+	}
+
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sanitasi')
+			->row();
+	}
+
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sanitasi')
+			->row();
+	}
+
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('sanitasi')
+			->result();
 	}
 
 	/*public function get_by_date($date, $plant = null)

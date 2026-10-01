@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Seasoning_model extends CI_Model {
-	
+class Seasoning_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -22,7 +24,7 @@ class Seasoning_model extends CI_Model {
 				'field' => 'spesifikasi',
 				'label' => 'Specification',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'pemasok',
 				'label' => 'Supplier',
@@ -56,7 +58,7 @@ class Seasoning_model extends CI_Model {
 				'field' => 'jumlah_reject',
 				'label' => 'Rejected',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'kemasan',
 				'label' => 'Packaging'
@@ -155,8 +157,8 @@ class Seasoning_model extends CI_Model {
 		$catatan = $this->input->post('catatan');
 		$status_spv = "0";
 
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
-		if(empty($kondisi_mobil)) {
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
 		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
@@ -198,8 +200,7 @@ class Seasoning_model extends CI_Model {
 		);
 
 		$this->db->insert('seasoning', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function update($uuid, $file_name)
@@ -232,10 +233,10 @@ class Seasoning_model extends CI_Model {
 		$allergen = $this->input->post('allergen');
 		$keterangan = $this->input->post('keterangan');
 		$catatan = $this->input->post('catatan');
-		$old_data = $this->db->get_where('seasoning', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('seasoning', ['uuid' => $uuid])->row_array();
 
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
-		if(empty($kondisi_mobil)) {
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
 		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
@@ -277,27 +278,26 @@ class Seasoning_model extends CI_Model {
 
 		$this->db->update('seasoning', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('seasoning', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('seasoning', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus seasoning_logs
+			// simpan log ke tabel khusus seasoning_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'seasoning_logs', // nama tabel log khusus seasoning
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'seasoning_logs', // nama tabel log khusus seasoning
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -326,8 +326,7 @@ class Seasoning_model extends CI_Model {
 		);
 
 		$this->db->update('seasoning', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -352,7 +351,7 @@ class Seasoning_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -373,7 +372,7 @@ class Seasoning_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
@@ -387,12 +386,18 @@ class Seasoning_model extends CI_Model {
 	public function get_data_by_plant()
 	{
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('seasoning', ['plant' => $plant])->result();
+
+		return $this->db->get_where('seasoning', [
+			'plant'    => $plant,
+			'is_audit' => 0
+		])->result();
 	}
 
-	public function get_latest_seasoning() {
-		$user_plant = $this->session->userdata('plant'); 
+	public function get_latest_seasoning()
+	{
+		$user_plant = $this->session->userdata('plant');
 
 		$this->db->select('jenis_seasoning, kode_produksi, pemasok, jumlah_barang');
 		$this->db->from('seasoning');
@@ -408,5 +413,53 @@ class Seasoning_model extends CI_Model {
 	{
 		$this->db->where('uuid', $uuid);
 		return $this->db->delete('seasoning');
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('seasoning')->result();
+	}
+
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('seasoning')
+			->row();
+	}
+
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('seasoning')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('seasoning')
+			->result();
 	}
 }

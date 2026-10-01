@@ -335,4 +335,62 @@ class Suhu_model extends CI_Model
 
 		return $results;
 	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('suhu')->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('suhu')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('suhu')
+			->row();
+	}
+
+	public function get_data_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('suhu')->result();
+	}
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		$this->db->where('date', $tanggal);
+		$this->db->where('plant', $plant);
+		$this->db->order_by('shift', 'ASC');
+		$this->db->order_by('pukul', 'ASC');
+
+		return $this->db
+			->get('suhu')
+			->result();
+	}
 }
