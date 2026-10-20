@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Sensori_model extends CI_Model {
+class Sensori_model extends CI_Model
+{
 
 	protected $table = 'sensori_fg';
-	
+
 	public function rules()
 	{
 		return [
@@ -35,54 +37,77 @@ class Sensori_model extends CI_Model {
 	{
 		$produksi_data = $this->session->userdata('produksi_data');
 		$nama_produksi = $produksi_data['nama_produksi'] ?? '';
-		$uuid = Uuid::uuid4()->toString();
+
+		$uuid_qc = Uuid::uuid4()->toString();
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant');
+
 		$date = $this->input->post('date');
 		$nama_produk = $this->input->post('nama_produk');
 		$tindakan = $this->input->post('tindakan');
 		$catatan = $this->input->post('catatan');
 
-		$kode_produksi = $this->input->post('kode_produksi');
-		$best_before = $this->input->post('best_before');
-		$warna = $this->input->post('warna');
-		$tekstur = $this->input->post('tekstur');
-		$rasa = $this->input->post('rasa');
-		$aroma = $this->input->post('aroma');
-		$kenampakan = $this->input->post('kenampakan');
+		$kode_produksi = $this->input->post('kode_produksi') ?? [];
+		$best_before = $this->input->post('best_before') ?? [];
+		$warna = $this->input->post('warna') ?? [];
+		$tekstur = $this->input->post('tekstur') ?? [];
+		$rasa = $this->input->post('rasa') ?? [];
+		$aroma = $this->input->post('aroma') ?? [];
+		$kenampakan = $this->input->post('kenampakan') ?? [];
 
 		$produk = [];
+
 		for ($i = 0; $i < count($kode_produksi); $i++) {
 			$produk[] = [
 				'kode_produksi' => $kode_produksi[$i],
-				'best_before' => isset($best_before[$i]) ? $best_before[$i] : '',
-				'warna' => isset($warna[$i]) ? $warna[$i] : '',
-				'tekstur' => isset($tekstur[$i]) ? $tekstur[$i] : '',
-				'rasa' => isset($rasa[$i]) ? $rasa[$i] : '',
-				'aroma' => isset($aroma[$i]) ? $aroma[$i] : '',
-				'kenampakan' => isset($kenampakan[$i]) ? $kenampakan[$i] : '',
+				'best_before' => $best_before[$i] ?? '',
+				'warna' => $warna[$i] ?? '',
+				'tekstur' => $tekstur[$i] ?? '',
+				'rasa' => $rasa[$i] ?? '',
+				'aroma' => $aroma[$i] ?? '',
+				'kenampakan' => $kenampakan[$i] ?? ''
 			];
 		}
 
-		$status_spv = "0";
-		$status_produksi = "1";
-
-		$data = array(
-			'uuid' => $uuid,
+		$data = [
+			'uuid' => $uuid_qc,
+			'is_audit' => 0,
+			'source_uuid' => null,
 			'username' => $username,
 			'plant' => $plant,
 			'date' => $date,
 			'nama_produk' => $nama_produk,
 			'tindakan' => $tindakan,
 			'catatan' => $catatan,
-			'produk' => json_encode($produk), 
-			'status_spv' => $status_spv,
+			'produk' => json_encode($produk),
+			'status_spv' => '0',
 			'nama_produksi' => $nama_produksi,
-			'status_produksi' => $status_produksi
-		);
+			'status_produksi' => '1'
+		];
 
+		$this->db->trans_begin();
+
+		// Simpan data QC
 		$this->db->insert('sensori_fg', $data);
-		return ($this->db->affected_rows() > 0) ? true : false;
+
+		// Buat snapshot Audit
+		if ($this->db->trans_status() !== false) {
+			$data_audit = $data;
+			$data_audit['uuid'] = Uuid::uuid4()->toString();
+			$data_audit['is_audit'] = 1;
+			$data_audit['source_uuid'] = $uuid_qc;
+
+			$this->db->insert('sensori_fg', $data_audit);
+		}
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
 	public function update($uuid)
@@ -95,7 +120,7 @@ class Sensori_model extends CI_Model {
 		$rasa = $this->input->post('rasa');
 		$aroma = $this->input->post('aroma');
 		$kenampakan = $this->input->post('kenampakan');
-		$old_data = $this->db->get_where('sensori_fg', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('sensori_fg', ['uuid' => $uuid])->row_array();
 		$date = $this->input->post('date');
 		$nama_produk = $this->input->post('nama_produk');
 		$tindakan = $this->input->post('tindakan');
@@ -130,7 +155,7 @@ class Sensori_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('sensori_fg', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'sensori_fg_logs',
@@ -148,7 +173,7 @@ class Sensori_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -177,13 +202,12 @@ class Sensori_model extends CI_Model {
 		);
 
 		$this->db->update('sensori_fg', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -212,8 +236,7 @@ class Sensori_model extends CI_Model {
 		);
 
 		$this->db->update('sensori_fg', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -243,7 +266,7 @@ class Sensori_model extends CI_Model {
 	public function get_by_uuid_sensori($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -253,21 +276,21 @@ class Sensori_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_sensori_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, status_produksi, tgl_update_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('sensori_fg');
 
-		$data_sensori = $query->row();  
-		return $data_sensori; 
+		$data_sensori = $query->row();
+		return $data_sensori;
 	}
 
 	public function get_data_by_plant($limit, $start)
@@ -275,13 +298,14 @@ class Sensori_model extends CI_Model {
 		$plant = $this->session->userdata('plant');
 
 		return $this->db
-		->select('uuid,date,nama_produk,produk,tindakan,status_spv')
-		->from('sensori_fg')
-		->where('plant', $plant)
-		->order_by('created_at', 'DESC')
-		->limit($limit, $start)
-		->get()
-		->result();
+			->select('uuid, date, nama_produk, produk, tindakan, status_spv')
+			->from('sensori_fg')
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->order_by('created_at', 'DESC')
+			->limit($limit, $start)
+			->get()
+			->result();
 	}
 
 	public function get_data_verifikasi()
@@ -289,14 +313,14 @@ class Sensori_model extends CI_Model {
 		$plant = $this->session->userdata('plant');
 
 		return $this->db
-		->select('uuid,date,nama_produk,produk,tindakan,status_spv,modified_at,tgl_update_spv')
-		->from('sensori_fg')
-		->where('plant', $plant)
-		->order_by('created_at', 'DESC')
-		->get()
-		->result();
+			->select('uuid,date,nama_produk,produk,tindakan,status_spv,modified_at,tgl_update_spv')
+			->from('sensori_fg')
+			->where('plant', $plant)
+			->order_by('created_at', 'DESC')
+			->get()
+			->result();
 	}
-	
+
 	public function delete_by_uuid($uuid)
 	{
 		$this->db->where('uuid', $uuid);
@@ -312,7 +336,7 @@ class Sensori_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -333,7 +357,7 @@ class Sensori_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
@@ -343,4 +367,137 @@ class Sensori_model extends CI_Model {
 		return $query->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('sensori_fg')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sensori_fg')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sensori_fg')
+			->row();
+	}
+
+	public function get_qc_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->get('sensori_fg')
+			->row();
+	}
+
+	public function update_qc($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		$record = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->get('sensori_fg')
+			->row();
+
+		if (!$record) {
+			return false;
+		}
+
+		// Pertahankan proses update QC yang sudah ada.
+		return $this->update($uuid);
+	}
+
+	public function update_audit($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		$record = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sensori_fg')
+			->row();
+
+		if (!$record) {
+			return false;
+		}
+
+		$produk = $this->build_produk_from_post();
+
+		if ($produk === false) {
+			return false;
+		}
+
+		$data = [
+			'date'        => $this->input->post('date', true),
+			'nama_produk' => $this->input->post('nama_produk', true),
+			'produk'      => json_encode($produk, JSON_UNESCAPED_UNICODE),
+			'tindakan'    => $this->input->post('tindakan', true),
+			'catatan'     => $this->input->post('catatan', true),
+		];
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update('sensori_fg', $data);
+	}
+
+	private function build_produk_from_post()
+	{
+		$kode = $this->input->post('kode_produksi');
+		$bestBefore = $this->input->post('best_before');
+		$warna = $this->input->post('warna');
+		$tekstur = $this->input->post('tekstur');
+		$rasa = $this->input->post('rasa');
+		$aroma = $this->input->post('aroma');
+		$kenampakan = $this->input->post('kenampakan');
+
+		if (!is_array($kode) || !is_array($bestBefore)) {
+			return false;
+		}
+
+		$produk = [];
+
+		foreach ($kode as $index => $kodeProduksi) {
+			$produk[] = [
+				'kode_produksi' => trim((string) $kodeProduksi),
+				'best_before'   => $bestBefore[$index] ?? '',
+				'warna'         => $warna[$index] ?? '',
+				'tekstur'       => $tekstur[$index] ?? '',
+				'rasa'          => $rasa[$index] ?? '',
+				'aroma'         => $aroma[$index] ?? '',
+				'kenampakan'    => $kenampakan[$index] ?? '',
+			];
+		}
+
+		return $produk;
+	}
 }

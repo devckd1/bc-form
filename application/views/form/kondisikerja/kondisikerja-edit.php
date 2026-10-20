@@ -46,15 +46,15 @@
                 <?php
                 $options = [
                     '1' => '1. Berdebu',
-                    '2' => '2. Basah, ada genangan air',
-                    '3' => '3. Sisa produksi',
-                    '4' => '4. Noda',
-                    '5' => '5. Mikroorganisme',
-                    '6' => '6. Kontaminasi non halal',
-                    '7' => '7. Higiene karyawan tidak sesuai GMP',
-                    '✓' => '✓ Ok, Sesuai SSOP',
-                    'X' => 'X Tidak Ok',
-                    '−' => '− Tidak ada'
+					'2' => '2. Basah, ada genangan air',
+					'3' => '3. Sisa produksi (remah-remah roti, tepung, sisa adonan)',
+					'4' => '4. Noda (karat, cat, tinta)',
+					'5' => '5. Pertumbuhan Mikroorganisme (jamur, bau busuk, biofilm)',
+					'6' => '6. Kontak / kontaminasi material non halal',
+					'7' => '7. Higiene karyawan tidak sesuai GMP',
+					'✓' => '✓ Ok, Sesuai SSOP, bersih, bebas najis / material non halal',
+					'X' => 'X Tidak Ok, tidak sesuai SSOP',
+					'-' => '- Tidak ada / Tidak digunakan'
                 ];
 
                 $sections = [

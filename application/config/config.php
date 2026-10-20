@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | a PHP script and you can easily do that on your own.
 |
 */
-$config['base_url'] = 'http://10.7.5.13/bc-form/';
+$config['base_url'] = 'http://10.7.2.9/bc/';
 
 /*
 |--------------------------------------------------------------------------

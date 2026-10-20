@@ -27,11 +27,11 @@ class List_timbangan_model extends CI_Model {
 				'label' => 'Location',
 				'rules' => 'required'
 			],
-			// [
-			// 	'field' => 'standar',
-			// 	'label' => 'Standart',
-			// 	'rules' => 'required'
-			// ]
+			 [
+			 	'field' => 'standar',
+			 	'label' => 'Standart',
+			 	'rules' => 'required'
+			 ]
 		];
 	}
 
@@ -43,7 +43,7 @@ class List_timbangan_model extends CI_Model {
 		$kapasitas = $this->input->post('kapasitas');
 		$model = $this->input->post('model');
 		$lokasi = $this->input->post('lokasi');
-		// $standar = $this->input->post('standar');
+		$standar = $this->input->post('standar');
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant'); 
 
@@ -54,7 +54,7 @@ class List_timbangan_model extends CI_Model {
 			'kapasitas' => $kapasitas,
 			'model' => $model,
 			'lokasi' => $lokasi,
-			// 'standar' => $standar,
+			'standar' => $standar,
 			'plant' => $plant
 		);
 
@@ -70,14 +70,14 @@ class List_timbangan_model extends CI_Model {
 		$kapasitas = $this->input->post('kapasitas');
 		$model = $this->input->post('model');
 		$lokasi = $this->input->post('lokasi');
-		// $standar = $this->input->post('standar');
+		$standar = $this->input->post('standar');
 
 		$data = array(
 			'kode_timbangan' => $kode_timbangan,
 			'kapasitas' => $kapasitas,
 			'model' => $model,
 			'lokasi' => $lokasi,
-			// 'standar' => $standar,
+			'standar' => $standar,
 
 			'modified_at' => date("Y-m-d H:i:s")
 		);

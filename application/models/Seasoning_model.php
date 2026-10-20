@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Seasoning_model extends CI_Model {
-	
+class Seasoning_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -22,7 +24,7 @@ class Seasoning_model extends CI_Model {
 				'field' => 'spesifikasi',
 				'label' => 'Specification',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'pemasok',
 				'label' => 'Supplier',
@@ -56,7 +58,7 @@ class Seasoning_model extends CI_Model {
 				'field' => 'jumlah_reject',
 				'label' => 'Rejected',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'kemasan',
 				'label' => 'Packaging'
@@ -123,83 +125,82 @@ class Seasoning_model extends CI_Model {
 
 	public function insert($file_name)
 	{
-		$uuid = Uuid::uuid4()->toString();
+		$uuid_qc = Uuid::uuid4()->toString();
+
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant');
-		$date = $this->input->post('date');
-		$jenis_seasoning = $this->input->post('jenis_seasoning');
-		$spesifikasi = $this->input->post('spesifikasi');
-		$pemasok = $this->input->post('pemasok');
-		$jenis_mobil = $this->input->post('jenis_mobil');
-		$no_polisi = $this->input->post('no_polisi');
-		$identitas_pengantar = $this->input->post('identitas_pengantar');
-		$no_po = $this->input->post('no_po');
-		$kode_produksi = $this->input->post('kode_produksi');
-		$expired = $this->input->post('expired');
-		$jumlah_barang = $this->input->post('jumlah_barang');
-		$sampel = $this->input->post('sampel');
-		$jumlah_reject = $this->input->post('jumlah_reject');
-		$kemasan = $this->input->post('kemasan');
-		$warna = $this->input->post('warna');
-		$kotoran = $this->input->post('kotoran');
-		$aroma = $this->input->post('aroma');
-		$logo_halal = $this->input->post('logo_halal');
-		$kadar_air = $this->input->post('kadar_air');
-		$negara_asal = $this->input->post('negara_asal');
-		$segel = $this->input->post('segel');
-		$coa = $this->input->post('coa');
-		$sertif_halal = $this->input->post('sertif_halal');
-		$penerimaan = $this->input->post('penerimaan');
-		$allergen = $this->input->post('allergen');
-		$keterangan = $this->input->post('keterangan');
-		$catatan = $this->input->post('catatan');
-		$status_spv = "0";
 
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
-		if(empty($kondisi_mobil)) {
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
+
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
-		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
+
+		$kondisi_mobil_str = implode(', ', $kondisi_mobil);
 
 		$data = array(
-			'uuid' => $uuid,
+			'uuid' => $uuid_qc,
+			'is_audit' => 0,
+			'source_uuid' => null,
+
 			'username' => $username,
 			'plant' => $plant,
-			'date' => $date,
-			'jenis_seasoning' => $jenis_seasoning,
-			'spesifikasi' => $spesifikasi,
-			'pemasok' => $pemasok,
-			'jenis_mobil' => $jenis_mobil,
-			'no_polisi' => $no_polisi,
-			'identitas_pengantar' => $identitas_pengantar,
-			'no_po' => $no_po,
+			'date' => $this->input->post('date'),
+			'jenis_seasoning' => $this->input->post('jenis_seasoning'),
+			'spesifikasi' => $this->input->post('spesifikasi'),
+			'pemasok' => $this->input->post('pemasok'),
+			'jenis_mobil' => $this->input->post('jenis_mobil'),
+			'no_polisi' => $this->input->post('no_polisi'),
+			'identitas_pengantar' => $this->input->post('identitas_pengantar'),
+			'no_po' => $this->input->post('no_po'),
 			'kondisi_mobil' => $kondisi_mobil_str,
-			'kode_produksi' => $kode_produksi,
-			'expired' => $expired,
-			'jumlah_barang' => $jumlah_barang,
-			'sampel' => $sampel,
-			'jumlah_reject' => $jumlah_reject,
-			'kemasan' => $kemasan,
-			'warna' => $warna,
-			'kotoran' => $kotoran,
-			'aroma' => $aroma,
-			'logo_halal' => $logo_halal,
-			'kadar_air' => $kadar_air,
-			'negara_asal' => $negara_asal,
-			'segel' => $segel,
-			'coa' => $coa,
+			'kode_produksi' => $this->input->post('kode_produksi'),
+			'expired' => $this->input->post('expired'),
+			'jumlah_barang' => $this->input->post('jumlah_barang'),
+			'sampel' => $this->input->post('sampel'),
+			'jumlah_reject' => $this->input->post('jumlah_reject'),
+			'kemasan' => $this->input->post('kemasan'),
+			'warna' => $this->input->post('warna'),
+			'kotoran' => $this->input->post('kotoran'),
+			'aroma' => $this->input->post('aroma'),
+			'logo_halal' => $this->input->post('logo_halal'),
+			'kadar_air' => $this->input->post('kadar_air'),
+			'negara_asal' => $this->input->post('negara_asal'),
+			'segel' => $this->input->post('segel'),
+			'coa' => $this->input->post('coa'),
 			'bukti_coa' => $file_name,
-			'sertif_halal' => $sertif_halal,
-			'penerimaan' => $penerimaan,
-			'allergen' => $allergen,
-			'keterangan' => $keterangan,
-			'catatan' => $catatan,
-			'status_spv' => $status_spv
+			'sertif_halal' => $this->input->post('sertif_halal'),
+			'penerimaan' => $this->input->post('penerimaan'),
+			'allergen' => $this->input->post('allergen'),
+			'keterangan' => $this->input->post('keterangan'),
+			'catatan' => $this->input->post('catatan'),
+			'status_spv' => '0'
 		);
 
-		$this->db->insert('seasoning', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
+		$this->db->trans_begin();
 
+		// Simpan data QC utama
+		$this->db->insert('seasoning', $data);
+
+		// Jika insert QC berhasil, buat snapshot Audit
+		if ($this->db->trans_status() !== false) {
+			$data_audit = $data;
+
+			$data_audit['uuid'] = Uuid::uuid4()->toString();
+			$data_audit['is_audit'] = 1;
+			$data_audit['source_uuid'] = $uuid_qc;
+
+			$this->db->insert('seasoning', $data_audit);
+		}
+
+		// Batalkan seluruh transaksi jika salah satu insert gagal
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+		return true;
 	}
 
 	public function update($uuid, $file_name)
@@ -232,10 +233,10 @@ class Seasoning_model extends CI_Model {
 		$allergen = $this->input->post('allergen');
 		$keterangan = $this->input->post('keterangan');
 		$catatan = $this->input->post('catatan');
-		$old_data = $this->db->get_where('seasoning', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('seasoning', ['uuid' => $uuid])->row_array();
 
-		$kondisi_mobil = $this->input->post('kondisi_mobil'); 
-		if(empty($kondisi_mobil)) {
+		$kondisi_mobil = $this->input->post('kondisi_mobil');
+		if (empty($kondisi_mobil)) {
 			$kondisi_mobil = ['Tidak Sesuai'];
 		}
 		$kondisi_mobil_str = implode(", ", $kondisi_mobil);
@@ -277,27 +278,26 @@ class Seasoning_model extends CI_Model {
 
 		$this->db->update('seasoning', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('seasoning', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('seasoning', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus seasoning_logs
+			// simpan log ke tabel khusus seasoning_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'seasoning_logs', // nama tabel log khusus seasoning
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'seasoning_logs', // nama tabel log khusus seasoning
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -326,8 +326,7 @@ class Seasoning_model extends CI_Model {
 		);
 
 		$this->db->update('seasoning', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -352,7 +351,7 @@ class Seasoning_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -373,7 +372,7 @@ class Seasoning_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
@@ -383,22 +382,27 @@ class Seasoning_model extends CI_Model {
 		return $query->row();
 	}
 
-
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('created_at', 'DESC');
 
 		if ($type_user == 9 || $type_user == 1) {
 			return $this->db->get('seasoning')->result();
 		}
 
-		return $this->db->get_where('seasoning', ['plant' => $plant])->result();
+		return $this->db
+			->where('plant', $plant)
+			->get('seasoning')
+			->result();
 	}
 
-	public function get_latest_seasoning() {
-		$user_plant = $this->session->userdata('plant'); 
+	public function get_latest_seasoning()
+	{
+		$user_plant = $this->session->userdata('plant');
 
 		$this->db->select('jenis_seasoning, kode_produksi, pemasok, jumlah_barang');
 		$this->db->from('seasoning');
@@ -414,5 +418,111 @@ class Seasoning_model extends CI_Model {
 	{
 		$this->db->where('uuid', $uuid);
 		return $this->db->delete('seasoning');
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('seasoning')->result();
+	}
+
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('seasoning')
+			->row();
+	}
+
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('seasoning')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('seasoning')
+			->result();
+	}
+
+	public function update_audit($uuid, $file_name)
+	{
+		$plant = $this->session->userdata('plant');
+
+		$kondisiMobil = $this->input->post('kondisi_mobil');
+
+		$data = [
+			'date'              => $this->input->post('date', TRUE),
+			'jenis_seasoning'   => $this->input->post('jenis_seasoning', TRUE),
+			'spesifikasi'       => $this->input->post('spesifikasi', TRUE),
+			'pemasok'           => $this->input->post('pemasok', TRUE),
+			'jenis_mobil'       => $this->input->post('jenis_mobil', TRUE),
+			'no_polisi'         => $this->input->post('no_polisi', TRUE),
+			'identitas_pengantar' => $this->input->post('identitas_pengantar', TRUE),
+			'no_po'             => $this->input->post('no_po', TRUE),
+
+			'kondisi_mobil'     => is_array($kondisiMobil)
+				? implode(',', $kondisiMobil)
+				: '',
+
+			'kode_produksi'     => $this->input->post('kode_produksi', TRUE),
+			'expired'           => $this->input->post('expired', TRUE),
+			'jumlah_barang'     => $this->input->post('jumlah_barang', TRUE),
+			'sampel'            => $this->input->post('sampel', TRUE),
+			'jumlah_reject'     => $this->input->post('jumlah_reject', TRUE),
+
+			'kemasan'           => $this->input->post('kemasan') === 'sesuai'
+				? 'sesuai' : '',
+
+			'warna'             => $this->input->post('warna') === 'sesuai'
+				? 'sesuai' : '',
+
+			'kotoran'           => $this->input->post('kotoran') === 'sesuai'
+				? 'sesuai' : '',
+
+			'aroma'             => $this->input->post('aroma') === 'sesuai'
+				? 'sesuai' : '',
+
+			'kadar_air'         => $this->input->post('kadar_air', TRUE),
+			'negara_asal'       => $this->input->post('negara_asal', TRUE),
+			'segel'             => $this->input->post('segel', TRUE),
+			'logo_halal'        => $this->input->post('logo_halal', TRUE),
+			'sertif_halal'      => $this->input->post('sertif_halal', TRUE),
+			'coa'               => $this->input->post('coa', TRUE),
+			'allergen'          => $this->input->post('allergen', TRUE),
+			'penerimaan'        => $this->input->post('penerimaan', TRUE),
+			'bukti_coa'         => $file_name,
+			'keterangan'        => $this->input->post('keterangan', TRUE),
+			'catatan'           => $this->input->post('catatan', TRUE),
+		];
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update('seasoning', $data);
 	}
 }

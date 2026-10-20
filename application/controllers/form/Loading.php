@@ -1,11 +1,14 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Loading extends MY_Controller {
+class Loading extends MY_Controller
+{
 
 	public function __construct()
 	{
@@ -13,9 +16,9 @@ class Loading extends MY_Controller {
 
 		$this->load->library('form_validation');
 		$this->load->library('session');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('loading_model');
-		if(!$this->auth_model->current_user()){
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
@@ -26,17 +29,29 @@ class Loading extends MY_Controller {
 			'loading' => $this->loading_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'loading'; 
+		$this->active_nav = 'loading';
 		$this->render('form/loading/loading', $data);
 	}
 
 	public function detail($uuid)
 	{
-		$data = array(
-			'loading' => $this->loading_model->get_by_uuid($uuid),
-		);
+		$loading = $this->loading_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'loading'; 
+		if (!$loading || (int) $loading->is_audit !== 0) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Loading Produk tidak ditemukan.'
+			);
+			redirect('loading');
+			return;
+		}
+
+		$data = [
+			'loading' => $loading,
+			'mode'    => 'qc'
+		];
+
+		$this->active_nav = 'loading';
 		$this->render('form/loading/loading-detail', $data);
 	}
 
@@ -50,42 +65,59 @@ class Loading extends MY_Controller {
 			if ($insert) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Loading Produk berhasil di simpan');
 				redirect('loading');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Loading Produk gagal di simpan');
 				redirect('loading');
 			}
 		}
 
-		$this->active_nav = 'loading'; 
+		$this->active_nav = 'loading';
 		$this->render('form/loading/loading-tambah');
 	}
 
 	public function edit($uuid)
 	{
+		$loading = $this->loading_model->get_by_uuid($uuid);
+
+		if (!$loading || (int) $loading->is_audit !== 0) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Loading Produk tidak ditemukan.'
+			);
+			redirect('loading');
+			return;
+		}
+
 		$rules = $this->loading_model->rules();
 		$this->form_validation->set_rules($rules);
 
-		if ($this->form_validation->run() == TRUE) {
+		if ($this->form_validation->run() === TRUE) {
 			$update = $this->loading_model->update($uuid);
 
 			if ($update) {
-				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Loading Produk berhasil diupdate.');
-			} else {
-				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Loading Produk gagal diupdate.');
+				$this->session->set_flashdata(
+					'success_msg',
+					'Data Pemeriksaan Loading Produk berhasil diupdate.'
+				);
+				redirect('loading');
+				return;
 			}
 
-			redirect('loading');
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Loading Produk gagal diupdate.'
+			);
 		}
 
 		$data = [
-			'loading' => $this->loading_model->get_by_uuid($uuid),
-			'bagian_list' => $this->loading_model->get_bagian_by_uuid($uuid)
+			'loading'     => $loading,
+			'bagian_list' => $this->loading_model->get_bagian_by_uuid($uuid),
+			'mode'        => 'qc'
 		];
 
-		$this->active_nav = 'loading'; 
+		$this->active_nav = 'loading';
 		$this->render('form/loading/loading-edit', $data);
 	}
-
 	public function delete($uuid)
 	{
 		if (!$uuid) {
@@ -108,10 +140,10 @@ class Loading extends MY_Controller {
 	{
 		$data = array(
 			'loading' => $this->loading_model->get_data_by_plant(),
-			'active_nav' => 'verifikasi-loading', 
+			'active_nav' => 'verifikasi-loading',
 		);
 
-		$this->active_nav = 'verifikasi-loading'; 
+		$this->active_nav = 'verifikasi-loading';
 		$this->render('form/loading/loading-verifikasi', $data);
 	}
 
@@ -126,7 +158,7 @@ class Loading extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Loading Produk berhasil di Update');
 				redirect('loading/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Loading Produk gagal di Update');
 				redirect('loading/verifikasi');
 			}
@@ -134,10 +166,92 @@ class Loading extends MY_Controller {
 
 		$data = array(
 			'loading' => $this->loading_model->get_by_uuid($uuid),
-			'active_nav' => 'verifikasi-loading');
+			'active_nav' => 'verifikasi-loading'
+		);
 
-		$this->active_nav = 'verifikasi-loading'; 
+		$this->active_nav = 'verifikasi-loading';
 		$this->render('form/loading/loading-status', $data);
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'data' => $this->loading_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'loading';
+
+		$this->render(
+			'form/loading/loading-audit',
+			$data
+		);
+	}
+
+	public function detail_audit($uuid)
+	{
+		$loading = $this->loading_model->get_audit_by_uuid($uuid);
+
+		if (!$loading) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Audit Pemeriksaan Loading Produk tidak ditemukan.'
+			);
+			redirect('loading/audit');
+			return;
+		}
+
+		$data = [
+			'loading' => $loading,
+			'mode'    => 'audit'
+		];
+
+		$this->active_nav = 'loading';
+		$this->render('form/loading/loading-detail', $data);
+	}
+
+	public function edit_audit($uuid)
+	{
+		$loading = $this->loading_model->get_audit_by_uuid($uuid);
+
+		if (!$loading) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Audit Pemeriksaan Loading Produk tidak ditemukan.'
+			);
+			redirect('loading/audit');
+			return;
+		}
+
+		$rules = $this->loading_model->rules();
+		$this->form_validation->set_rules($rules);
+
+		if ($this->form_validation->run() === TRUE) {
+			$update = $this->loading_model->update_audit($uuid);
+
+			if ($update) {
+				$this->session->set_flashdata(
+					'success_msg',
+					'Data Audit Pemeriksaan Loading Produk berhasil diupdate.'
+				);
+			} else {
+				$this->session->set_flashdata(
+					'error_msg',
+					'Data Audit Pemeriksaan Loading Produk gagal diupdate.'
+				);
+			}
+
+			redirect('loading/audit');
+			return;
+		}
+
+		$data = [
+			'loading'     => $loading,
+			'bagian_list' => $this->loading_model->get_bagian_by_uuid($uuid),
+			'mode'        => 'audit'
+		];
+
+		$this->active_nav = 'loading';
+		$this->render('form/loading/loading-edit', $data);
 	}
 
 	// public function diketahui()
@@ -159,7 +273,7 @@ class Loading extends MY_Controller {
 	// 	$this->form_validation->set_rules($rules);
 
 	// 	if ($this->form_validation->run() == TRUE) {
-			
+
 	// 		$update = $this->loading_model->diketahui_update($uuid);
 	// 		if ($update) {
 	// 			$this->session->set_flashdata('success_msg', 'Status Pemeriksaan Loading Produk berhasil di Update');
@@ -181,7 +295,7 @@ class Loading extends MY_Controller {
 
 	public function cetak()
 	{
-		$selected_items = $this->input->post('checkbox'); 
+		$selected_items = $this->input->post('checkbox');
 
 		log_message('debug', 'UUID yang dipilih: ' . print_r($selected_items, true));
 
@@ -203,7 +317,7 @@ class Loading extends MY_Controller {
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
-		$pdf->setPrintHeader(false); 
+		$pdf->setPrintHeader(false);
 		$pdf->SetMargins(10, 14, 10);
 		$pdf->AddPage();
 		$pdf->SetFont('times', 'B', 12);
@@ -222,8 +336,28 @@ class Loading extends MY_Controller {
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['loading']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
-		$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+		$timestamp = strtotime($tanggal);
+
+		$bulan = [
+			1 => 'Januari',
+			2 => 'Februari',
+			3 => 'Maret',
+			4 => 'April',
+			5 => 'Mei',
+			6 => 'Juni',
+			7 => 'Juli',
+			8 => 'Agustus',
+			9 => 'September',
+			10 => 'Oktober',
+			11 => 'November',
+			12 => 'Desember'
+		];
+
+		$formatted_date = date('d', $timestamp) . ' ' .
+			$bulan[(int) date('n', $timestamp)] . ' ' .
+			date('Y', $timestamp);
+
+		$formatted_date2 = date('d-m-Y', $timestamp);
 
 		$start = new DateTime($data['loading']->start_loading);
 		$startFormatted = $start->format('H:i');
@@ -299,7 +433,7 @@ class Loading extends MY_Controller {
 					$baris_kondisi[] = ucwords(str_replace('_', ' ', $kondisi));
 					$baris_nilai[] = $nilai;
 
-            // Tampilkan setiap 5 kolom
+					// Tampilkan setiap 5 kolom
 					if (count($baris_kondisi) == 5) {
 
 						$pdf->SetFont('times', '', 7);
@@ -331,7 +465,7 @@ class Loading extends MY_Controller {
 					}
 				}
 
-        // Sisa data yang kurang dari 5 kolom
+				// Sisa data yang kurang dari 5 kolom
 				if (!empty($baris_kondisi)) {
 
 					$pdf->SetFont('times', '', 7);
@@ -366,7 +500,6 @@ class Loading extends MY_Controller {
 
 					$pdf->Ln();
 				}
-
 			} else {
 
 				$pdf->Cell(0, 6, 'Data kondisi mobil tidak tersedia.', 0, 1, 'L');
@@ -406,7 +539,7 @@ class Loading extends MY_Controller {
 					$expired = isset($loading->expired) ? $loading->expired : '-';
 					$keterangan = isset($loading->keterangan) ? $loading->keterangan : '-';
 
-                                        $pdf->SetFont('times', '', 8);
+					$pdf->SetFont('times', '', 8);
 
 					$h1 = $pdf->getStringHeight(43, $nama_produk);
 					$h2 = $pdf->getStringHeight(40, $kode_produksi);
@@ -431,13 +564,13 @@ class Loading extends MY_Controller {
 		}
 
 		$pdf->SetFont('times', 'I', 7);
-		$pdf->Cell(193, 5, 'QW 07/02', 0, 1, 'R'); 
+		$pdf->Cell(193, 5, 'QW 07/02', 0, 1, 'R');
 
 		$y_last = $pdf->GetY();
-		$y_last += 1; 
+		$y_last += 1;
 
 		$pdf->SetFont('times', '', 7);
-		$pdf->SetY($pdf->GetY() + 1); 
+		$pdf->SetY($pdf->GetY() + 1);
 		$pdf->Cell(15, 5, 'Keterangan: ', 0, 1, 'C');
 		$pdf->SetFont('dejavusans', '', 6);
 		$pdf->MultiCell(40, 10, "✔ Ok\n✘ Tidak", 0, 'L', false, 0);
@@ -452,12 +585,12 @@ class Loading extends MY_Controller {
 		$data['loading']->nama_lengkap_wh = $data['loading']->nama_wh;
 
 
-		$pdf->SetY($pdf->GetY() +2); 
+		$pdf->SetY($pdf->GetY() + 2);
 		$pdf->SetFont('times', '', 7);
 		$pdf->Cell(5, 3, 'Catatan : ', 0, 1, 'L');
 		foreach ($loading_data as $item) {
 			if (!empty($item->catatan)) {
-				$pdf->Cell(10, 0, '', 0, 0, 'L'); 
+				$pdf->Cell(10, 0, '', 0, 0, 'L');
 				$pdf->Cell(200, 0, ' - ' . $item->catatan, 0, 1, 'L');
 			}
 		}
@@ -477,16 +610,16 @@ class Loading extends MY_Controller {
 		if ($status_verifikasi) {
 			$y_verifikasi = $y_after_keterangan;
 
-		// Dibuat oleh (QC)
+			// Dibuat oleh (QC)
 			$pdf->SetXY(25, $y_verifikasi + 5);
 			$pdf->Cell(35, 5, 'Dibuat Oleh,', 0, 0, 'C');
 			if (!empty($data['loading']->nama_lengkap_qc)) {
 				$update_tanggal_qc = !empty($data['loading']->created_at)
-				? (new DateTime($data['loading']->created_at))->format('d-m-Y | H:i')
-				: date('d-m-Y | H:i'); 
+					? (new DateTime($data['loading']->created_at))->format('d-m-Y | H:i')
+					: date('d-m-Y | H:i');
 
 				$qr_text_qc = "Dibuat secara digital oleh,\n" .
-				$data['loading']->nama_lengkap_qc . "\nQC Inspector\n" . $update_tanggal_qc;
+					$data['loading']->nama_lengkap_qc . "\nQC Inspector\n" . $update_tanggal_qc;
 				$pdf->write2DBarcode($qr_text_qc, 'QRCODE,L', 35, $y_verifikasi + 10, 15, 15, null, 'N');
 				$pdf->SetXY(25, $y_verifikasi + 24);
 				$pdf->Cell(35, 5, 'QC Inspector', 0, 0, 'C');
@@ -530,7 +663,7 @@ class Loading extends MY_Controller {
 			// 	$pdf->Cell(35, 5, 'Belum Diverifikasi', 0, 0, 'C');
 			// }
 
-		// Disetujui oleh (SPV)
+			// Disetujui oleh (SPV)
 			$pdf->SetXY(150, $y_verifikasi + 5);
 			$pdf->Cell(49, 5, 'Disetujui Oleh,', 0, 0, 'C');
 			$update_tanggal = (new DateTime($data['loading']->tgl_update_spv))->format('d-m-Y | H:i');
@@ -539,7 +672,7 @@ class Loading extends MY_Controller {
 			$pdf->SetXY(150, $y_verifikasi + 24);
 			$pdf->Cell(49, 5, 'Supervisor QC', 0, 0, 'C');
 		} else {
-			$pdf->SetTextColor(255, 0, 0); 
+			$pdf->SetTextColor(255, 0, 0);
 			$pdf->SetFont('times', '', 8);
 			$pdf->SetXY(100, $y_after_keterangan);
 			$pdf->Cell(80, 5, 'Data Belum Diverifikasi', 0, 0, 'C');
@@ -550,4 +683,3 @@ class Loading extends MY_Controller {
 		$pdf->Output($filename, 'I');
 	}
 }
-

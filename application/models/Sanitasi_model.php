@@ -39,19 +39,21 @@ class Sanitasi_model extends CI_Model
 		$uuid = Uuid::uuid4()->toString();
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant');
+
 		$date = $this->input->post('date');
 		$shift = $this->input->post('shift');
 		$waktu = $this->input->post('waktu');
 		$catatan = $this->input->post('catatan');
-		$status_produksi = "1";
-		$status_spv = "0";
 
-		$sub_area = $this->input->post('sub_area');
-		$standar = $this->input->post('standar');
-		$aktual = $this->input->post('aktual');
-		$suhu_air = $this->input->post('suhu_air');
-		$keterangan = $this->input->post('keterangan');
-		$tindakan = $this->input->post('tindakan');
+		$status_produksi = '1';
+		$status_spv = '0';
+
+		$sub_area = $this->input->post('sub_area') ?? [];
+		$standar = $this->input->post('standar') ?? [];
+		$aktual = $this->input->post('aktual') ?? [];
+		$suhu_air = $this->input->post('suhu_air') ?? [];
+		$keterangan = $this->input->post('keterangan') ?? [];
+		$tindakan = $this->input->post('tindakan') ?? [];
 
 		$area = [];
 
@@ -60,17 +62,22 @@ class Sanitasi_model extends CI_Model
 		for ($i = 0; $i < count($sub_area); $i++) {
 			$gambar = null;
 
-			if (!empty($_FILES['gambar']['name'][$i])) {
+			if (
+				isset($_FILES['gambar']['name'][$i]) &&
+				$_FILES['gambar']['name'][$i] !== ''
+			) {
 				$_FILES['file']['name']     = $_FILES['gambar']['name'][$i];
 				$_FILES['file']['type']     = $_FILES['gambar']['type'][$i];
 				$_FILES['file']['tmp_name'] = $_FILES['gambar']['tmp_name'][$i];
 				$_FILES['file']['error']    = $_FILES['gambar']['error'][$i];
 				$_FILES['file']['size']     = $_FILES['gambar']['size'][$i];
 
-				$config['upload_path']   = './uploads/sanitasi/';
-				$config['allowed_types'] = 'jpg|jpeg|png|webp';
-				$config['file_name']     = 'gambar_' . time() . '_' . $i;
-				$config['overwrite']     = false;
+				$config = [
+					'upload_path'   => './uploads/sanitasi/',
+					'allowed_types' => 'jpg|jpeg|png|webp',
+					'file_name'     => 'gambar_' . time() . '_' . $i,
+					'overwrite'     => false
+				];
 
 				$this->upload->initialize($config);
 
@@ -78,21 +85,31 @@ class Sanitasi_model extends CI_Model
 					$uploadData = $this->upload->data();
 					$gambar = $uploadData['file_name'];
 
-					// ✅ Kompres gambar langsung setelah upload
-					$config_compress['image_library']  = 'gd2';
-					$config_compress['source_image']   = $uploadData['full_path'];
-					$config_compress['maintain_ratio'] = TRUE;
-					$config_compress['quality']        = '70%';
-					$config_compress['width']          = 1600;
-					$config_compress['height']         = 1600;
+					// Kompres gambar setelah upload.
+					$config_compress = [
+						'image_library'  => 'gd2',
+						'source_image'   => $uploadData['full_path'],
+						'maintain_ratio' => true,
+						'quality'        => '70%',
+						'width'          => 1600,
+						'height'         => 1600
+					];
 
 					$this->image_lib->initialize($config_compress);
+
 					if (!$this->image_lib->resize()) {
-						log_message('error', 'Kompres gagal: ' . $this->image_lib->display_errors());
+						log_message(
+							'error',
+							'Kompres gagal: ' . $this->image_lib->display_errors()
+						);
 					}
+
 					$this->image_lib->clear();
 				} else {
-					log_message('error', 'Upload gagal: ' . $this->upload->display_errors());
+					log_message(
+						'error',
+						'Upload gagal: ' . $this->upload->display_errors()
+					);
 				}
 			}
 
@@ -110,19 +127,45 @@ class Sanitasi_model extends CI_Model
 		$data = [
 			'uuid'            => $uuid,
 			'username'        => $username,
-			'plant' 		  => $plant,
+			'plant'           => $plant,
 			'date'            => $date,
-			'shift'           => $shift,
-			'waktu'           => $waktu,
-			'area'            => json_encode($area),
-			'catatan'         => $catatan,
-			'status_produksi' => $status_produksi,
-			'nama_produksi'   => $nama_produksi,
-			'status_spv'      => $status_spv
+			'shift'            => $shift,
+			'waktu'            => $waktu,
+			'area'             => json_encode($area),
+			'catatan'          => $catatan,
+			'status_produksi'  => $status_produksi,
+			'nama_produksi'    => $nama_produksi,
+			'status_spv'       => $status_spv,
+			'is_audit'         => 0,
+			'source_uuid'      => null
 		];
 
+		$this->db->trans_begin();
+
+		// Simpan data QC.
 		$this->db->insert('sanitasi', $data);
-		return ($this->db->affected_rows() > 0);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		// Salin data menjadi snapshot Audit.
+		$audit_data = $data;
+		$audit_data['uuid'] = Uuid::uuid4()->toString();
+		$audit_data['is_audit'] = 1;
+		$audit_data['source_uuid'] = $uuid;
+
+		$this->db->insert('sanitasi', $audit_data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
 	public function update($uuid)
@@ -368,6 +411,175 @@ class Sanitasi_model extends CI_Model
 		log_message('debug', 'QUERY SANITASI: ' . $this->db->last_query());
 
 		return $query->result();
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('sanitasi')->result();
+	}
+
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sanitasi')
+			->row();
+	}
+
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sanitasi')
+			->row();
+	}
+
+
+	public function get_audit_by_date($tanggal, $plant)
+	{
+		return $this->db
+			->where('date', $tanggal)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('sanitasi')
+			->result();
+	}
+
+	public function update_audit($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		// Pastikan data merupakan snapshot Audit milik plant aktif.
+		$audit = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sanitasi')
+			->row();
+
+		if (!$audit) {
+			return false;
+		}
+
+		$sub_area = $this->input->post('sub_area') ?? [];
+		$standar = $this->input->post('standar') ?? [];
+		$aktual = $this->input->post('aktual') ?? [];
+		$suhu_air = $this->input->post('suhu_air') ?? [];
+		$keterangan = $this->input->post('keterangan') ?? [];
+		$tindakan = $this->input->post('tindakan') ?? [];
+
+		// Pertahankan nama gambar lama jika form tidak mengunggah gambar baru.
+		$area_lama = json_decode($audit->area ?? '[]', true);
+		if (!is_array($area_lama)) {
+			$area_lama = [];
+		}
+
+		$area = [];
+
+		$this->load->library('upload');
+
+		for ($i = 0; $i < count($sub_area); $i++) {
+			$gambar = $area_lama[$i]['gambar'] ?? null;
+
+			if (
+				isset($_FILES['gambar']['name'][$i]) &&
+				$_FILES['gambar']['name'][$i] !== ''
+			) {
+				$_FILES['file']['name']     = $_FILES['gambar']['name'][$i];
+				$_FILES['file']['type']     = $_FILES['gambar']['type'][$i];
+				$_FILES['file']['tmp_name'] = $_FILES['gambar']['tmp_name'][$i];
+				$_FILES['file']['error']    = $_FILES['gambar']['error'][$i];
+				$_FILES['file']['size']     = $_FILES['gambar']['size'][$i];
+
+				$config = [
+					'upload_path'   => './uploads/sanitasi/',
+					'allowed_types' => 'jpg|jpeg|png|webp',
+					'file_name'     => 'audit_' . time() . '_' . $i,
+					'overwrite'     => false
+				];
+
+				$this->upload->initialize($config);
+
+				if ($this->upload->do_upload('file')) {
+					$uploadData = $this->upload->data();
+					$gambar = $uploadData['file_name'];
+
+					// Kompres gambar baru.
+					$this->load->library('image_lib');
+
+					$config_compress = [
+						'image_library'  => 'gd2',
+						'source_image'   => $uploadData['full_path'],
+						'maintain_ratio' => true,
+						'quality'        => '70%',
+						'width'          => 1600,
+						'height'         => 1600
+					];
+
+					$this->image_lib->initialize($config_compress);
+
+					if (!$this->image_lib->resize()) {
+						log_message(
+							'error',
+							'Kompres gambar Audit gagal: ' .
+								$this->image_lib->display_errors()
+						);
+					}
+
+					$this->image_lib->clear();
+				} else {
+					log_message(
+						'error',
+						'Upload gambar Audit gagal: ' .
+							$this->upload->display_errors()
+					);
+				}
+			}
+
+			$area[] = [
+				'sub_area'   => $sub_area[$i],
+				'standar'    => $standar[$i] ?? '',
+				'aktual'     => $aktual[$i] ?? '',
+				'suhu_air'   => $suhu_air[$i] ?? '',
+				'keterangan' => $keterangan[$i] ?? '',
+				'tindakan'   => $tindakan[$i] ?? '',
+				'gambar'     => $gambar
+			];
+		}
+
+		$data = [
+			'username' => $username,
+			'date'     => $this->input->post('date'),
+			'shift'    => $this->input->post('shift'),
+			'waktu'    => $this->input->post('waktu'),
+			'area'     => json_encode($area),
+			'catatan'  => $this->input->post('catatan'),
+			'modified_at' => date('Y-m-d H:i:s')
+		];
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update('sanitasi', $data);
 	}
 
 	/*public function get_by_date($date, $plant = null)

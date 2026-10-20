@@ -130,7 +130,6 @@ if (!is_array($sanitasi_data)) {
 
     .breadcrumb a {
         color: white;
-        font-weight: bold;
         text-decoration: none;
     }
 

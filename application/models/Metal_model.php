@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Metal_model extends CI_Model {
-	
+class Metal_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date_metal',
 				'label' => 'Date',
@@ -17,12 +19,12 @@ class Metal_model extends CI_Model {
 				'field' => 'shift',
 				'label' => 'Shift',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'time',
 				'label' => 'Time',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'nama_produk',
 				'label' => 'Produk Name',
@@ -48,7 +50,7 @@ class Metal_model extends CI_Model {
 				'label' => 'STD Fe',
 				'rules' => 'required'
 			],
-			[ 
+			[
 				'field' => 'std_nonfe',
 				'label' => 'STD Non Fe',
 				'rules' => 'required'
@@ -103,77 +105,79 @@ class Metal_model extends CI_Model {
 				'label' => 'Notes'
 			]
 		];
-	} 
+	}
 
 	public function insert()
 	{
 		$produksi_data = $this->session->userdata('produksi_data');
 		$nama_produksi = $produksi_data['nama_produksi'] ?? '';
-		$uuid = Uuid::uuid4()->toString();
+
+		$uuid_qc = Uuid::uuid4()->toString();
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant');
-		$date_metal = $this->input->post('date_metal');
-		$shift = $this->input->post('shift');
-		$time = $this->input->post('time');
-		$nama_produk = $this->input->post('nama_produk');
-		$kode_produksi = $this->input->post('kode_produksi');
-		$no_program = $this->input->post('no_program');
- 		$deteksi_ng = $this->input->post('deteksi_ng');
-		$std_fe = $this->input->post('std_fe');
-		$std_nonfe = $this->input->post('std_nonfe');
-		$std_sus304 = $this->input->post('std_sus304');
-		$fe_d = $this->input->post('fe_d') ?? 'tidak terdeteksi';
-		$nonfe_d = $this->input->post('nonfe_d') ?? 'tidak terdeteksi';
-		$sus_d = $this->input->post('sus_d') ?? 'tidak terdeteksi';
-		$fe_t = $this->input->post('fe_t') ?? 'tidak terdeteksi';
-		$nonfe_t = $this->input->post('nonfe_t') ?? 'tidak terdeteksi';
-		$sus_t = $this->input->post('sus_t') ?? 'tidak terdeteksi';
-		$fe_b = $this->input->post('fe_b') ?? 'tidak terdeteksi';
-		$nonfe_b = $this->input->post('nonfe_b') ?? 'tidak terdeteksi';
-		$sus_b = $this->input->post('sus_b') ?? 'tidak terdeteksi';
-		$keterangan = $this->input->post('keterangan');
-		$catatan_metal = $this->input->post('catatan_metal');
-		$status_produksi = "1";
-		$status_spv = "0";
-		$status_produksi_false = "1";
-		$status_spv_false = "0";
 
-		$data = array(
-			'uuid' => $uuid,
-			'username_1' => $username,
-			'plant' => $plant,
-			'date_metal' => $date_metal,
-			'shift' => $shift,
-			'time' => $time,
-			'nama_produk' => $nama_produk,
-			'kode_produksi' => $kode_produksi,
-			'no_program' => $no_program,
-			'deteksi_ng' => $deteksi_ng,
-			'std_fe' => $std_fe,
-			'std_nonfe' => $std_nonfe,
-			'std_sus304' => $std_sus304,
-			'fe_d' => $fe_d,
-			'nonfe_d' => $nonfe_d,
-			'sus_d' => $sus_d,
-			'fe_t' => $fe_t,
-			'nonfe_t' => $nonfe_t,
-			'sus_t' => $sus_t,
-			'fe_b' => $fe_b,
-			'nonfe_b' => $nonfe_b,
-			'sus_b' => $sus_b,
-			'keterangan' => $keterangan,
-			'catatan_metal' => $catatan_metal,
-			'status_produksi' => $status_produksi,
-			'status_spv' => $status_spv,
-			'status_produksi_false' => $status_produksi_false,
-			'nama_produksi_metal' => $nama_produksi,
-			'nama_produksi_false' => $nama_produksi,
-			'status_spv_false' => $status_spv_false
-		);
+		$data = [
+			'uuid'                  => $uuid_qc,
+			'is_audit'              => 0,
+			'source_uuid'           => null,
+			'username_1'            => $username,
+			'plant'                 => $plant,
+			'date_metal'            => $this->input->post('date_metal'),
+			'shift'                 => $this->input->post('shift'),
+			'time'                  => $this->input->post('time'),
+			'nama_produk'           => $this->input->post('nama_produk'),
+			'kode_produksi'         => $this->input->post('kode_produksi'),
+			'no_program'            => $this->input->post('no_program'),
+			'deteksi_ng'            => $this->input->post('deteksi_ng'),
+			'std_fe'                => $this->input->post('std_fe'),
+			'std_nonfe'             => $this->input->post('std_nonfe'),
+			'std_sus304'            => $this->input->post('std_sus304'),
 
+			'fe_d'                  => $this->input->post('fe_d') ?? 'tidak terdeteksi',
+			'nonfe_d'               => $this->input->post('nonfe_d') ?? 'tidak terdeteksi',
+			'sus_d'                 => $this->input->post('sus_d') ?? 'tidak terdeteksi',
+			'fe_t'                  => $this->input->post('fe_t') ?? 'tidak terdeteksi',
+			'nonfe_t'               => $this->input->post('nonfe_t') ?? 'tidak terdeteksi',
+			'sus_t'                 => $this->input->post('sus_t') ?? 'tidak terdeteksi',
+			'fe_b'                  => $this->input->post('fe_b') ?? 'tidak terdeteksi',
+			'nonfe_b'               => $this->input->post('nonfe_b') ?? 'tidak terdeteksi',
+			'sus_b'                 => $this->input->post('sus_b') ?? 'tidak terdeteksi',
+
+			'keterangan'            => $this->input->post('keterangan'),
+			'catatan_metal'         => $this->input->post('catatan_metal'),
+			'status_produksi'       => '1',
+			'status_spv'            => '0',
+			'status_produksi_false' => '1',
+			'nama_produksi_metal'   => $nama_produksi,
+			'nama_produksi_false'   => $nama_produksi,
+			'status_spv_false'      => '0'
+		];
+
+		$this->db->trans_begin();
+
+		// Simpan data QC utama
 		$this->db->insert('metal', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
 
+		// Jika insert QC berhasil, buat snapshot Audit
+		if ($this->db->trans_status() !== false) {
+			$data_audit = $data;
+
+			$data_audit['uuid'] = Uuid::uuid4()->toString();
+			$data_audit['is_audit'] = 1;
+			$data_audit['source_uuid'] = $uuid_qc;
+
+			$this->db->insert('metal', $data_audit);
+		}
+
+		// Batalkan keduanya jika salah satu insert gagal
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
 	public function rules_update()
@@ -242,46 +246,70 @@ class Metal_model extends CI_Model {
 		];
 	}
 
+
 	public function update($uuid)
 	{
+		$plant = $this->session->userdata('plant');
 		$username = $this->session->userdata('username');
-		$old_data = $this->db->get_where('metal', ['uuid'=>$uuid])->row_array();
+
+		$old_data = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->get('metal')
+			->row_array();
+
+		if (!$old_data) {
+			return false;
+		}
+
 		$data = [
 			'username_1'   => $username,
 			'date_metal'   => $this->input->post('date_metal'),
 			'shift'        => $this->input->post('shift'),
 			'time'         => $this->input->post('time'),
 			'nama_produk'  => $this->input->post('nama_produk'),
-			'kode_produksi'=> $this->input->post('kode_produksi'),
+			'kode_produksi' => $this->input->post('kode_produksi'),
 			'no_program'   => $this->input->post('no_program'),
 			'deteksi_ng'   => $this->input->post('deteksi_ng'),
 			'std_fe'       => $this->input->post('std_fe'),
 			'std_nonfe'    => $this->input->post('std_nonfe'),
 			'std_sus304'   => $this->input->post('std_sus304'),
 
-			'fe_d'         => $this->input->post('fe_d') ?: 'tidak terdeteksi',
-			'nonfe_d'      => $this->input->post('nonfe_d') ?: 'tidak terdeteksi',
-			'sus_d'        => $this->input->post('sus_d') ?: 'tidak terdeteksi',
-			'fe_t'         => $this->input->post('fe_t') ?: 'tidak terdeteksi',
-			'nonfe_t'      => $this->input->post('nonfe_t') ?: 'tidak terdeteksi',
-			'sus_t'        => $this->input->post('sus_t') ?: 'tidak terdeteksi',
-			'fe_b'         => $this->input->post('fe_b') ?: 'tidak terdeteksi',
-			'nonfe_b'      => $this->input->post('nonfe_b') ?: 'tidak terdeteksi',
-			'sus_b'        => $this->input->post('sus_b') ?: 'tidak terdeteksi',
+			'fe_d'    => $this->input->post('fe_d') ?: 'tidak terdeteksi',
+			'nonfe_d' => $this->input->post('nonfe_d') ?: 'tidak terdeteksi',
+			'sus_d'   => $this->input->post('sus_d') ?: 'tidak terdeteksi',
+
+			'fe_t'    => $this->input->post('fe_t') ?: 'tidak terdeteksi',
+			'nonfe_t' => $this->input->post('nonfe_t') ?: 'tidak terdeteksi',
+			'sus_t'   => $this->input->post('sus_t') ?: 'tidak terdeteksi',
+
+			'fe_b'    => $this->input->post('fe_b') ?: 'tidak terdeteksi',
+			'nonfe_b' => $this->input->post('nonfe_b') ?: 'tidak terdeteksi',
+			'sus_b'   => $this->input->post('sus_b') ?: 'tidak terdeteksi',
 
 			'keterangan'   => $this->input->post('keterangan'),
-			'catatan_metal'=> $this->input->post('catatan_metal'),
-
-			'modified_at'  => date("Y-m-d H:i:s")
+			'catatan_metal' => $this->input->post('catatan_metal'),
+			'modified_at'  => date('Y-m-d H:i:s')
 		];
 
-		$this->db->where('uuid', $uuid);
-		$this->db->update('metal', $data);
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0);
 
-		if ($this->db->affected_rows() > 0) {
-			$new_data = $this->db->get_where('metal', ['uuid' => $uuid])->row_array();
+		$success = $this->db->update('metal', $data);
 
-        // Catat log activity
+		if (!$success) {
+			return false;
+		}
+
+		$new_data = $this->db
+			->where('uuid', $uuid)
+			->get('metal')
+			->row_array();
+
+		if (isset($this->activity_logger)) {
 			$this->activity_logger->log_activity(
 				'update',
 				'metal_logs',
@@ -289,11 +317,9 @@ class Metal_model extends CI_Model {
 				$old_data,
 				$new_data
 			);
-
-			return true;
 		}
 
-		return false;
+		return true;
 	}
 
 
@@ -396,7 +422,7 @@ class Metal_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -425,13 +451,12 @@ class Metal_model extends CI_Model {
 		);
 
 		$this->db->update('metal', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -441,7 +466,7 @@ class Metal_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -461,8 +486,7 @@ class Metal_model extends CI_Model {
 		);
 
 		$this->db->update('metal', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -481,7 +505,7 @@ class Metal_model extends CI_Model {
 	public function get_by_uuid_metal($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -491,21 +515,21 @@ class Metal_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_metal_verif($uuid_array)
 	{
 		$this->db->select('nama_spv_metal, tgl_update_spv_metal, date_metal, shift, username_1, username_2, std_fe,std_nonfe,std_sus304, nama_produksi_metal, status_spv, nama_produksi_metal, tgl_update_produksi_metal');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv_metal', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv_metal', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('metal');
 
-		$data_metal = $query->row();  
-		return $data_metal; 
+		$data_metal = $query->row();
+		return $data_metal;
 	}
 
 	public function get_data_by_plant($limit, $start)
@@ -514,27 +538,31 @@ class Metal_model extends CI_Model {
 		$type_user = $this->session->userdata('tipe_user');
 
 		$this->db->select('
-			uuid,
-			date_metal,
-			time,
-			nama_produk,
-			kode_produksi,
-			fe_d,
-			nonfe_d,
-			sus_d,
-			fe_t,
-			nonfe_t,
-			sus_t,
-			fe_b,
-			nonfe_b,
-			sus_b,
-			status_spv,
-			modified_at,
-			tgl_update_spv_metal
-			');
+        uuid,
+        date_metal,
+        time,
+        nama_produk,
+        kode_produksi,
+        fe_d,
+        nonfe_d,
+        sus_d,
+        fe_t,
+        nonfe_t,
+        sus_t,
+        fe_b,
+        nonfe_b,
+        sus_b,
+        status_spv,
+        modified_at,
+        tgl_update_spv_metal
+    ');
 
 		$this->db->from('metal');
 
+		// Halaman utama hanya menampilkan data QC
+		$this->db->where('is_audit', 0);
+
+		// Pertahankan hak akses plant sebelumnya
 		if (!in_array($type_user, [9, 1])) {
 			$this->db->where('plant', $plant);
 		}
@@ -551,7 +579,7 @@ class Metal_model extends CI_Model {
 		return $this->db->delete('metal');
 	}
 
-public function get_by_date($tanggal, $plant = null, $shift = null)
+	public function get_by_date($tanggal, $plant = null, $shift = null)
 	{
 		if (empty($tanggal)) {
 			return false;
@@ -599,7 +627,7 @@ public function get_by_date($tanggal, $plant = null, $shift = null)
 		$this->db->where('DATE(date_metal)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv_metal', 'DESC');
@@ -616,13 +644,130 @@ public function get_by_date($tanggal, $plant = null, $shift = null)
 		}
 
 		return $this->db
-		->where('plant', $plant_uuid)
-		->order_by('date_metal', 'DESC')
-		->order_by('time', 'DESC')
-		->limit(1)
-		->get('metal')
-		->row();
+			->where('plant', $plant_uuid)
+			->order_by('date_metal', 'DESC')
+			->order_by('time', 'DESC')
+			->limit(1)
+			->get('metal')
+			->row();
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('metal')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('metal')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('metal')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null, $shift = null)
+	{
+		if (empty($tanggal)) {
+			return [];
+		}
+
+		$this->db->where('DATE(date_metal)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift)) {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('time', 'ASC');
+
+		return $this->db->get('metal')->result();
+	}
+
+	public function get_qc_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->get('metal')
+			->row();
 	}
 
 
+	public function update_audit($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$audit = $this->get_audit_by_uuid($uuid);
+
+		if (!$audit) {
+			return false;
+		}
+
+		$data = [
+			'username_1'    => $username,
+			'date_metal'    => $this->input->post('date_metal'),
+			'shift'         => $this->input->post('shift'),
+			'time'          => $this->input->post('time'),
+			'nama_produk'   => $this->input->post('nama_produk'),
+			'kode_produksi' => $this->input->post('kode_produksi'),
+			'no_program'    => $this->input->post('no_program'),
+			'deteksi_ng'    => $this->input->post('deteksi_ng'),
+			'std_fe'        => $this->input->post('std_fe'),
+			'std_nonfe'     => $this->input->post('std_nonfe'),
+			'std_sus304'    => $this->input->post('std_sus304'),
+
+			'fe_d'    => $this->input->post('fe_d') ?: 'tidak terdeteksi',
+			'nonfe_d' => $this->input->post('nonfe_d') ?: 'tidak terdeteksi',
+			'sus_d'   => $this->input->post('sus_d') ?: 'tidak terdeteksi',
+
+			'fe_t'    => $this->input->post('fe_t') ?: 'tidak terdeteksi',
+			'nonfe_t' => $this->input->post('nonfe_t') ?: 'tidak terdeteksi',
+			'sus_t'   => $this->input->post('sus_t') ?: 'tidak terdeteksi',
+
+			'fe_b'    => $this->input->post('fe_b') ?: 'tidak terdeteksi',
+			'nonfe_b' => $this->input->post('nonfe_b') ?: 'tidak terdeteksi',
+			'sus_b'   => $this->input->post('sus_b') ?: 'tidak terdeteksi',
+
+			'keterangan'    => $this->input->post('keterangan'),
+			'catatan_metal' => $this->input->post('catatan_metal'),
+			'modified_at'   => date('Y-m-d H:i:s')
+		];
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update('metal', $data);
+	}
 }

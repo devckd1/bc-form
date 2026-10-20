@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Inventaris_model extends CI_Model {
+class Inventaris_model extends CI_Model
+{
 
 	protected $table = 'inventaris';
-	
+
 	public function rules()
 	{
 		return [
@@ -20,48 +22,81 @@ class Inventaris_model extends CI_Model {
 				'label' => 'Shift',
 				'rules' => 'required'
 			]
-		]; 
+		];
 	}
+
 
 	public function insert()
 	{
-		$uuid = Uuid::uuid4()->toString();
 		$username = $this->session->userdata('username');
-		$plant = $this->session->userdata('plant');
-		$date = $this->input->post('date');
-		$shift = $this->input->post('shift');
+		$plant    = $this->session->userdata('plant');
 
-		$nama_alat = $this->input->post('nama_alat');
-		$jumlah = $this->input->post('jumlah');
+		$nama_alat    = $this->input->post('nama_alat');
+		$jumlah       = $this->input->post('jumlah');
 		$kondisi_awal = $this->input->post('kondisi_awal');
-		$keterangan = $this->input->post('keterangan');
+		$keterangan   = $this->input->post('keterangan');
+
+		if (!is_array($nama_alat) || empty($nama_alat)) {
+			return false;
+		}
 
 		$peralatan = [];
-		for ($i = 0; $i < count($nama_alat); $i++) {
+
+		foreach ($nama_alat as $i => $nama) {
+			$awal = $kondisi_awal[$i] ?? '';
+
 			$peralatan[] = [
-				'nama_alat' => $nama_alat[$i],
-				'jumlah' => isset($jumlah[$i]) ? $jumlah[$i] : '',
-				'kondisi_awal' => isset($kondisi_awal[$i])
-				? (is_array($kondisi_awal[$i]) ? implode(', ', $kondisi_awal[$i]) : $kondisi_awal[$i])
-				: '',
+				'nama_alat'     => $nama,
+				'jumlah'        => $jumlah[$i] ?? '',
+				'kondisi_awal'  => is_array($awal)
+					? implode(', ', $awal)
+					: $awal,
 				'kondisi_akhir' => '-',
-				'keterangan' => isset($keterangan[$i]) ? $keterangan[$i] : '',
+				'keterangan'    => $keterangan[$i] ?? '',
 			];
 		}
 
+		$uuid = Uuid::uuid4()->toString();
+
 		$data = [
-			'uuid' => $uuid,
-			'username' => $username,
-			'plant' => $plant,
-			'date' => $date,
-			'shift' => $shift,
-			'peralatan' => json_encode($peralatan),
-			'status_spv' => "0",
-			'created_at' => date('Y-m-d H:i:s')
+			'uuid'        => $uuid,
+			'username'    => $username,
+			'plant'       => $plant,
+			'date'        => $this->input->post('date'),
+			'shift'       => $this->input->post('shift'),
+			'peralatan'   => json_encode($peralatan),
+			'status_spv'  => '0',
+			'created_at'  => date('Y-m-d H:i:s'),
+			'is_audit'    => 0,
+			'source_uuid' => null,
 		];
 
-		$this->db->insert('inventaris', $data);
-		return ($this->db->affected_rows() > 0);
+		$this->db->trans_begin();
+
+		// Simpan data QC
+		$this->db->insert($this->table, $data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		// Buat snapshot Audit
+		$audit_data = $data;
+		$audit_data['uuid'] = Uuid::uuid4()->toString();
+		$audit_data['is_audit'] = 1;
+		$audit_data['source_uuid'] = $uuid;
+
+		$this->db->insert($this->table, $audit_data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
 	public function update($uuid)
@@ -75,7 +110,7 @@ class Inventaris_model extends CI_Model {
 		$kondisi_akhir  = $this->input->post('kondisi_akhir');
 		$keterangan     = $this->input->post('keterangan');
 
-		$old_data = $this->db->get_where('inventaris', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('inventaris', ['uuid' => $uuid])->row_array();
 		$data = $this->db->get_where('inventaris', ['uuid' => $uuid])->row();
 		if (!$data) {
 			return false;
@@ -123,7 +158,7 @@ class Inventaris_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('inventaris', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'inventaris_logs',
@@ -160,7 +195,7 @@ class Inventaris_model extends CI_Model {
 
 		$updateData = [
 			'qc_update' => $username,
-			'peralatan' => json_encode($peralatan), 
+			'peralatan' => json_encode($peralatan),
 			'modified_at' => date('Y-m-d H:i:s'),
 		];
 
@@ -172,7 +207,7 @@ class Inventaris_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -201,8 +236,7 @@ class Inventaris_model extends CI_Model {
 		);
 
 		$this->db->update('inventaris', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -221,7 +255,7 @@ class Inventaris_model extends CI_Model {
 	public function get_by_uuid_inventaris($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -231,39 +265,142 @@ class Inventaris_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_inventaris_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, qc_update, shift');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('inventaris');
 
-		$data_inventaris = $query->row();  
-		return $data_inventaris; 
+		$data_inventaris = $query->row();
+		return $data_inventaris;
 	}
+
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get('inventaris')->result();
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
 		}
 
-		return $this->db->get_where('inventaris', ['plant' => $plant])->result();
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get($this->table)->result();
 	}
 
 	public function delete_by_uuid($uuid)
 	{
 		$this->db->where('uuid', $uuid);
 		return $this->db->delete('inventaris');
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('inventaris')
+			->result();
+	}
+
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('inventaris')
+			->row();
+	}
+
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('inventaris')
+			->row();
+	}
+
+
+	public function update_audit($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		// Pastikan record merupakan snapshot Audit milik plant aktif
+		$audit = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get($this->table)
+			->row();
+
+		if (!$audit) {
+			return false;
+		}
+
+		$nama_alat = $this->input->post('nama_alat');
+		$jumlah = $this->input->post('jumlah');
+		$kondisi_awal = $this->input->post('kondisi_awal');
+		$kondisi_akhir = $this->input->post('kondisi_akhir');
+		$keterangan = $this->input->post('keterangan');
+
+		if (!is_array($nama_alat) || empty($nama_alat)) {
+			return false;
+		}
+
+		$peralatan = [];
+
+		foreach ($nama_alat as $i => $nama) {
+			$awal = $kondisi_awal[$i] ?? '';
+
+			$peralatan[] = [
+				'nama_alat' => $nama,
+				'jumlah' => $jumlah[$i] ?? '',
+				'kondisi_awal' => is_array($awal)
+					? implode(', ', $awal)
+					: $awal,
+				'kondisi_akhir' => $kondisi_akhir[$i] ?? '',
+				'keterangan' => $keterangan[$i] ?? '',
+			];
+		}
+
+		$update_data = [
+			'date' => $this->input->post('date'),
+			'shift' => $this->input->post('shift'),
+			'peralatan' => json_encode($peralatan),
+			'qc_update' => $username,
+			'modified_at' => date('Y-m-d H:i:s'),
+		];
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update($this->table, $update_data);
+
+		return $this->db->affected_rows() > 0;
 	}
 }

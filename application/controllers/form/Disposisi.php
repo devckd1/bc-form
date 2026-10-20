@@ -1,11 +1,14 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Disposisi extends MY_Controller {
+class Disposisi extends MY_Controller
+{
 
 	public function __construct()
 	{
@@ -13,9 +16,9 @@ class Disposisi extends MY_Controller {
 
 		$this->load->library('form_validation');
 		$this->load->library('session');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('disposisi_model');
-		if(!$this->auth_model->current_user()){
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
@@ -23,20 +26,28 @@ class Disposisi extends MY_Controller {
 	public function index()
 	{
 		$data = array(
-			'disposisi' => $this->disposisi_model->get_data_by_plant() 
+			'disposisi' => $this->disposisi_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'disposisi'; 
+		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi', $data);
 	}
 
 	public function detail($uuid)
 	{
-		$data = array(
-			'disposisi' => $this->disposisi_model->get_by_uuid($uuid),
-		);
+		$disposisi = $this->disposisi_model->get_qc_by_uuid($uuid);
 
-		$this->active_nav = 'disposisi'; 
+		if (!$disposisi) {
+			show_404();
+			return;
+		}
+
+		$data = [
+			'disposisi' => $disposisi,
+			'mode'      => 'qc'
+		];
+
+		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi-detail', $data);
 	}
 
@@ -50,38 +61,52 @@ class Disposisi extends MY_Controller {
 			if ($insert) {
 				$this->session->set_flashdata('success_msg', 'Data Disposisi Produk dan Prosedur berhasil di simpan');
 				redirect('disposisi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Disposisi Produk dan Prosedur gagal di simpan');
 				redirect('disposisi');
 			}
 		}
 
-		$this->active_nav = 'disposisi'; 
+		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi-tambah');
 	}
 
 	public function edit($uuid)
 	{
+		$disposisi = $this->disposisi_model->get_qc_by_uuid($uuid);
+
+		if (!$disposisi) {
+			show_404();
+			return;
+		}
+
 		$rules = $this->disposisi_model->rules();
 		$this->form_validation->set_rules($rules);
 
-		if ($this->form_validation->run() == TRUE) {
+		if ($this->form_validation->run() === TRUE) {
 			$update = $this->disposisi_model->update($uuid);
 
 			if ($update) {
-				$this->session->set_flashdata('success_msg', 'Data Disposisi Produk dan Prosedur berhasil diupdate.');
-			} else {
-				$this->session->set_flashdata('error_msg', 'Data Disposisi Produk dan Prosedur gagal diupdate.');
+				$this->session->set_flashdata(
+					'success_msg',
+					'Data Disposisi Produk dan Prosedur berhasil diupdate.'
+				);
+				redirect('disposisi');
+				return;
 			}
 
-			redirect('disposisi');
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Disposisi Produk dan Prosedur gagal diupdate.'
+			);
 		}
 
 		$data = [
-			'disposisi' => $this->disposisi_model->get_by_uuid($uuid)
+			'disposisi' => $disposisi,
+			'mode'      => 'qc'
 		];
 
-		$this->active_nav = 'disposisi'; 
+		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi-edit', $data);
 	}
 
@@ -109,7 +134,7 @@ class Disposisi extends MY_Controller {
 			'disposisi' => $this->disposisi_model->get_data_by_plant(),
 		);
 
-		$this->active_nav = 'verifikasi-disposisi'; 
+		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi-verifikasi', $data);
 	}
 
@@ -124,7 +149,7 @@ class Disposisi extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Disposisi Produk dan Prosedur berhasil di Update');
 				redirect('disposisi/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Disposisi Produk dan Prosedur gagal di Update');
 				redirect('disposisi/verifikasi');
 			}
@@ -133,8 +158,87 @@ class Disposisi extends MY_Controller {
 		$data = array(
 			'disposisi' => $this->disposisi_model->get_by_uuid($uuid),
 		);
-		$this->active_nav = 'verifikasi-disposisi'; 
+		$this->active_nav = 'verifikasi-disposisi';
 		$this->render('form/disposisi/disposisi-status', $data);
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'disposisi' => $this->disposisi_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'disposisi';
+
+		$this->render(
+			'form/disposisi/disposisi-audit',
+			$data
+		);
+	}
+
+	public function edit_audit($uuid)
+	{
+		$disposisi = $this->disposisi_model->get_audit_by_uuid($uuid);
+
+		if (!$disposisi) {
+			show_404();
+			return;
+		}
+
+		$rules = $this->disposisi_model->rules();
+		$this->form_validation->set_rules($rules);
+
+		if ($this->form_validation->run() === TRUE) {
+			$update = $this->disposisi_model->update_audit($uuid);
+
+			if ($update) {
+				$this->session->set_flashdata(
+					'success_msg',
+					'Data Audit Disposisi berhasil diupdate.'
+				);
+				redirect('disposisi/audit');
+				return;
+			}
+
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Audit Disposisi gagal diupdate.'
+			);
+		}
+
+		// Ambil ulang snapshot Audit agar data tetap sesuai database
+		$disposisi = $this->disposisi_model->get_audit_by_uuid($uuid);
+
+		if (!$disposisi) {
+			show_404();
+			return;
+		}
+
+		$data = [
+			'disposisi' => $disposisi,
+			'mode'      => 'audit'
+		];
+
+		$this->active_nav = 'disposisi';
+		$this->render('form/disposisi/disposisi-edit', $data);
+	}
+
+	public function detail_audit($uuid)
+	{
+		$disposisi = $this->disposisi_model->get_audit_by_uuid($uuid);
+
+		if (!$disposisi) {
+			show_404();
+			return;
+		}
+
+		$data = [
+			'disposisi' => $disposisi,
+			'mode'      => 'audit'
+		];
+
+		$this->active_nav = 'disposisi';
+		$this->render('form/disposisi/disposisi-detail', $data);
 	}
 
 	// public function diketahui()
@@ -156,7 +260,7 @@ class Disposisi extends MY_Controller {
 	// 	$this->form_validation->set_rules($rules);
 
 	// 	if ($this->form_validation->run() == TRUE) {
-			
+
 	// 		$update = $this->disposisi_model->diketahui_update($uuid);
 	// 		if ($update) {
 	// 			$this->session->set_flashdata('success_msg', 'Status Disposisi Produk dan Prosedur berhasil di Update');
@@ -178,7 +282,7 @@ class Disposisi extends MY_Controller {
 
 	public function cetak()
 	{
-		$selected_items = $this->input->post('checkbox'); 
+		$selected_items = $this->input->post('checkbox');
 
 		log_message('debug', 'UUID yang dipilih: ' . print_r($selected_items, true));
 
@@ -200,7 +304,7 @@ class Disposisi extends MY_Controller {
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
-		$pdf->setPrintHeader(false); 
+		$pdf->setPrintHeader(false);
 		$pdf->SetMargins(10, 14, 10);
 		$pdf->AddPage();
 		$pdf->SetFont('times', 'B', 12);
@@ -219,8 +323,28 @@ class Disposisi extends MY_Controller {
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['disposisi']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
-		$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+		$timestamp = strtotime($tanggal);
+
+		$bulan = [
+			1 => 'Januari',
+			2 => 'Februari',
+			3 => 'Maret',
+			4 => 'April',
+			5 => 'Mei',
+			6 => 'Juni',
+			7 => 'Juli',
+			8 => 'Agustus',
+			9 => 'September',
+			10 => 'Oktober',
+			11 => 'November',
+			12 => 'Desember'
+		];
+
+		$formatted_date = date('d', $timestamp) . ' ' .
+			$bulan[(int) date('n', $timestamp)] . ' ' .
+			date('Y', $timestamp);
+
+		$formatted_date2 = date('d-m-Y', $timestamp);
 
 		$pdf->SetFont('times', '', 10);
 
@@ -230,7 +354,7 @@ class Disposisi extends MY_Controller {
 		$totalWidth = $labelWidth + $colonWidth + $valueWidth;
 
 		$startX = 15;
-		$startY = $pdf->GetY(); 
+		$startY = $pdf->GetY();
 
 		$pdf->SetX($startX);
 		$pdf->Cell($labelWidth, 5, 'Nomor', 0, 0, 'L');
@@ -268,8 +392,8 @@ class Disposisi extends MY_Controller {
 		$pdf->MultiCell($valueWidth, 5, $data['disposisi']->catatan, 0, 'L');
 		$pdf->Cell($colonWidth, 2, '', 0, 1, 'L');
 		$pdf->SetFont('times', 'I', 7);
-		$pdf->Cell(190, 5, 'QW 18/00', 0, 1, 'R'); 
-		$endY = $pdf->GetY(); 
+		$pdf->Cell(190, 5, 'QW 18/00', 0, 1, 'R');
+		$endY = $pdf->GetY();
 		$pdf->Rect($startX, $startY, $totalWidth, $endY - $startY);
 
 		$pdf->SetFont('times', '', 10);
@@ -287,15 +411,15 @@ class Disposisi extends MY_Controller {
 		$pdf->Rect($startX, $ccStartY, $totalWidth, $ccEndY - $ccStartY);
 
 		$boxWidth = $totalWidth / 3;
-		$boxHeight = 42; 
+		$boxHeight = 42;
 		$pdf->Rect($startX, $ccEndY, $totalWidth, $boxHeight);
 		$pdf->Line($startX + $boxWidth, $ccEndY, $startX + $boxWidth, $ccEndY + $boxHeight);
 		$pdf->Line($startX + 2 * $boxWidth, $ccEndY, $startX + 2 * $boxWidth, $ccEndY + $boxHeight);
 		$pdf->SetFont('times', '', 10);
 
-		$labelY    = $ccEndY + 2;  
-		$lineY     = $labelY + 25; 
-		$titleY    = $lineY + 5; 
+		$labelY    = $ccEndY + 2;
+		$lineY     = $labelY + 25;
+		$titleY    = $lineY + 5;
 
 		$pdf->SetXY($startX, $labelY);
 		$pdf->Cell($boxWidth, 6, 'Dibuat Oleh :', 0, 0, 'C');
@@ -359,4 +483,3 @@ class Disposisi extends MY_Controller {
 		$pdf->Output($filename, 'I');
 	}
 }
-

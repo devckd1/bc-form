@@ -1,8 +1,17 @@
-<?php 
-$datetime = (new DateTime($analisis->date))->format('d-m-Y');
-$bb = (new DateTime($analisis->best_before))->format('d-m-Y');
+<?php
+$mode = isset($mode) ? $mode : 'qc';
+$is_audit = $mode === 'audit';
 
-function tampilkan_analisis($kode) {
+$datetime = !empty($analisis->date)
+    ? (new DateTime($analisis->date))->format('d-m-Y')
+    : '-';
+
+$bb = !empty($analisis->best_before)
+    ? (new DateTime($analisis->best_before))->format('d-m-Y')
+    : '-';
+
+function tampilkan_analisis($kode)
+{
     $map = [
         '1' => 'Moisture',
         '2' => 'Salinity',
@@ -13,6 +22,7 @@ function tampilkan_analisis($kode) {
         '7' => 'Salmonella',
         '8' => 'Yeast and Mold',
     ];
+
     return $map[$kode] ?? $kode;
 }
 ?>

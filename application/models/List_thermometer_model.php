@@ -1,12 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
-class List_thermometer_model extends CI_Model {
-	
+class List_thermometer_model extends CI_Model
+{
+
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'kode_thermometer',
 				'label' => 'Kode Thermometer',
@@ -21,6 +24,16 @@ class List_thermometer_model extends CI_Model {
 				'field' => 'area',
 				'label' => 'Area',
 				'rules' => 'required'
+			],
+			[
+				'field' => 'standar',
+				'label' => 'Standar',
+				'rules' => 'trim'
+			],
+			[
+				'field' => 'hasil',
+				'label' => 'Hasil',
+				'rules' => 'trim'
 			]
 		];
 	}
@@ -29,70 +42,67 @@ class List_thermometer_model extends CI_Model {
 	{
 		$uuid = Uuid::uuid4()->toString();
 
-		$kode_thermometer = $this->input->post('kode_thermometer');
-		$model = $this->input->post('model');
-		$area = $this->input->post('area');
-		$username = $this->session->userdata('username');
-		$plant = $this->session->userdata('plant'); 
+		$data = [
+			'uuid'              => $uuid,
+			'username'          => $this->session->userdata('username'),
+			'kode_thermometer'  => $this->input->post('kode_thermometer', true),
+			'area'              => $this->input->post('area', true),
+			'model'             => $this->input->post('model', true),
+			'standar'           => $this->input->post('standar', true),
+			'hasil'             => $this->input->post('hasil', true),
+			'plant'             => $this->session->userdata('plant')
+		];
 
-		$data = array(
-			'uuid' => $uuid,
-			'username' => $username,
-			'kode_thermometer' => $kode_thermometer,
-			'area' => $area,
-			'model' => $model,
-			'plant' => $plant
-		);
-		
 		$this->db->insert('list_thermometer', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
 
+		return $this->db->affected_rows() > 0;
 	}
 
 	public function update($uuid)
 	{
+		$plant = $this->session->userdata('plant');
 
-		$kode_thermometer = $this->input->post('kode_thermometer');
-		$model = $this->input->post('model');
-		$area = $this->input->post('area');
+		$data = [
+			'kode_thermometer' => $this->input->post('kode_thermometer', true),
+			'area'             => $this->input->post('area', true),
+			'model'            => $this->input->post('model', true),
+			'standar'          => $this->input->post('standar', true),
+			'hasil'             => $this->input->post('hasil', true),
+			'modified_at'       => date('Y-m-d H:i:s')
+		];
 
-		$data = array(
-			'kode_thermometer' => $kode_thermometer,
-			'area' => $area,
-			'model' => $model,
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->update('list_thermometer', $data);
 
-			'modified_at' => date("Y-m-d H:i:s")
-		);
-
-		$this->db->update('list_thermometer', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return $this->db->affected_rows() > 0;
 	}
 
 	public function get_all()
-{
-    $plant = $this->session->userdata('plant');
-    $type_user = (int) $this->session->userdata('tipe_user');
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
 
-    // Selain superadmin, filter plant
-    if ($type_user !== 9) {
-        $this->db->where('plant', $plant);
-    }
+		// Selain superadmin, filter plant
+		if ($type_user !== 9) {
+			$this->db->where('plant', $plant);
+		}
 
-    $this->db->order_by('created_at', 'DESC');
+		$this->db->order_by('created_at', 'DESC');
 
-    return $this->db->get('list_thermometer')->result();
-}
+		return $this->db->get('list_thermometer')->result();
+	}
 
 	public function get_by_uuid($uuid)
 	{
 		$plant = $this->session->userdata('plant');
 
 		return $this->db
-		->where('uuid', $uuid)
-		->where('plant', $plant)
-		->get('list_thermometer')
-		->row();
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->get('list_thermometer')
+			->row();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -106,9 +116,9 @@ class List_thermometer_model extends CI_Model {
 		$plant = $this->session->userdata('plant');
 
 		return $this->db
-		->where('plant', $plant)
-		->order_by('kode_thermometer', 'ASC')
-		->get('list_thermometer')
-		->result();
+			->where('plant', $plant)
+			->order_by('kode_thermometer', 'ASC')
+			->get('list_thermometer')
+			->result();
 	}
 }

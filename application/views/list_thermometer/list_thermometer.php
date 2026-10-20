@@ -38,6 +38,8 @@
                             <th>Kode Thermometer</th>
                             <th>Model</th>
                             <th>Area</th>
+							<th>Standar Suhu (°C)</th>
+							<th>Hasil</th>
                             <th>Created</th>
                             <th>Action</th>
                         </tr>
@@ -52,6 +54,8 @@
                                 <td><?= $val->kode_thermometer; ?></td>
                                 <td><?= $val->model; ?></td>
                                 <td><?= $val->area; ?></td>
+								<td><?= $val->standar; ?></td>
+								<td><?= $val->hasil; ?></td>
                                 <td><?= $val->created_at; ?></td>
                                 <td class="text-center">
                                     <a href="<?= base_url('list_thermometer/edit/'.$val->uuid);?>" class="btn btn-primary btn-icon-split">

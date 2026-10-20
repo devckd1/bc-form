@@ -1,12 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Sanitasiwarehouse_model extends CI_Model {
+class Sanitasiwarehouse_model extends CI_Model
+{
 
 	protected $table = 'sanitasi_wh';
-	
+
 	public function rules()
 	{
 		return [
@@ -23,48 +25,74 @@ class Sanitasiwarehouse_model extends CI_Model {
 		];
 	}
 
+
 	public function insert()
 	{
 		$produksi_data = $this->session->userdata('produksi_data');
 		$nama_produksi = $produksi_data['nama_produksi'] ?? '';
-		$uuid = Uuid::uuid4()->toString();
+
+		$uuid_qc = Uuid::uuid4()->toString();
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant');
+
 		$date = $this->input->post('date');
 		$area = $this->input->post('area');
 
-		$bagian = $this->input->post('bagian');
-		$kondisi = $this->input->post('kondisi');
-		$problem = $this->input->post('problem');
-		$tindakan = $this->input->post('tindakan');
+		$bagian = $this->input->post('bagian') ?? [];
+		$kondisi = $this->input->post('kondisi') ?? [];
+		$problem = $this->input->post('problem') ?? [];
+		$tindakan = $this->input->post('tindakan') ?? [];
 
 		$detail = [];
+
 		for ($i = 0; $i < count($bagian); $i++) {
 			$detail[] = [
-				'bagian' => $bagian[$i],
-				'kondisi' => isset($kondisi[$i]) ? $kondisi[$i] : '',
-				'problem' => isset($problem[$i]) ? $problem[$i] : '',
-				'tindakan' => isset($tindakan[$i]) ? $tindakan[$i] : '',
+				'bagian'   => $bagian[$i],
+				'kondisi'  => $kondisi[$i] ?? '',
+				'problem'  => $problem[$i] ?? '',
+				'tindakan' => $tindakan[$i] ?? ''
 			];
 		}
 
-		$status_spv = "0";
-		$status_wh = "1";
+		$data = [
+			'uuid'        => $uuid_qc,
+			'is_audit'    => 0,
+			'source_uuid' => null,
+			'username'    => $username,
+			'plant'       => $plant,
+			'date'        => $date,
+			'area'        => $area,
+			'detail'      => json_encode($detail),
+			'nama_wh'     => $nama_produksi,
+			'status_wh'   => '1',
+			'status_spv'  => '0'
+		];
 
-		$data = array(
-			'uuid' => $uuid,
-			'username' => $username,
-			'plant' => $plant,
-			'date' => $date,
-			'area' => $area,
-			'detail' => json_encode($detail), 
-			'nama_wh' => $nama_produksi,
-			'status_wh' => $status_wh,
-			'status_spv' => $status_spv
-		);
+		$this->db->trans_begin();
 
+		// Simpan data QC
 		$this->db->insert('sanitasi_wh', $data);
-		return ($this->db->affected_rows() > 0) ? true : false;
+
+		// Buat snapshot Audit jika insert QC berhasil
+		if ($this->db->trans_status() !== false) {
+			$data_audit = $data;
+
+			$data_audit['uuid'] = Uuid::uuid4()->toString();
+			$data_audit['is_audit'] = 1;
+			$data_audit['source_uuid'] = $uuid_qc;
+
+			$this->db->insert('sanitasi_wh', $data_audit);
+		}
+
+		// Rollback jika salah satu insert gagal
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
 
@@ -74,7 +102,7 @@ class Sanitasiwarehouse_model extends CI_Model {
 		$kondisi   = $this->input->post('kondisi');
 		$problem   = $this->input->post('problem');
 		$tindakan  = $this->input->post('tindakan');
-		$old_data = $this->db->get_where('sanitasi_wh', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('sanitasi_wh', ['uuid' => $uuid])->row_array();
 		$detail = [];
 		foreach ($bagian as $i => $b) {
 			$detail[] = [
@@ -98,7 +126,7 @@ class Sanitasiwarehouse_model extends CI_Model {
 		if ($this->db->affected_rows() > 0) {
 			$new_data = $this->db->get_where('sanitasi_wh', ['uuid' => $uuid])->row_array();
 
-        // Catat log activity
+			// Catat log activity
 			$this->activity_logger->log_activity(
 				'update',
 				'sanitasi_wh_logs',
@@ -116,7 +144,7 @@ class Sanitasiwarehouse_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -145,13 +173,12 @@ class Sanitasiwarehouse_model extends CI_Model {
 		);
 
 		$this->db->update('sanitasi_wh', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_wh',
 				'label' => 'Status',
@@ -180,8 +207,7 @@ class Sanitasiwarehouse_model extends CI_Model {
 		);
 
 		$this->db->update('sanitasi_wh', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -211,7 +237,7 @@ class Sanitasiwarehouse_model extends CI_Model {
 	public function get_by_uuid_sanitasiwarehouse($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -221,34 +247,42 @@ class Sanitasiwarehouse_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_sanitasiwarehouse_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_wh, status_wh, tgl_update_wh');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('sanitasi_wh');
 
-		$data_sanitasi_wh = $query->row();  
-		return $data_sanitasi_wh; 
+		$data_sanitasi_wh = $query->row();
+		return $data_sanitasi_wh;
 	}
+
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('created_at', 'DESC');
 
 		if ($type_user == 9 || $type_user == 1) {
 			return $this->db->get('sanitasi_wh')->result();
 		}
 
-		return $this->db->get_where('sanitasi_wh', ['plant' => $plant])->result();
+		return $this->db
+			->get_where('sanitasi_wh', [
+				'plant' => $plant,
+				'is_audit' => 0
+			])
+			->result();
 	}
 	public function delete_by_uuid($uuid)
 	{
@@ -265,7 +299,7 @@ class Sanitasiwarehouse_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -286,7 +320,7 @@ class Sanitasiwarehouse_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
@@ -296,4 +330,112 @@ class Sanitasiwarehouse_model extends CI_Model {
 		return $query->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('sanitasi_wh')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sanitasi_wh')
+			->row();
+	}
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('sanitasi_wh')
+			->row();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('date', 'ASC');
+
+		$query = $this->db->get('sanitasi_wh');
+
+		if ($query->num_rows() > 0) {
+			return $query->result();
+		}
+
+		return false;
+	}
+
+
+	public function update_audit($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		$date = $this->input->post('date', true);
+		$bagian = $this->input->post('bagian');
+		$kondisi = $this->input->post('kondisi');
+		$problem = $this->input->post('problem');
+		$tindakan = $this->input->post('tindakan');
+
+		if (
+			!is_array($bagian) ||
+			!is_array($kondisi) ||
+			!is_array($problem) ||
+			!is_array($tindakan) ||
+			count($bagian) !== count($kondisi) ||
+			count($bagian) !== count($problem) ||
+			count($bagian) !== count($tindakan)
+		) {
+			return false;
+		}
+
+		$detail = [];
+
+		foreach ($bagian as $i => $nama_bagian) {
+			$detail[] = [
+				'bagian' => $nama_bagian,
+				'kondisi' => $kondisi[$i],
+				'problem' => $problem[$i],
+				'tindakan' => $tindakan[$i],
+			];
+		}
+
+		$data = [
+			'date' => $date,
+			'detail' => json_encode(
+				$detail,
+				JSON_UNESCAPED_UNICODE
+			),
+		];
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update('sanitasi_wh', $data);
+	}
 }

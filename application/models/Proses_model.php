@@ -36,8 +36,10 @@ class Proses_model extends CI_Model
 	public function insert()
 	{
 		$uuid = Uuid::uuid4()->toString();
+
 		$produksi_data = $this->session->userdata('produksi_data');
 		$nama_produksi = $produksi_data['nama_produksi'] ?? '';
+
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant');
 
@@ -45,51 +47,97 @@ class Proses_model extends CI_Model
 		$shift = $this->input->post('shift');
 		$nama_produk = $this->input->post('nama_produk');
 		$catatan = $this->input->post('catatan');
-		$status_produksi = "1";
-		$status_spv = "0";
+
+		$status_produksi = '1';
+		$status_spv = '0';
 
 		$proses_input = $this->input->post('proses_produksi');
 		$cleaned = [];
 
 		if (is_array($proses_input)) {
 			foreach ($proses_input as $kategori => $params) {
+				if (!is_array($params)) {
+					continue;
+				}
+
 				foreach ($params as $param => $cols) {
+					if (!is_array($cols)) {
+						continue;
+					}
+
 					for ($i = 0; $i < 11; $i++) {
-						// Standar berat di index 0
 						if ($kategori == 'kondisi_rm' && $i == 0) {
-							$cleaned[$kategori][$param][$i] = isset($cols[0]) ? $cols[0] : '';
+							$cleaned[$kategori][$param][$i] = $cols[0] ?? '';
 						} else {
-							$cleaned[$kategori][$param][$i] = isset($cols[$i]) ? $cols[$i] : '';
+							$cleaned[$kategori][$param][$i] = $cols[$i] ?? '';
 						}
 
-						// Default otomatis
-						if ($kategori == 'mixing' && $param == 'waktu_mixing_1' && $i == 0) $cleaned[$kategori][$param][$i] = '3';
-						if ($kategori == 'mixing' && $param == 'waktu_mixing_2' && $i == 0) $cleaned[$kategori][$param][$i] = '8';
-						if ($kategori == 'electric_baking' && $param == 'baking_time_high' && $i == 0) $cleaned[$kategori][$param][$i] = '5';
-						if ($kategori == 'electric_baking' && $param == 'baking_time_low' && $i == 0) $cleaned[$kategori][$param][$i] = '7';
+						// Nilai default yang sudah digunakan sebelumnya.
+						if ($kategori == 'mixing' && $param == 'waktu_mixing_1' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '3';
+						}
+
+						if ($kategori == 'mixing' && $param == 'waktu_mixing_2' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '8';
+						}
+
+						if ($kategori == 'electric_baking' && $param == 'baking_time_high' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '5';
+						}
+
+						if ($kategori == 'electric_baking' && $param == 'baking_time_low' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '7';
+						}
 					}
 				}
 			}
 		}
 
-		$json_proses = json_encode($cleaned);
+		$json_proses = json_encode($cleaned, JSON_UNESCAPED_UNICODE);
 
 		$data = [
-			'uuid' => $uuid,
-			'username' => $username,
-			'plant' => $plant,
-			'date' => $date,
-			'shift' => $shift,
-			'jenis_produk' => $nama_produk,
-			'nama_produk' => $nama_produk,
-			'catatan' => $catatan,
-			'status_spv' => $status_spv,
+			'uuid'            => $uuid,
+			'username'        => $username,
+			'plant'           => $plant,
+			'date'            => $date,
+			'shift'           => $shift,
+			'jenis_produk'    => $nama_produk,
+			'nama_produk'     => $nama_produk,
+			'catatan'         => $catatan,
+			'status_spv'      => $status_spv,
 			'status_produksi' => $status_produksi,
-			'nama_produksi' => $nama_produksi,
-			'proses_produksi' => $json_proses
+			'nama_produksi'   => $nama_produksi,
+			'proses_produksi' => $json_proses,
+			'is_audit'        => 0,
+			'source_uuid'     => null
 		];
 
-		return $this->db->insert($this->table, $data);
+		$this->db->trans_begin();
+
+		// Simpan data QC.
+		$this->db->insert($this->table, $data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		// Buat snapshot Audit dari data QC.
+		$audit_data = $data;
+		$audit_data['uuid'] = Uuid::uuid4()->toString();
+		$audit_data['is_audit'] = 1;
+		$audit_data['source_uuid'] = $uuid;
+
+		$this->db->insert($this->table, $audit_data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
 	public function update($uuid)
@@ -505,15 +553,20 @@ class Proses_model extends CI_Model
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('created_at', 'DESC');
+
 		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get('mixing')->result();
+			return $this->db->get($this->table)->result();
 		}
 
-		return $this->db->get_where('mixing', ['plant' => $plant])->result();
+		return $this->db
+			->where('plant', $plant)
+			->get($this->table)
+			->result();
 	}
 
 	public function delete_by_uuid($uuid)
@@ -544,5 +597,135 @@ class Proses_model extends CI_Model
 		}
 
 		return null;
+	}
+
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('mixing')
+			->result();
+	}
+
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('mixing')
+			->row();
+	}
+
+
+	public function get_audit_by_source_uuid($source_uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('source_uuid', $source_uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('mixing')
+			->row();
+	}
+
+
+	public function get_audit_by_tanggal_shift($tanggal, $shift)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('DATE(date)', $tanggal)
+			->where('shift', $shift)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('mixing')
+			->result();
+	}
+
+	public function update_audit($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		// Pastikan snapshot Audit benar-benar ada di plant aktif.
+		$audit = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get($this->table)
+			->row();
+
+		if (!$audit) {
+			return false;
+		}
+
+		$nama_produk = $this->input->post('nama_produk');
+		$proses_input = $this->input->post('proses_produksi');
+		$cleaned = [];
+
+		if (is_array($proses_input)) {
+			foreach ($proses_input as $kategori => $params) {
+				if (!is_array($params)) {
+					continue;
+				}
+
+				foreach ($params as $param => $cols) {
+					if (!is_array($cols)) {
+						continue;
+					}
+
+					for ($i = 0; $i < 11; $i++) {
+						$value = $cols[$i] ?? '';
+						$cleaned[$kategori][$param][$i] = is_scalar($value)
+							? trim((string) $value)
+							: '';
+
+						// Pertahankan nilai default yang digunakan form.
+						if ($kategori == 'mixing' && $param == 'waktu_mixing_1' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '3';
+						}
+
+						if ($kategori == 'mixing' && $param == 'waktu_mixing_2' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '8';
+						}
+
+						if ($kategori == 'electric_baking' && $param == 'baking_time_high' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '5';
+						}
+
+						if ($kategori == 'electric_baking' && $param == 'baking_time_low' && $i == 0) {
+							$cleaned[$kategori][$param][$i] = '7';
+						}
+					}
+				}
+			}
+		}
+
+		$data = [
+			'username'        => $username,
+			'date'            => $this->input->post('date'),
+			'shift'           => $this->input->post('shift'),
+			'nama_produk'     => $nama_produk,
+			'jenis_produk'    => $nama_produk,
+			'catatan'         => $this->input->post('catatan'),
+			'proses_produksi' => json_encode($cleaned, JSON_UNESCAPED_UNICODE),
+			'modified_at'     => date('Y-m-d H:i:s')
+		];
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update($this->table, $data);
 	}
 }

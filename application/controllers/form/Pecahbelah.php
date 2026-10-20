@@ -1,11 +1,14 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Pecahbelah extends MY_Controller {
+class Pecahbelah extends MY_Controller
+{
 
 	public function __construct()
 	{
@@ -13,10 +16,10 @@ class Pecahbelah extends MY_Controller {
 
 		$this->load->library('form_validation');
 		$this->load->library('session');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('pecahbelah_model');
 		$this->load->model('bendapecah_model');
-		if(!$this->auth_model->current_user()){
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
@@ -27,7 +30,7 @@ class Pecahbelah extends MY_Controller {
 			'pecahbelah' => $this->pecahbelah_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'pecahbelah'; 
+		$this->active_nav = 'pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah', $data);
 	}
 
@@ -37,7 +40,7 @@ class Pecahbelah extends MY_Controller {
 			'pecahbelah' => $this->pecahbelah_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'pecahbelah'; 
+		$this->active_nav = 'pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-detail', $data);
 	}
 
@@ -61,7 +64,7 @@ class Pecahbelah extends MY_Controller {
 			'benda_list' => $this->bendapecah_model->get_all_benda()
 		];
 
-		$this->active_nav = 'pecahbelah'; 
+		$this->active_nav = 'pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-tambah', $data);
 	}
 
@@ -86,7 +89,7 @@ class Pecahbelah extends MY_Controller {
 			'pecahbelah' => $this->pecahbelah_model->get_by_uuid($uuid)
 		];
 
-		$this->active_nav = 'pecahbelah'; 
+		$this->active_nav = 'pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-edit', $data);
 	}
 
@@ -110,7 +113,7 @@ class Pecahbelah extends MY_Controller {
 			'pecahbelah' => $this->pecahbelah_model->get_by_uuid($uuid)
 		];
 
-		$this->active_nav = 'pecahbelah'; 
+		$this->active_nav = 'pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-check', $data);
 	}
 
@@ -138,7 +141,7 @@ class Pecahbelah extends MY_Controller {
 			'pecahbelah' => $this->pecahbelah_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pecahbelah'; 
+		$this->active_nav = 'verifikasi-pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-verifikasi', $data);
 	}
 
@@ -153,7 +156,7 @@ class Pecahbelah extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Benda Mudah Pecah berhasil di Update');
 				redirect('pecahbelah/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Benda Mudah Pecah gagal di Update');
 				redirect('pecahbelah/verifikasi');
 			}
@@ -163,8 +166,96 @@ class Pecahbelah extends MY_Controller {
 			'pecahbelah' => $this->pecahbelah_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pecahbelah'; 
+		$this->active_nav = 'verifikasi-pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-status', $data);
+	}
+
+	public function audit()
+	{
+		$data = array(
+			'pecahbelah' => $this->pecahbelah_model->get_audit_by_plant()
+		);
+
+		$this->active_nav = 'pecahbelah';
+
+		$this->render(
+			'form/pecahbelah/pecahbelah-audit',
+			$data
+		);
+	}
+
+	public function edit_audit($uuid)
+	{
+		$pecahbelah = $this->pecahbelah_model->get_audit_by_uuid($uuid);
+
+		if (!$pecahbelah) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Audit Benda Mudah Pecah tidak ditemukan.'
+			);
+			redirect('pecahbelah/audit');
+			return;
+		}
+
+		$rules = $this->pecahbelah_model->rules();
+		$this->form_validation->set_rules($rules);
+
+		if ($this->form_validation->run() == TRUE) {
+			$update = $this->pecahbelah_model->update_audit($uuid);
+
+			if ($update) {
+				$this->session->set_flashdata(
+					'success_msg',
+					'Data Audit Benda Mudah Pecah berhasil diupdate.'
+				);
+			} else {
+				$this->session->set_flashdata(
+					'error_msg',
+					'Data Audit Benda Mudah Pecah gagal diupdate.'
+				);
+			}
+
+			redirect('pecahbelah/audit');
+			return;
+		}
+
+		$data = [
+			'pecahbelah' => $pecahbelah,
+			'mode'       => 'audit'
+		];
+
+		$this->active_nav = 'pecahbelah';
+
+		$this->render(
+			'form/pecahbelah/pecahbelah-edit',
+			$data
+		);
+	}
+
+	public function detail_audit($uuid)
+	{
+		$pecahbelah = $this->pecahbelah_model->get_audit_by_uuid($uuid);
+
+		if (!$pecahbelah) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Audit Benda Mudah Pecah tidak ditemukan.'
+			);
+			redirect('pecahbelah/audit');
+			return;
+		}
+
+		$data = [
+			'pecahbelah' => $pecahbelah,
+			'mode'       => 'audit'
+		];
+
+		$this->active_nav = 'pecahbelah';
+
+		$this->render(
+			'form/pecahbelah/pecahbelah-detail',
+			$data
+		);
 	}
 
 	// public function diketahui()
@@ -185,7 +276,7 @@ class Pecahbelah extends MY_Controller {
 	// 	$this->form_validation->set_rules($rules);
 
 	// 	if ($this->form_validation->run() == TRUE) {
-			
+
 	// 		$update = $this->pecahbelah_model->diketahui_update($uuid);
 	// 		if ($update) {
 	// 			$this->session->set_flashdata('success_msg', 'Status Pemeriksaan Benda Mudah Pecah berhasil di Update');
@@ -534,4 +625,3 @@ class Pecahbelah extends MY_Controller {
 		$pdf->Output($filename, 'I');
 	}
 }
-

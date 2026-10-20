@@ -23,95 +23,47 @@ class Auth extends CI_Controller {
 	}
 
 	public function login()
-    {
-        // Jika sudah login secara lokal
-        if ($this->auth_model->current_user()) {
-            redirect('home');
-            return;
-        }
+	{
+		// Jika sudah login secara lokal
+		if ($this->auth_model->current_user()) {
+			redirect('home');
+			return;
+		}
 
-        // Redirect ke PDQC hanya saat GET
-        if (strtoupper($this->input->server('REQUEST_METHOD')) === 'GET') {
+		// =========================
+		// LOGIN MANUAL / LOKAL
+		// =========================
 
-            // Cek access_key
-            $bypass_key   = $this->input->get('access_key');
-            $expected_key = $this->config->item('login_bypass_key');
+		$rules = $this->auth_model->rules();
 
-            $has_valid_bypass =
-                $bypass_key &&
-                $expected_key &&
-                hash_equals($expected_key, $bypass_key);
+		$this->form_validation->set_rules($rules);
 
-            // Jika tidak menggunakan bypass
-            if (!$has_valid_bypass) {
+		if ($this->form_validation->run() == FALSE) {
+			return $this->load->view('auth/login');
+		}
 
-                $portal_url = rtrim(
-                    $this->config->item('employee_portal_url'),
-                    '/'
-                );
+		$username = $this->input->post('username');
+		$password = $this->input->post('password');
 
-                // Cek apakah PDQC bisa diakses
-                $ch = curl_init($portal_url);
+		if ($this->auth_model->login($username, $password)) {
 
-                curl_setopt_array($ch, [
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_TIMEOUT        => 3,
-                    CURLOPT_CONNECTTIMEOUT => 3,
-                ]);
+			$this->session->set_userdata(
+				'show_produksi_modal',
+				true
+			);
 
-                curl_exec($ch);
+			redirect('home');
+			return;
+		} else {
 
-                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			$this->session->set_flashdata(
+				'error_msg',
+				'Login Gagal, pastikan username dan password benar!'
+			);
+		}
 
-                curl_close($ch);
-
-                // Jika PDQC bisa diakses
-                if ($http_code >= 200 && $http_code < 400) {
-                    redirect($portal_url);
-                    return;
-                }
-
-                // Jika PDQC tidak bisa diakses,
-                // lanjut ke login lokal
-            }
-        }
-
-        // =========================
-        // LOGIN LOKAL
-        // =========================
-
-        $rules = $this->auth_model->rules();
-
-        $this->form_validation->set_rules($rules);
-
-        if ($this->form_validation->run() == FALSE) {
-            return $this->load->view('auth/login');
-        }
-
-        $username = $this->input->post('username');
-        $password = $this->input->post('password');
-
-        if ($this->auth_model->login($username, $password)) {
-
-            $this->session->set_userdata(
-                'show_produksi_modal',
-                true
-            );
-
-            redirect('home');
-            return;
-
-        } else {
-
-            $this->session->set_flashdata(
-                'error_msg',
-                'Login Gagal, pastikan username dan passwrod benar!'
-            );
-        }
-
-        $this->load->view('auth/login');
-    }
+		$this->load->view('auth/login');
+	}
 
     public function switch_plant()
 	{
@@ -156,16 +108,16 @@ class Auth extends CI_Controller {
 		redirect('home');
 	}
 
-	/*public function logout()
+	public function logout()
 	{
 		$this->auth_model->logout();
 		redirect(base_url('auth/login'));
-	}*/
+	}
 
-	public function logout()
+	/*public function logout()
 	{
 		$this->auth_model->logout();
 
 		redirect('http://10.68.1.28');
-	}
+	}*/
 }

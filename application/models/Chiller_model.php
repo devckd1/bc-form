@@ -1,13 +1,14 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
+class Chiller_model extends CI_Model
+{
 
-class Chiller_model extends CI_Model {
-	
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -32,7 +33,7 @@ class Chiller_model extends CI_Model {
 				'field' => 'chiller_3',
 				'label' => 'Chiller no.3',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'chiller_4',
 				'label' => 'Chiller no.4',
@@ -47,42 +48,94 @@ class Chiller_model extends CI_Model {
 
 	public function insert()
 	{
-
 		$produksi_data = $this->session->userdata('produksi_data');
+
 		$nama_produksi = $produksi_data['nama_produksi'] ?? '';
+		$username      = $this->session->userdata('username');
+		$plant         = $this->session->userdata('plant');
 
+		$date       = $this->input->post('date');
+		$waktu      = $this->input->post('waktu');
+		$chiller_1  = $this->input->post('chiller_1');
+		$chiller_2  = $this->input->post('chiller_2');
+		$chiller_3  = $this->input->post('chiller_3');
+		$chiller_4  = $this->input->post('chiller_4');
+		$catatan    = $this->input->post('catatan');
+
+		/*
+     * UUID DATA UTAMA
+     */
 		$uuid = Uuid::uuid4()->toString();
-		$username = $this->session->userdata('username');
-		$plant = $this->session->userdata('plant');
-		$date = $this->input->post('date');
-		$waktu = $this->input->post('waktu');
-		$chiller_1 = $this->input->post('chiller_1');
-		$chiller_2 = $this->input->post('chiller_2');
-		$chiller_3 = $this->input->post('chiller_3');
-		$chiller_4 = $this->input->post('chiller_4');
-		$catatan = $this->input->post('catatan');
-		$status_produksi = "1";
-		$status_spv = "0";
 
-		$data = array(
-			'uuid' => $uuid,
-			'plant' => $plant,
-			'username' => $username,
-			'date' => $date,
-			'waktu' => $waktu,
-			'chiller_1' => $chiller_1,
-			'chiller_2' => $chiller_2,
-			'chiller_3' => $chiller_3,
-			'chiller_4' => $chiller_4,
-			'catatan' => $catatan,
-			'status_produksi' => $status_produksi,
-			'nama_produksi' => $nama_produksi,
-			'status_spv' => $status_spv
-		);
+		/*
+     * DATA UTAMA
+     */
+		$data_utama = [
+			'uuid'              => $uuid,
+			'is_audit'          => 0,
+			'source_uuid'       => null,
+			'username'          => $username,
+			'plant'             => $plant,
+			'date'              => $date,
+			'waktu'             => $waktu,
+			'chiller_1'         => $chiller_1,
+			'chiller_2'         => $chiller_2,
+			'chiller_3'         => $chiller_3,
+			'chiller_4'         => $chiller_4,
+			'catatan'           => $catatan,
+			'nama_produksi'     => $nama_produksi,
+			'status_produksi'   => '1',
+			'catatan_produksi'  => '',
+			'nama_spv'          => '',
+			'status_spv'        => '0',
+			'catatan_spv'       => ''
+		];
 
-		$this->db->insert('chiller', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
+		/*
+     * UUID UNTUK DATA AUDIT
+     */
+		$audit_uuid = Uuid::uuid4()->toString();
 
+		/*
+     * DATA AUDIT
+     * Awalnya merupakan COPY dari data utama.
+     */
+		$data_audit = [
+			'uuid'              => $audit_uuid,
+			'is_audit'          => 1,
+			'source_uuid'       => $uuid,
+			'username'          => $username,
+			'plant'             => $plant,
+			'date'              => $date,
+			'waktu'             => $waktu,
+			'chiller_1'         => $chiller_1,
+			'chiller_2'         => $chiller_2,
+			'chiller_3'         => $chiller_3,
+			'chiller_4'         => $chiller_4,
+			'catatan'           => $catatan,
+			'nama_produksi'     => $nama_produksi,
+			'status_produksi'   => '1',
+			'catatan_produksi'  => '',
+			'nama_spv'          => '',
+			'status_spv'        => '0',
+			'catatan_spv'       => ''
+		];
+
+		/*
+     * SIMPAN KEDUANYA DALAM 1 TRANSACTION
+     */
+		$this->db->trans_start();
+
+		$this->db->insert('chiller', $data_utama);
+		$this->db->insert('chiller', $data_audit);
+
+		$this->db->trans_complete();
+
+		if ($this->db->trans_status() === FALSE) {
+			return false;
+		}
+
+		return true;
 	}
 
 	public function update($uuid)
@@ -96,7 +149,7 @@ class Chiller_model extends CI_Model {
 		$chiller_4 = $this->input->post('chiller_4');
 		$catatan = $this->input->post('catatan');
 
-		$old_data = $this->db->get_where('chiller', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('chiller', ['uuid' => $uuid])->row_array();
 
 		$data = array(
 			'username' => $username,
@@ -108,12 +161,12 @@ class Chiller_model extends CI_Model {
 			'chiller_4' => $chiller_4,
 			'catatan' => $catatan,
 
-			'modified_at' => date("Y-m-d H:i:s") 
+			'modified_at' => date("Y-m-d H:i:s")
 		);
 
 		$this->db->update('chiller', $data, ['uuid' => $uuid]);
 
-		$new_data = $this->db->get_where('chiller', ['uuid'=>$uuid])->row_array();
+		$new_data = $this->db->get_where('chiller', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
 			$this->activity_logger->log_activity(
@@ -130,7 +183,7 @@ class Chiller_model extends CI_Model {
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -140,7 +193,7 @@ class Chiller_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -159,13 +212,12 @@ class Chiller_model extends CI_Model {
 		);
 
 		$this->db->update('chiller', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_produksi',
 				'label' => 'Status',
@@ -175,7 +227,7 @@ class Chiller_model extends CI_Model {
 				'field' => 'catatan_produksi',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -194,8 +246,7 @@ class Chiller_model extends CI_Model {
 		);
 
 		$this->db->update('chiller', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -207,14 +258,17 @@ class Chiller_model extends CI_Model {
 
 	public function get_by_uuid($uuid)
 	{
-		$data = $this->db->get_where('chiller', array('uuid' => $uuid))->row();
-		return $data;
+		return $this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0)
+			->get('chiller')
+			->row();
 	}
 
 	public function get_by_uuid_chiller($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -224,22 +278,22 @@ class Chiller_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_chiller_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, status_produksi, tgl_update_produksi');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('chiller');
 
-		$data_chiller = $query->row();  
-		return $data_chiller; 
-	} 
+		$data_chiller = $query->row();
+		return $data_chiller;
+	}
 
 	// public function get_chiller_by_plant()
 	// {
@@ -259,19 +313,22 @@ class Chiller_model extends CI_Model {
 		$type_user = $this->session->userdata('tipe_user');
 
 		$this->db->select('
-			uuid,
-			date,
-			waktu,
-			chiller_1,
-			chiller_2,
-			chiller_3,
-			chiller_4,
-			status_spv,
-			modified_at,
-			tgl_update_spv
-			');
+        uuid,
+        date,
+        waktu,
+        chiller_1,
+        chiller_2,
+        chiller_3,
+        chiller_4,
+        status_spv,
+        modified_at,
+        tgl_update_spv
+    ');
 
 		$this->db->from('chiller');
+
+		// Hanya data utama
+		$this->db->where('is_audit', 0);
 
 		if (!in_array($type_user, [9, 1])) {
 			$this->db->where('plant', $plant);
@@ -296,17 +353,15 @@ class Chiller_model extends CI_Model {
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
-    // Urutkan berdasarkan waktu
-		$this->db->order_by('TIME(waktu)', 'ASC');  
+		$this->db->order_by('TIME(waktu)', 'ASC');
 
 		$query = $this->db->get('chiller');
-
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
 			return $query->result();
@@ -317,19 +372,107 @@ class Chiller_model extends CI_Model {
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, status_produksi, tgl_update_produksi, created_at');
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        nama_produksi,
+        status_produksi,
+        tgl_update_produksi,
+        created_at
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('chiller');
 
-		return $query->row();
+		return $this->db->get('chiller')->row();
 	}
 
+	public function get_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
 
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 1);
+		$this->db->order_by('date', 'DESC');
+		$this->db->order_by('waktu', 'DESC');
+
+		return $this->db->get('chiller')->result();
+	}
+
+	public function get_audit_by_date($tanggal, $plant = null)
+	{
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 1);
+
+		if (!empty($plant)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('waktu', 'ASC');
+
+		$query = $this->db->get('chiller');
+
+		if ($query->num_rows() > 0) {
+			return $query->result();
+		}
+
+		return false;
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('is_audit', 1);
+
+		// User biasa hanya boleh melihat audit plant aktif
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		return $this->db->get('chiller')->row();
+	}
+
+	public function update_audit($uuid)
+	{
+		$audit = $this->get_audit_by_uuid($uuid);
+
+		if (!$audit) {
+			return false;
+		}
+
+		$data = [
+			'date'         => $this->input->post('date'),
+			'waktu'        => $this->input->post('waktu'),
+			'chiller_1'    => $this->input->post('chiller_1'),
+			'chiller_2'    => $this->input->post('chiller_2'),
+			'chiller_3'    => $this->input->post('chiller_3'),
+			'chiller_4'    => $this->input->post('chiller_4'),
+			'catatan'      => $this->input->post('catatan'),
+			'modified_at'  => date('Y-m-d H:i:s')
+		];
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 1)
+			->where('plant', $this->session->userdata('plant'))
+			->update('chiller', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
 }

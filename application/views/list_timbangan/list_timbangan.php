@@ -39,7 +39,7 @@
                             <th>Kapasitas</th>
                             <th>Model</th>
                             <th>Lokasi</th>
-                            <!-- <th>Standar</th> -->
+                            <th>Standar</th> 
                             <th>Created</th>
                             <th>Action</th>
                         </tr>
@@ -55,7 +55,7 @@
                                 <td><?= $val->kapasitas; ?></td>
                                 <td><?= $val->model; ?></td>
                                 <td><?= $val->lokasi; ?></td>
-                                <!-- <td><?= $val->standar; ?></td> -->
+                                <td><?= $val->standar; ?></td>
                                 <td><?= $val->created_at; ?></td>
                                 <td class="text-center">
                                     <a href="<?= base_url('list_timbangan/edit/'.$val->uuid);?>" class="btn btn-primary btn-icon-split">

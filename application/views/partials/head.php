@@ -67,14 +67,14 @@
             <?php if (in_array($tipe_user, [0, 9])): ?>
                 <hr class="sidebar-divider">
                 <div class="sidebar-heading">MASTER DATA</div>
-                <li class="nav-item <?= $active_nav == 'data_master' | $active_nav == 'pegawai' | $active_nav == 'departemen' | $active_nav == 'plant' | $active_nav == 'alatqc' | $active_nav == 'bendapecah' | $active_nav == 'peralatan' | $active_nav == 'produk' | $active_nav == 'material' | $active_nav == 'area_kebersihan' | $active_nav == 'list_thermometer' | $active_nav == 'list_timbangan' | $active_nav == 'list_kebersihan' ?'active':'';?>">
+                <li class="nav-item <?= $active_nav == 'data_master' | $active_nav == 'pegawai' | $active_nav == 'departemen' | $active_nav == 'plant' | $active_nav == 'alatqc' | $active_nav == 'bendapecah' | $active_nav == 'peralatan' | $active_nav == 'produk' | $active_nav == 'material' | $active_nav == 'area_kebersihan' | $active_nav == 'list_thermometer' | $active_nav == 'list_timbangan' | $active_nav == 'list_kebersihan' | $active_nav == 'master_suhu' | $active_nav == 'master_chiller' | $active_nav == 'master_sanitasi' ?'active':'';?>">
                     <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseDataMaster"
                     aria-expanded="true" aria-controls="collapseDataMaster">
                     <i class="fas fa-briefcase"></i>
                     <span>Data Master</span>
                 </a>
 
-                <div id="collapseDataMaster" class="collapse <?= $active_nav == 'pegawai' | $active_nav == 'departemen' | $active_nav == 'plant' | $active_nav == 'alatqc' | $active_nav == 'bendapecah' | $active_nav == 'peralatan' | $active_nav == 'produk' | $active_nav == 'material' | $active_nav == 'area_kebersihan' | $active_nav == 'list_thermometer' | $active_nav == 'list_timbangan' | $active_nav == 'list_kebersihan' ?'show':'';?>" aria-labelledby="headingDataMaster" data-parent="#accordionSidebar">
+                <div id="collapseDataMaster" class="collapse <?= $active_nav == 'pegawai' | $active_nav == 'departemen' | $active_nav == 'plant' | $active_nav == 'alatqc' | $active_nav == 'bendapecah' | $active_nav == 'peralatan' | $active_nav == 'produk' | $active_nav == 'material' | $active_nav == 'area_kebersihan' | $active_nav == 'list_thermometer' | $active_nav == 'list_timbangan' | $active_nav == 'list_kebersihan' | $active_nav == 'master_suhu' | $active_nav == 'master_chiller' | $active_nav == 'master_sanitasi' ?'show':'';?>" aria-labelledby="headingDataMaster" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
                         <!-- <a class="collapse-item <?= $active_nav == 'pegawai' ?'active':'';?>" href="<?= base_url('pegawai')?>">Pegawai</a> -->
                         <a class="collapse-item <?= $active_nav == 'departemen' ?'active':'';?>" href="<?= base_url('departemen')?>">Departemen</a>
@@ -88,6 +88,9 @@
                         <a class="collapse-item <?= $active_nav == 'list_thermometer' ?'active':'';?>" href="<?= base_url('list_thermometer')?>">List Thermometer</a>
                         <a class="collapse-item <?= $active_nav == 'list_timbangan' ?'active':'';?>" href="<?= base_url('list_timbangan')?>">List Timbangan</a>
                         <a class="collapse-item <?= $active_nav == 'list_kebersihan' ?'active':'';?>" href="<?= base_url('list_kebersihan')?>">List Kebersihan Ruang</a>
+						<a class="collapse-item <?= $active_nav == 'master_suhu' ? 'active' : ''; ?>"href="<?= base_url('master-suhu') ?>">Master Suhu</a>
+						<a class="collapse-item <?= $active_nav == 'master_chiller' ? 'active' : ''; ?>" href="<?= base_url('master-chiller') ?>">Master Chiller</a>
+						<a class="collapse-item <?= $active_nav == 'master_sanitasi' ? 'active' : ''; ?>" href="<?= base_url('master-sanitasi') ?>">Master Sanitasi</a>
                     </div>
                 </div>
             </li>
@@ -117,7 +120,7 @@
 <!-- FORM QC (hanya user_type 0,1,4) -->
 <?php if (in_array($tipe_user, [0, 4, 8, 9])): ?>
     <hr class="sidebar-divider">
-    <div class="sidebar-heading">FORM QC</div>
+    <div class="sidebar-heading">FORM </div>
     <li class="nav-item <?= $active_nav == 'form_qc' | $active_nav == 'pengayakan' | $active_nav == 'produksi' | $active_nav == 'metal' |  $active_nav == 'falserejection' |  $active_nav == 'kontaminasi' |  $active_nav == 'kekuatanmagnet' |  $active_nav == 'verifikasimagnet' |  $active_nav == 'thermometer' |  $active_nav == 'timbangan' |  $active_nav == 'releasepacking' |  $active_nav == 'pengemasan' |  $active_nav == 'chiller' |  $active_nav == 'sanitasi' |  $active_nav == 'ketidaksesuaian' |  $active_nav == 'pemusnahan' |  $active_nav == 'kondisikerja' |  $active_nav == 'retain' |  $active_nav == 'kebersihankaryawan' |  $active_nav == 'kebersihanperalatan' |  $active_nav == 'penerimaankemasan' |  $active_nav == 'pemeriksaanpengiriman' |  $active_nav == 'pembuatanlarutan' |  $active_nav == 'pemeriksaanchemical' |  $active_nav == 'seasoning' |  $active_nav == 'kebersihanruang' |  $active_nav == 'sanitasiwarehouse' |  $active_nav == 'loading' |  $active_nav == 'disposisi' |  $active_nav == 'magnettrap' |  $active_nav == 'kebersihanmesin' |  $active_nav == 'sensori' |  $active_nav == 'reagen' |  $active_nav == 'residu' |  $active_nav == 'larutan' |  $active_nav == 'analisis' |  $active_nav == 'inventaris' |  $active_nav == 'pecahbelah' |  $active_nav == 'suhu' | $active_nav == 'proses' ? 'active' : ''; ?>">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseQC1"
         aria-expanded="true" aria-controls="collapseQC1">
@@ -234,7 +237,7 @@
 
 <!-- Verifikasi SPV -->
 <!-- VERIFIKASI SPV (hanya tipe_user 0,1,2) -->
-<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+<?php if (in_array($tipe_user, [9])): ?>
     <hr class="sidebar-divider">
     <div class="sidebar-heading">VERIFIKASI SUPERVISOR</div>
     <li class="nav-item <?= ($active_nav == 'verifikasi' || $active_nav == 'verifikasi-pengayakan' || $active_nav == 'verifikasi-produksi' || $active_nav == 'verifikasi-metal' || $active_nav == 'verifikasi-falserejection' || $active_nav == 'verifikasi-kontaminasi' || $active_nav == 'verifikasi-kekuatanmagnet' || $active_nav == 'verifikasi-verifikasimagnet' || $active_nav == 'verifikasi-thermometer' || $active_nav == 'verifikasi-timbangan' || $active_nav == 'verifikasi-releasepacking' || $active_nav == 'verifikasi-pengemasan' || $active_nav == 'verifikasi-chiller' || $active_nav == 'verifikasi-sanitasi' || $active_nav == 'verifikasi-ketidaksesuaian' || $active_nav == 'verifikasi-pemusnahan' || $active_nav == 'verifikasi-kondisikerja' || $active_nav == 'verifikasi-retain' || $active_nav == 'verifikasi-kebersihankaryawan' || $active_nav == 'verifikasi-kebersihanperalatan' || $active_nav == 'verifikasi-penerimaankemasan' || $active_nav == 'verifikasi-pemeriksaanpengiriman' || $active_nav == 'verifikasi-pembuatanlarutan' || $active_nav == 'verifikasi-pemeriksaanchemical' || $active_nav == 'verifikasi-seasoning' || $active_nav == 'verifikasi-kebersihanruang' || $active_nav == 'verifikasi-sanitasiwarehouse' || $active_nav == 'verifikasi-loading' || $active_nav == 'verifikasi-disposisi' || $active_nav == 'verifikasi-magnettrap' || $active_nav == 'verifikasi-kebersihanmesin' || $active_nav == 'verifikasi-sensori' || $active_nav == 'verifikasi-reagen' || $active_nav == 'verifikasi-residu' || $active_nav == 'verifikasi-larutan' || $active_nav == 'verifikasi-analisis' || $active_nav == 'verifikasi-inventaris' || $active_nav == 'verifikasi-pecahbelah' || $active_nav == 'verifikasi-suhu' || $active_nav == 'verifikasi-proses' ) ? 'active' : ''; ?>">

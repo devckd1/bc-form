@@ -1,7 +1,8 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
-class Home extends MY_Controller {
+class Home extends MY_Controller
+{
 
 	public function __construct()
 	{
@@ -92,14 +93,14 @@ class Home extends MY_Controller {
 
 		if ($proses) {
 			$proses_produksi = json_decode(
-				$proses->proses_produksi,
+				$proses->proses_produksi ?? '[]',
 				true
-			);
+			) ?? [];
 
 			$proses_packing = json_decode(
-				$proses->proses_packing,
+				$proses->proses_packing ?? '[]',
 				true
-			);
+			) ?? [];
 		}
 
 		/*
@@ -370,32 +371,32 @@ class Home extends MY_Controller {
 				: 'Tamu',
 
 			'latest_today' =>
-				$this->produksi_model->get_latest_today(),
+			$this->produksi_model->get_latest_today(),
 
 			'count_batch' =>
-				$this->produksi_model->count_today_same_product(),
+			$this->produksi_model->count_today_same_product(),
 
 			'packaging' =>
-				$this->penerimaankemasan_model->get_latest_kemasan(),
+			$this->penerimaankemasan_model->get_latest_kemasan(),
 
 			'seasoning' =>
-				$this->seasoning_model->get_latest_seasoning(),
+			$this->seasoning_model->get_latest_seasoning(),
 
 			'chemical' =>
-				$this->pemeriksaanchemical_model->get_latest_chemical(),
+			$this->pemeriksaanchemical_model->get_latest_chemical(),
 
 			'loading' =>
-				$this->loading_model->get_latest_loading(),
+			$this->loading_model->get_latest_loading(),
 
 			'jumlah_temuan' =>
-				$this->kontaminasi_model->get_temuan_per_hari(),
+			$this->kontaminasi_model->get_temuan_per_hari(),
 
 			'temuan' =>
-				$this->kontaminasi_model->get_latest_temuan_bulan_ini(),
+			$this->kontaminasi_model->get_latest_temuan_bulan_ini(),
 
 			'pegawai_produksi' =>
-				$this->pegawai_model
-					->get_pegawai_produksi_by_plant($plant_uuid),
+			$this->pegawai_model
+				->get_pegawai_produksi_by_plant($plant_uuid),
 
 			'show_modal' => $show_modal,
 
@@ -450,13 +451,13 @@ class Home extends MY_Controller {
 			|--------------------------------------------------------------------------
 			*/
 			'roti_gosong' =>
-				$roti_gosong,
+			$roti_gosong,
 
 			'kontaminasi_chart' =>
-				$kontaminasi_chart,
+			$kontaminasi_chart,
 
 			'ketidaksesuaian_md' =>
-				$ketidaksesuaian_md,
+			$ketidaksesuaian_md,
 		];
 
 		$this->active_nav = 'home';

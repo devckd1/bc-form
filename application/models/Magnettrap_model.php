@@ -1,10 +1,12 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Magnettrap_model extends CI_Model {
-	
+class Magnettrap_model extends CI_Model
+{
+
 	public function rules()
 	{
 		return [
@@ -59,17 +61,20 @@ class Magnettrap_model extends CI_Model {
 		];
 	}
 
-    // ======================= Insert Data =======================
+	// ======================= Insert Data =======================
 	public function insert($file_name)
 	{
 		$produksi_data = $this->session->userdata('produksi_data');
 		$nama_produksi = $produksi_data['nama_produksi'] ?? '';
-		$uuid = Uuid::uuid4()->toString();
 		$username = $this->session->userdata('username');
 		$plant = $this->session->userdata('plant');
 
+		$uuid = Uuid::uuid4()->toString();
+
 		$data = [
 			'uuid' => $uuid,
+			'is_audit' => 0,
+			'source_uuid' => null,
 			'username' => $username,
 			'plant' => $plant,
 			'date' => $this->input->post('date'),
@@ -83,19 +88,53 @@ class Magnettrap_model extends CI_Model {
 			'catatan' => $this->input->post('catatan'),
 			'keterangan' => $this->input->post('keterangan'),
 			'bukti' => $file_name,
-			'status_enginer' => "1",
+			'status_enginer' => '1',
 			'nama_enginer' => $nama_produksi,
-			'status_spv' => "0",
-			'created_at' => date("Y-m-d H:i:s")
+			'status_spv' => '0',
+			'created_at' => date('Y-m-d H:i:s')
 		];
 
-		return $this->db->insert('magnet_trap', $data);
+		$this->db->trans_begin();
+
+		// Simpan data QC
+		$this->db->insert('magnet_trap', $data);
+
+		// Buat snapshot Audit dari data QC
+		$audit_data = $data;
+		$audit_data['uuid'] = Uuid::uuid4()->toString();
+		$audit_data['is_audit'] = 1;
+		$audit_data['source_uuid'] = $uuid;
+
+		$this->db->insert('magnet_trap', $audit_data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
-    // ======================= Update Data =======================
+	// ======================= Update Data =======================
 	public function update($uuid, $file_name)
 	{
-		$old_data = $this->db->get_where('magnet_trap', ['uuid' => $uuid])->row_array();
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		$old_data = $this->db->get('magnet_trap')->row_array();
+
+		if (!$old_data) {
+			return false;
+		}
 
 		$data = [
 			'username' => $this->session->userdata('username'),
@@ -110,14 +149,23 @@ class Magnettrap_model extends CI_Model {
 			'catatan' => $this->input->post('catatan'),
 			'keterangan' => $this->input->post('keterangan'),
 			'bukti' => $file_name,
-			'modified_at' => date("Y-m-d H:i:s")
+			'modified_at' => date('Y-m-d H:i:s')
 		];
-		
+
 		$this->db->where('uuid', $uuid);
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
 		$this->db->update('magnet_trap', $data);
 
+		if ($this->db->trans_status() === false) {
+			return false;
+		}
+
 		if (isset($this->activity_logger)) {
-			$old_data = $this->db->get_where('magnet_trap', ['uuid' => $uuid])->row_array();
 			$this->activity_logger->log_activity(
 				'update',
 				'magnet_trap_logs',
@@ -127,13 +175,12 @@ class Magnettrap_model extends CI_Model {
 			);
 		}
 
-		return true; 
-
+		return $this->db->affected_rows() >= 0;
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Status',
@@ -162,13 +209,12 @@ class Magnettrap_model extends CI_Model {
 		);
 
 		$this->db->update('magnet_trap', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function rules_diketahui()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_enginer',
 				'label' => 'Status',
@@ -197,8 +243,7 @@ class Magnettrap_model extends CI_Model {
 		);
 
 		$this->db->update('magnet_trap', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -210,14 +255,24 @@ class Magnettrap_model extends CI_Model {
 
 	public function get_by_uuid($uuid)
 	{
-		$data = $this->db->get_where('magnet_trap', array('uuid' => $uuid))->row();
-		return $data;
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		return $this->db->get('magnet_trap')->row();
 	}
 
 	public function get_by_uuid_magnettrap($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -227,39 +282,53 @@ class Magnettrap_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_magnettrap_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, date, username, shift, nama_enginer, status_enginer, tgl_update_enginer');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('magnet_trap');
 
-		$data_magnet_trap = $query->row();  
-		return $data_magnet_trap; 
+		$data_magnet_trap = $query->row();
+		return $data_magnet_trap;
 	}
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get('magnet_trap')->result();
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
 		}
 
-		return $this->db->get_where('magnet_trap', ['plant' => $plant])->result();
+		return $this->db
+			->order_by('created_at', 'DESC')
+			->get('magnet_trap')
+			->result();
 	}
 
 	public function delete_by_uuid($uuid)
 	{
-		$this->db->where('uuid', $uuid);
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
 		return $this->db->delete('magnet_trap');
 	}
 
@@ -272,7 +341,7 @@ class Magnettrap_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -297,7 +366,7 @@ class Magnettrap_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		if (!empty($shift)) {
@@ -314,12 +383,83 @@ class Magnettrap_model extends CI_Model {
 	public function get_by_month($tahun, $bulan, $plant)
 	{
 		return $this->db
-		->where('YEAR(date)', $tahun)
-		->where('MONTH(date)', $bulan)
-		->where('plant', $plant)
-		->order_by('date', 'ASC')
-		->get('magnet_trap')
-		->result();
+			->where('YEAR(date)', $tahun)
+			->where('MONTH(date)', $bulan)
+			->where('plant', $plant)
+			->order_by('date', 'ASC')
+			->get('magnet_trap')
+			->result();
 	}
 
+	public function get_data_audit_by_plant()
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('magnet_trap')
+			->result();
+	}
+
+	public function get_audit_by_uuid($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->get('magnet_trap')
+			->row();
+	}
+
+	public function get_audit_by_date($date)
+	{
+		$plant = $this->session->userdata('plant');
+
+		return $this->db
+			->where('date', $date)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->order_by('created_at', 'DESC')
+			->get('magnet_trap')
+			->result();
+	}
+
+	public function update_audit($uuid, $file_name)
+	{
+		$plant = $this->session->userdata('plant');
+
+		$record = $this->get_audit_by_uuid($uuid);
+
+		if (!$record) {
+			return false;
+		}
+
+		$data = [
+			'username' => $this->session->userdata('username'),
+			'date' => $this->input->post('date'),
+			'shift' => $this->input->post('shift'),
+			'time' => $this->input->post('time'),
+			'tahapan' => $this->input->post('tahapan'),
+			'kontaminasi' => $this->input->post('kontaminasi'),
+			'analisis' => $this->input->post('analisis'),
+			'tindakan' => $this->input->post('tindakan'),
+			'verifikasi' => $this->input->post('verifikasi'),
+			'catatan' => $this->input->post('catatan'),
+			'keterangan' => $this->input->post('keterangan'),
+			'bukti' => $file_name,
+			'modified_at' => date('Y-m-d H:i:s')
+		];
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->update('magnet_trap', $data);
+
+		return $this->db->trans_status() !== false;
+	}
 }
