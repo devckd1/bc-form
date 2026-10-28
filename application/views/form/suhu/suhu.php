@@ -93,17 +93,64 @@
 									?>
 								</td>
 								<td class="text-center">
-									<a href="<?= base_url('suhu/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split mb-1">
+									<a href="<?= base_url('suhu/edit/' . $val->uuid); ?>"
+										class="btn btn-warning btn-icon-split mb-1">
 										<span class="text">Edit</span>
 									</a>
-									<a href="<?= base_url('suhu/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split mb-1">
+
+									<a href="<?= base_url('suhu/detail/' . $val->uuid); ?>"
+										class="btn btn-success btn-icon-split mb-1">
 										<span class="text">Detail</span>
 									</a>
-									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-										<a href="<?= base_url('suhu/status/' . $val->uuid); ?>"
-											class="btn btn-info btn-icon-split">
-											<span class="text">Verifikasi</span>
-										</a>
+
+									<?php if ($tipe_user == 3): ?>
+
+										<?php if ((string) $val->status_produksi === '1'): ?>
+											<span class="btn btn-primary btn-icon-split mb-1">
+												<span class="icon text-white-50">
+													<i class="fas fa-check"></i>
+												</span>
+										<?php else: ?>
+											<a href="<?= base_url('suhu/verifikasi_produksi/' . $val->uuid); ?>"
+												class="btn btn-primary btn-icon-split mb-1"
+												onclick="return confirm('Apakah data Suhu ini sudah diverifikasi oleh Produksi?');">
+												<span class="text">Verifikasi</span>
+											</a>
+										<?php endif; ?>
+
+									<?php elseif (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+										<?php if ((string) $val->status_produksi !== '1'): ?>
+
+											<span class="waiting-verification mb-1"
+												style="display:inline-block;color:#f39c12;font-weight:bold;">
+												Menunggu Verifikasi Produksi
+											</span>
+
+										<?php elseif ((string) $val->status_spv === '0'): ?>
+
+											<a href="<?= base_url('suhu/status/' . $val->uuid); ?>"
+												class="btn btn-info btn-icon-split mb-1">
+												<span class="text">Verifikasi</span>
+											</a>
+
+										<?php elseif ((string) $val->status_spv === '1'): ?>
+
+											<span class="btn btn-info btn-icon-split mb-1">
+												<span class="icon text-white-50">
+													<i class="fas fa-check"></i>
+												</span>
+											</span>
+
+										<?php elseif ((string) $val->status_spv === '2'): ?>
+
+											<a href="<?= base_url('suhu/status/' . $val->uuid); ?>"
+												class="btn btn-warning btn-icon-split mb-1">
+												<span class="text">Verifikasi Ulang</span>
+											</a>
+
+										<?php endif; ?>
+
 									<?php endif; ?>
 									<!--  <a href="<?= base_url('suhu/delete/' . $val->uuid); ?>" class="btn btn-danger btn-icon-split mb-1" onclick="return confirm('Yakin ingin menghapus data ini?')">
                                         <span class="text">Delete</span>

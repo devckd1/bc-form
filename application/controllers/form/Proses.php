@@ -336,6 +336,89 @@ class Proses extends MY_Controller
 		$this->render('form/proses/proses-detail', $data);
 	}
 
+	public function audit_packing($uuid)
+	{
+		$rules = $this->proses_model->rules_packing();
+		$this->form_validation->set_rules($rules);
+
+		// Ambil snapshot Audit
+		$proses = $this->proses_model->get_audit_by_uuid($uuid);
+
+		if (!$proses) {
+			show_404();
+		}
+
+		if ($this->form_validation->run() === TRUE) {
+			$update = $this->proses_model->update_audit_packing($uuid);
+
+			if ($update) {
+				$this->session->set_flashdata(
+					'success_msg',
+					'Data Audit berhasil diperbarui.'
+				);
+			} else {
+				$this->session->set_flashdata(
+					'error_msg',
+					'Gagal memperbarui data Audit.'
+				);
+			}
+
+			return redirect('proses/audit');
+		}
+
+		// Decode proses produksi
+		$data_produksi = [];
+
+		if (!empty($proses->proses_produksi)) {
+			$decoded = json_decode($proses->proses_produksi, true);
+
+			if (is_array($decoded)) {
+				$data_produksi = $decoded;
+			}
+		}
+
+		// Decode proses packing
+		$data_packing = [];
+
+		if (!empty($proses->proses_packing)) {
+			$decoded = json_decode($proses->proses_packing, true);
+
+			if (is_array($decoded)) {
+				$data_packing = $decoded;
+			}
+		}
+
+		// Nama produk
+		$nama_produk_index1 =
+			$data_packing['nama_produk'][0]
+			?? $data_packing['nama_produk']
+			?? $proses->nama_produk
+			?? '';
+
+		// Kode produksi
+		$kode_produksi_index1 =
+			$data_packing['kode_produksi'][0]
+			?? $data_packing['kode_produksi']
+			?? ($data_produksi['dough_mixing']['kode_produksi'][1] ?? '');
+
+		// List produk
+		$produk_list = $this->produk_model->get_all_produk();
+
+		// Data ke view
+		$data = [
+			'mode'                  => 'audit',
+			'proses'                => $proses,
+			'produk_list'           => $produk_list,
+			'data_produksi'         => $data_produksi,
+			'data_packing'          => $data_packing,
+			'nama_produk_index1'    => $nama_produk_index1,
+			'kode_produksi_index1'  => $kode_produksi_index1
+		];
+
+		$this->active_nav = 'proses';
+		$this->render('form/proses/proses-packing', $data);
+	}
+
 	public function cetak()
 	{
 		error_reporting(0);
@@ -401,21 +484,34 @@ class Proses extends MY_Controller
 			//========================
 			foreach ($proses_data as $pd) {
 
+
 				$proses_produksi = json_decode($pd->proses_produksi ?? '[]', true);
 
 				if (empty($proses_produksi)) {
 					continue;
 				}
 
+				// Ambil jumlah kolom dari metadata JSON.
+				// Jika data lama belum memiliki metadata, gunakan 10 kolom.
+				$jumlah_kolom = isset($proses_produksi['_meta']['jumlah_kolom'])
+					? (int) $proses_produksi['_meta']['jumlah_kolom']
+					: 10;
+
+				// Batasi jumlah kolom antara 1 sampai 10.
+				$jumlah_kolom = max(1, min(10, $jumlah_kolom));
+
+				// Hapus metadata agar tidak ikut diproses sebagai data produksi.
+				unset($proses_produksi['_meta']);
+
 				$pdf->AddPage();
 
-				// nanti tambahkan tulisan SHIFT 1/2/3 di helper
 				$this->_generate_halaman_produksi(
 					$pdf,
 					$data,
 					[$pd],
 					$proses_produksi,
-					$shiftData['shift']
+					$shiftData['shift'],
+					$jumlah_kolom
 				);
 
 				$packing = json_decode($pd->proses_packing ?? '{}', true);
@@ -570,10 +666,25 @@ class Proses extends MY_Controller
 		$pdf->Output($filename, 'I');
 	}
 
-	private function _generate_halaman_produksi($pdf, $data, $proses_data, $proses_produksi, $shift)
+
+	private function _generate_halaman_produksi($pdf, $data, $proses_data, $proses_produksi, $shift, $jumlah_kolom = 10)
 	{
+		// =====================================================
+		// PENGATURAN JUMLAH DAN LEBAR KOLOM PDF PRODUKSI
+		// =====================================================
+		$jumlah_kolom = max(1, min(10, (int) $jumlah_kolom));
+
+		$lebarHalaman = $pdf->getPageWidth() - 17;
+		$lebarLabel = 39;
+		$lebarStandar = 20;
+
+		$lebarKolomInput = (
+			$lebarHalaman - $lebarLabel - $lebarStandar
+		) / $jumlah_kolom;
+
 		$pdf->SetFont('times', 'B', 13);
 		$pdf->SetTextColor(0, 0, 0);
+
 		$logo_path = FCPATH . 'assets/img/cpi-logo.png';
 		if (file_exists($logo_path)) {
 			$pdf->Image($logo_path, 10, 10, 10);
@@ -590,11 +701,12 @@ class Proses extends MY_Controller
 		$pdf->Ln(2);
 
 		$pdf->SetFont('times', 'B', 13);
-		$pdf->SetY(18); // ubah sesuai kebutuhan
+		$pdf->SetY(18);
 		$pdf->MultiCell(0, 5, 'VERIFIKASI PROSES PRODUKSI', 0, 'C');
 		$pdf->Ln(3);
 
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
+
 		$tanggal = $data['proses']->date;
 		$date = new DateTime($tanggal);
 		$formatted_date = date('l, d F Y', $date->getTimestamp());
@@ -676,125 +788,185 @@ class Proses extends MY_Controller
 		];
 
 		$pdf->SetFont('times', '', 8);
-		foreach ($label_param_produksi as $key => $label) {
-			$pdf->Cell(39, 4, $label, 1);
 
+		foreach ($label_param_produksi as $key => $label) {
+			$pdf->Cell($lebarLabel, 4, $label, 1);
+
+			// =====================================================
+			// BARIS JUDUL / KATEGORI
+			// =====================================================
 			if (in_array($key, ['dough', 'berat_rm', 'hasil_mixing', 'proofing', 'electric_baking', 'hasil_baking'])) {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
-					// ❌ Kosongkan kolom pertama untuk semua kecuali berat_rm
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					if ($key === 'berat_rm' && $i === 0) {
 						$pdf->Cell($cellWidth, 4, 'Berat (Kg)', 1, 0, 'C');
 					} else {
 						$pdf->Cell($cellWidth, 4, '', 1);
 					}
 				}
+
 				$pdf->Ln();
 				continue;
 			}
 
-			// 🔹 No Dokumen / Revisi
+			// =====================================================
+			// NO DOKUMEN / REVISI
+			// =====================================================
 			if ($key === 'no_dokumen') {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					if ($i === 0) {
-						// ❌ Kosongkan kolom pertama
 						$pdf->Cell($cellWidth, 4, '', 1);
 						continue;
 					}
+
 					$high = $proses_produksi['dough_mixing']['dokumen'][$i] ?? '';
 					$low  = $proses_produksi['dough_mixing']['revisi'][$i] ?? '';
+
 					$pdf->Cell($cellWidth, 4, $high . ' / ' . $low, 1);
 				}
+
 				$pdf->Ln();
 				continue;
 			}
 
-			// 🔹 Baking Time High / Low
+			// =====================================================
+			// BAKING TIME HIGH / LOW
+			// =====================================================
 			if ($key === 'baking_time') {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					if ($i === 0) {
 						$pdf->Cell($cellWidth, 4, '', 1);
 						continue;
 					}
+
 					$high = $proses_produksi['electric_baking']['baking_time_high'][$i] ?? '';
 					$low  = $proses_produksi['electric_baking']['baking_time_low'][$i] ?? '';
+
 					$pdf->Cell($cellWidth, 4, $high . ' / ' . $low, 1);
 				}
+
 				$pdf->Ln();
 				continue;
 			}
 
-			// 🔹 Jam Mulai / Selesai Proofing
+			// =====================================================
+			// JAM MULAI / SELESAI PROOFING
+			// =====================================================
 			if ($key === 'jam_mulai_proofing') {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					if ($i === 0) {
 						$pdf->Cell($cellWidth, 4, '', 1);
 						continue;
 					}
+
 					$high = $proses_produksi['proofing']['jam_mulai'][$i] ?? '';
 					$low  = $proses_produksi['proofing']['jam_selesai'][$i] ?? '';
+
 					$pdf->Cell($cellWidth, 4, $high . ' / ' . $low, 1);
 				}
+
 				$pdf->Ln();
 				continue;
 			}
 
-			// 🔹 Suhu Setting / Aktual Proofing
+			// =====================================================
+			// SUHU SETTING / AKTUAL PROOFING
+			// =====================================================
 			if ($key === 'suhu_setting_proofing') {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					if ($i === 0) {
 						$pdf->Cell($cellWidth, 4, '', 1);
 						continue;
 					}
+
 					$high = $proses_produksi['proofing']['suhu_setting'][$i] ?? '';
 					$low  = $proses_produksi['proofing']['suhu_aktual'][$i] ?? '';
+
 					$pdf->Cell($cellWidth, 4, $high . ' / ' . $low, 1);
 				}
+
 				$pdf->Ln();
 				continue;
 			}
 
-			// 🔹 RH Setting / Aktual Proofing
+			// =====================================================
+			// RH SETTING / AKTUAL PROOFING
+			// =====================================================
 			if ($key === 'rh_setting_proofing') {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					if ($i === 0) {
 						$pdf->Cell($cellWidth, 4, '', 1);
 						continue;
 					}
+
 					$high = $proses_produksi['proofing']['rh_setting'][$i] ?? '';
 					$low  = $proses_produksi['proofing']['rh_aktual'][$i] ?? '';
+
 					$pdf->Cell($cellWidth, 4, $high . ' / ' . $low, 1);
 				}
+
 				$pdf->Ln();
 				continue;
 			}
 
-			// 🔹 Waktu Mixing 1 / 2
+			// =====================================================
+			// WAKTU MIXING 1 / 2
+			// =====================================================
 			if ($key === 'mixing_place') {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					if ($i === 0) {
 						$pdf->Cell($cellWidth, 4, '', 1);
 						continue;
 					}
+
 					$mix1 = $proses_produksi['mixing']['waktu_mixing_1'][$i] ?? '';
 					$mix2 = $proses_produksi['mixing']['waktu_mixing_2'][$i] ?? '';
+
 					$pdf->Cell($cellWidth, 4, $mix1 . ' / ' . $mix2, 1);
 				}
+
 				$pdf->Ln();
 				continue;
 			}
 
-			// 🔹 Semua field yang masuk mapping
+			// =====================================================
+			// SEMUA FIELD YANG MASUK MAPPING
+			// =====================================================
 			if (isset($mapping_field[$key])) {
 				[$group, $field] = $mapping_field[$key];
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					$value = $proses_produksi[$group][$field][$i] ?? '';
 
 					if ($i === 0) {
@@ -803,11 +975,16 @@ class Proses extends MY_Controller
 						} else {
 							$pdf->Cell($cellWidth, 4, '', 1);
 						}
+
 						continue;
 					}
 
 					$checkmark_values = ['1', '✓', 'oke', 'ok', 'baik'];
-					$is_checked = in_array(strtolower(trim($value)), array_map('strtolower', $checkmark_values));
+
+					$is_checked = in_array(
+						strtolower(trim((string) $value)),
+						array_map('strtolower', $checkmark_values)
+					);
 
 					if (
 						($group === 'kondisi_rm' && $is_checked) ||
@@ -822,8 +999,14 @@ class Proses extends MY_Controller
 					}
 				}
 			} else {
-				for ($i = 0; $i < 11; $i++) {
-					$cellWidth = ($i === 0) ? 20 : 27;
+				// =================================================
+				// SEL KOSONG
+				// =================================================
+				for ($i = 0; $i <= $jumlah_kolom; $i++) {
+					$cellWidth = ($i === 0)
+						? $lebarStandar
+						: $lebarKolomInput;
+
 					$pdf->Cell($cellWidth, 4, '', 1);
 				}
 			}
@@ -831,9 +1014,13 @@ class Proses extends MY_Controller
 			$pdf->Ln();
 		}
 
+		// =====================================================
+		// CATATAN DAN STATUS VERIFIKASI
+		// =====================================================
 		$y_after_table = $pdf->GetY();
 
 		$status_verifikasi = true;
+
 		foreach ($proses_data as $item) {
 			if (!isset($item->status_spv) || $item->status_spv != '1') {
 				$status_verifikasi = false;
@@ -845,6 +1032,7 @@ class Proses extends MY_Controller
 
 		$pdf->Ln(2);
 		$pdf->Cell(5, 3, 'Catatan : ', 0, 1, 'L');
+
 		foreach ($proses_data as $item) {
 			if (!empty($item->catatan)) {
 				$pdf->Cell(40, 0, ' - ' . $item->catatan, 0, 1, 'L');
@@ -852,9 +1040,11 @@ class Proses extends MY_Controller
 		}
 
 		$y_after_keterangan = $pdf->GetY() + 2;
+
 		$status_verifikasi = true;
+
 		foreach ($proses_data as $item) {
-			if ($item->status_spv != '1') {
+			if (!isset($item->status_spv) || $item->status_spv != '1') {
 				$status_verifikasi = false;
 				break;
 			}
@@ -865,16 +1055,31 @@ class Proses extends MY_Controller
 
 		if ($status_verifikasi) {
 			$y_verifikasi = $y_after_keterangan;
+
 			$pdf->SetXY(45, $y_verifikasi + 5);
 			$pdf->Cell(55, 5, 'Dibuat Oleh,', 0, 0, 'C');
+
 			if (!empty($data['proses']->nama_lengkap_qc)) {
 				$update_tanggal_qc = !empty($data['proses']->created_at)
 					? (new DateTime($data['proses']->created_at))->format('d-m-Y | H:i')
 					: date('d-m-Y | H:i');
 
 				$qr_text_qc = "Dibuat secara digital oleh,\n" .
-					$data['proses']->nama_lengkap_qc . "\nQC Inspector\n" . $update_tanggal_qc;
-				$pdf->write2DBarcode($qr_text_qc, 'QRCODE,L', 65, $y_verifikasi + 10, 15, 15, null, 'N');
+					$data['proses']->nama_lengkap_qc .
+					"\nQC Inspector\n" .
+					$update_tanggal_qc;
+
+				$pdf->write2DBarcode(
+					$qr_text_qc,
+					'QRCODE,L',
+					65,
+					$y_verifikasi + 10,
+					15,
+					15,
+					null,
+					'N'
+				);
+
 				$pdf->SetXY(45, $y_verifikasi + 24);
 				$pdf->Cell(55, 5, 'QC Inspector', 0, 0, 'C');
 			} else {
@@ -882,13 +1087,36 @@ class Proses extends MY_Controller
 				$pdf->Cell(55, 5, 'Belum Diverifikasi', 0, 0, 'C');
 			}
 
-			// Diketahui oleh (Produksi)
+			// =================================================
+			// DIKETAHUI OLEH PRODUKSI
+			// =================================================
 			$pdf->SetXY(130, $y_verifikasi + 5);
 			$pdf->Cell(85, 5, 'Diketahui Oleh,', 0, 0, 'C');
-			if ($data['proses']->status_produksi == 1 && !empty($data['proses']->nama_produksi)) {
-				$update_tanggal_produksi = (new DateTime($data['proses']->tgl_update_prod))->format('d-m-Y | H:i');
-				$qr_text_produksi = "Diketahui secara digital oleh,\n" . $data['proses']->nama_produksi . "\nForeman/Forelady Produksi\n" . $update_tanggal_produksi;
-				$pdf->write2DBarcode($qr_text_produksi, 'QRCODE,L', 165, $y_verifikasi + 10, 15, 15, null, 'N');
+
+			if (
+				$data['proses']->status_produksi == 1 &&
+				!empty($data['proses']->nama_produksi)
+			) {
+				$update_tanggal_produksi = (
+					new DateTime($data['proses']->tgl_update_prod)
+				)->format('d-m-Y | H:i');
+
+				$qr_text_produksi = "Diketahui secara digital oleh,\n" .
+					$data['proses']->nama_produksi .
+					"\nForeman/Forelady Produksi\n" .
+					$update_tanggal_produksi;
+
+				$pdf->write2DBarcode(
+					$qr_text_produksi,
+					'QRCODE,L',
+					165,
+					$y_verifikasi + 10,
+					15,
+					15,
+					null,
+					'N'
+				);
+
 				$pdf->SetXY(130, $y_verifikasi + 24);
 				$pdf->Cell(85, 5, 'Foreman/Forelady Produksi', 0, 0, 'C');
 			} else {
@@ -896,12 +1124,32 @@ class Proses extends MY_Controller
 				$pdf->Cell(85, 5, 'Belum Diverifikasi', 0, 0, 'C');
 			}
 
-			// Disetujui oleh (SPV)
+			// =================================================
+			// DISETUJUI OLEH SPV
+			// =================================================
 			$pdf->SetXY(210, $y_verifikasi + 5);
 			$pdf->Cell(119, 5, 'Disetujui Oleh,', 0, 0, 'C');
-			$update_tanggal = (new DateTime($data['proses']->tgl_update))->format('d-m-Y | H:i');
-			$qr_text = "Diverifikasi secara digital oleh,\n" . $data['proses']->nama_lengkap_spv . "\nSPV QC Bread Crumb\n" . $update_tanggal;
-			$pdf->write2DBarcode($qr_text, 'QRCODE,L', 262, $y_verifikasi + 10, 15, 15, null, 'N');
+
+			$update_tanggal = (
+				new DateTime($data['proses']->tgl_update)
+			)->format('d-m-Y | H:i');
+
+			$qr_text = "Diverifikasi secara digital oleh,\n" .
+				$data['proses']->nama_lengkap_spv .
+				"\nSPV QC Bread Crumb\n" .
+				$update_tanggal;
+
+			$pdf->write2DBarcode(
+				$qr_text,
+				'QRCODE,L',
+				262,
+				$y_verifikasi + 10,
+				15,
+				15,
+				null,
+				'N'
+			);
+
 			$pdf->SetXY(190, $y_verifikasi + 24);
 			$pdf->Cell(159, 5, 'Supervisor QC', 0, 0, 'C');
 		} else {

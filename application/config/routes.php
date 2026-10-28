@@ -153,6 +153,7 @@ $route['proses/audit'] = 'form/proses/audit';
 $route['proses/cetak-audit'] = 'form/proses/cetak_audit';
 $route['proses/edit-audit/(:any)'] = 'form/proses/edit_audit/$1';
 $route['proses/detail-audit/(:any)'] = 'form/proses/detail_audit/$1';
+$route['proses/audit/packing/(:any)'] = 'form/proses/audit_packing/$1';
 
 $route['metal'] = 'form/metal';
 $route['metal/tambah'] = 'form/metal/tambah';
@@ -594,6 +595,8 @@ $route['magnettrap/audit'] = 'form/magnettrap/audit';
 $route['magnettrap/cetak-audit'] = 'form/magnettrap/cetak_audit';
 $route['magnettrap/detail-audit/(:any)'] = 'form/magnettrap/detail_audit/$1';
 $route['magnettrap/edit-audit/(:any)'] = 'form/magnettrap/edit_audit/$1';
+$route['magnettrap/verifikasi_produksi/(:any)'] = 'form/magnettrap/verifikasi_produksi/$1';
+$route['magnettrap/verifikasi_massal']['POST'] = 'form/magnettrap/verifikasi_massal';
 
 $route['kebersihanmesin'] = 'form/kebersihanmesin';
 $route['kebersihanmesin/tambah'] = 'form/kebersihanmesin/tambah';
@@ -760,6 +763,7 @@ $route['suhu/logs'] = 'form/suhu_logs/index';
 $route['suhu/audit'] = 'form/suhu/audit';
 $route['suhu/cetak_audit'] = 'form/suhu/cetak_audit';
 $route['suhu/copy-to-audit/(:any)'] = 'form/suhu/copy_to_audit/$1';
+$route['suhu/verifikasi_produksi/(:any)'] = 'form/suhu/verifikasi_produksi/$1';
 
 $route['gosong'] = 'form/gosong';
 $route['gosong/tambah'] = 'form/gosong/tambah';
@@ -788,3 +792,9 @@ $route['akses-plant/save'] = 'akses_plant/save';
 $route['traceability'] = 'traceability/index';
 $route['traceability/search'] = 'traceability/search';
 $route['traceability/form-details'] = 'traceability/form_details';
+
+//Master Dokumen
+$route['master-dokumen'] = 'master_dokumen/index';
+$route['master-dokumen/tambah'] = 'master_dokumen/tambah';
+$route['master-dokumen/edit/(:any)'] = 'master_dokumen/edit/$1';
+$route['master-dokumen/delete/(:any)'] = 'master_dokumen/delete/$1';

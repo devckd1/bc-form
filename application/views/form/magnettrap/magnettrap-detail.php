@@ -1,4 +1,3 @@
-
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
@@ -40,31 +39,34 @@ if (!empty($bukti)) {
 
 <div class="container-fluid">
 
-	<div class="d-sm-flex align-items-center justify-content-between mb-3">
-		<h1 class="h3 mb-2 text-gray-800 font-weight-bold">
-			<?= $is_audit ? 'Detail Audit Pemeriksaan Magnet Trap' : 'Detail Pemeriksaan Magnet Trap'; ?>
-		<?php if ($is_audit): ?>
-			<span class="badge-mode-audit">
-				<i class="fas fa-clipboard-check mr-1"></i>
-				MODE AUDIT
-			</span>
-		<?php endif; ?>			
-		</h1>
-	</div>
+	<?php if (empty($is_popup)): ?>
+		<div class="d-sm-flex align-items-center justify-content-between mb-3">
+			<h1 class="h3 mb-2 text-gray-800 font-weight-bold">
+				<?= $is_audit ? 'Detail Audit Pemeriksaan Magnet Trap' : 'Detail Pemeriksaan Magnet Trap'; ?>
+				<?php if ($is_audit): ?>
+					<span class="badge-mode-audit">
+						<i class="fas fa-clipboard-check mr-1"></i>
+						MODE AUDIT
+					</span>
+				<?php endif; ?>
+			</h1>
+		</div>
 
-	<nav aria-label="breadcrumb">
-		<ol class="breadcrumb">
-			<li class="breadcrumb-item">
-				<a href="<?= base_url($back_url); ?>">
-					<i class="fas fa-arrow-left mr-1"></i>
-					<?= $is_audit ? 'Daftar Audit Magnet Trap' : 'Daftar Pemeriksaan Magnet Trap'; ?>
-				</a>
-			</li>
-			<li class="breadcrumb-item active" aria-current="page">
-				Detail
-			</li>
-		</ol>
-	</nav>
+
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item">
+					<a href="<?= base_url($back_url); ?>">
+						<i class="fas fa-arrow-left mr-1"></i>
+						<?= $is_audit ? 'Daftar Audit Magnet Trap' : 'Daftar Pemeriksaan Magnet Trap'; ?>
+					</a>
+				</li>
+				<li class="breadcrumb-item active" aria-current="page">
+					Detail
+				</li>
+			</ol>
+		</nav>
+	<?php endif; ?>
 
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
@@ -83,7 +85,7 @@ if (!empty($bukti)) {
 
 					<thead class="text-center">
 						<tr>
-							<th colspan="7" class="font-weight-bold">
+							<th colspan="7" class="table-primary font-weight-bold">
 								PEMERIKSAAN MAGNET TRAP
 								<?= $is_audit ? ' - AUDIT' : ''; ?>
 							</th>
@@ -106,7 +108,18 @@ if (!empty($bukti)) {
 							</td>
 						</tr>
 
-						<tr class="bg-light text-center">
+						<tr>
+							<td colspan="2">
+								<b>Nama Produk:</b>
+								<?= !empty($magnettrap->nama_produk) ? $magnettrap->nama_produk : '-'; ?>
+							</td>
+							<td colspan="5">
+								<b>Kode Produksi:</b>
+								<?= !empty($magnettrap->kode_produksi) ? $magnettrap->kode_produksi : '-'; ?>
+							</td>
+						</tr>
+
+						<tr class="table-primary text-center">
 							<td colspan="7" class="font-weight-bold">
 								Hasil Pemeriksaan
 							</td>
@@ -143,6 +156,8 @@ if (!empty($bukti)) {
 										rel="noopener noreferrer">
 										<img src="<?= html_escape($img_url); ?>"
 											alt="Bukti Temuan"
+											loading="lazy"
+											decoding="async"
 											style="max-width:200px; max-height:150px;">
 									</a>
 								<?php else: ?>
@@ -212,16 +227,20 @@ if (!empty($bukti)) {
 							<td><b>Status Supervisor</b></td>
 							<td colspan="6">
 								<?php
-								switch ((int)($magnettrap->status_spv ?? 0)) {
-									case 1:
-										echo '<span class="text-success font-weight-bold">Verified</span>';
-										break;
-									case 2:
-										echo '<span class="text-danger font-weight-bold">Revision</span>';
-										break;
-									default:
-										echo '<span class="text-secondary font-weight-bold">Created</span>';
-										break;
+								$tipe_user = (int) $this->session->userdata('tipe_user');
+								$status_spv = (int) ($magnettrap->status_spv ?? 0);
+								$status_enginer = (int) ($magnettrap->status_enginer ?? 0);
+
+								if ($status_spv === 1) {
+									echo '<span class="text-success font-weight-bold">Verified</span>';
+								} elseif ($status_spv === 2) {
+									echo '<span class="text-danger font-weight-bold">Revision</span>';
+								} elseif ($status_enginer !== 1 && in_array($tipe_user, [0, 1, 2])) {
+									echo '<span style="color: #f39c12; font-weight: bold; font-size: 12px;">Menunggu Verifikasi Produksi</span>';
+								} elseif ($status_enginer === 1 && $status_spv === 0) {
+									echo '-';
+								} else {
+									echo '<span class="text-secondary font-weight-bold">Created</span>';
 								}
 								?>
 							</td>

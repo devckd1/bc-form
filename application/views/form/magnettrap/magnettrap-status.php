@@ -32,6 +32,17 @@
                             <td><b>Shift:</b> <?= $magnettrap->shift; ?></td>
                             <td colspan="4"><b>Pukul:</b> <?= $formattedTime; ?></td>
                         </tr>
+						<tr>
+							<td colspan="3">
+								<b>Nama Produk:</b>
+								<?= !empty($magnettrap->nama_produk) ? $magnettrap->nama_produk : '-'; ?>
+							</td>
+
+							<td colspan="4">
+								<b>Kode Produksi:</b>
+								<?= !empty($magnettrap->kode_produksi) ? $magnettrap->kode_produksi : '-'; ?>
+							</td>
+						</tr>
                         <tr class="bg-light text-center">
                             <td colspan="7" class="font-weight-bold">Hasil Pemeriksaan</td>
                         </tr>

@@ -54,6 +54,35 @@ if (!is_array($proses_data)) {
 	$proses_data = [];
 }
 
+$jumlah_kolom = 1;
+
+for ($i = 1; $i <= 10; $i++) {
+	$kolom_terisi = false;
+
+	foreach ($proses_data as $param_list) {
+		if (!is_array($param_list)) {
+			continue;
+		}
+
+		foreach ($param_list as $values) {
+			if (!is_array($values)) {
+				continue;
+			}
+
+			$value = trim((string) ($values[$i] ?? ''));
+
+			if ($value !== '' && $value !== '✗') {
+				$kolom_terisi = true;
+				break 2;
+			}
+		}
+	}
+
+	if ($kolom_terisi) {
+		$jumlah_kolom = $i;
+	}
+}
+
 $label_shift = [
 	'1' => 'Shift 1',
 	'2' => 'Shift 2',
@@ -183,8 +212,9 @@ $format_tanggal = function ($tanggal) {
 							<tr>
 								<th style="width: 20%;">Jenis Parameter</th>
 								<th>Standar / Input ke-0</th>
-								<?php for ($i = 1; $i <= 10; $i++): ?>
-									<th>Input ke-<?= $i ?></th>
+
+								<?php for ($i = 1; $i <= $jumlah_kolom; $i++): ?>
+									<th class="text-center">Input ke-<?= $i ?></th>
 								<?php endfor; ?>
 							</tr>
 						</thead>
@@ -194,7 +224,7 @@ $format_tanggal = function ($tanggal) {
 								<?php if (!is_array($param_list)) continue; ?>
 
 								<tr style="background-color:#f8f9fc;font-weight:bold;">
-									<td colspan="12">
+									<td colspan="<?= 2 + $jumlah_kolom ?>">
 										<?= html_escape(strtoupper(str_replace('_', ' ', $kategori))) ?>
 									</td>
 								</tr>
@@ -215,8 +245,8 @@ $format_tanggal = function ($tanggal) {
 											<?= html_escape((string) ($values[0] ?? '')) ?>
 										</td>
 
-										<?php for ($i = 1; $i <= 10; $i++): ?>
-											<td>
+										<?php for ($i = 1; $i <= $jumlah_kolom; $i++): ?>
+											<td class="text-center">
 												<?= html_escape((string) ($values[$i] ?? '')) ?>
 											</td>
 										<?php endfor; ?>
@@ -458,5 +488,25 @@ $format_tanggal = function ($tanggal) {
 
 	.table-responsive {
 		margin-bottom: 1rem;
+	}
+
+	/* Tabel detail proses produksi */
+	.table-responsive {
+		overflow-x: auto;
+	}
+
+	.table-responsive table {
+		min-width: 100%;
+		white-space: nowrap;
+	}
+
+	.table-responsive table td,
+	.table-responsive table th {
+		vertical-align: middle;
+		padding: 6px 8px;
+	}
+
+	.table-responsive table thead th {
+		text-align: center;
 	}
 </style>

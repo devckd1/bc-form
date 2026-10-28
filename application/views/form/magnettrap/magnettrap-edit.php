@@ -71,9 +71,6 @@ if (!empty($bukti)) {
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
-
-
-
 			<form class="user"
 				method="post"
 				action="<?= base_url($form_url); ?>"
@@ -109,6 +106,34 @@ if (!empty($bukti)) {
 							<?= form_error('shift'); ?>
 						</div>
 					</div>
+
+					<!-- NAMA PRODUK -->
+						<div class="col-sm-6">
+							<label class="form-label font-weight-bold">Nama Produk</label>
+							<input type="text"
+								name="nama_produk"
+								class="form-control <?= form_error('nama_produk') ? 'invalid' : '' ?>"
+								value="<?= set_value('nama_produk', $magnettrap->nama_produk); ?>"
+								placeholder="Nama Produk">
+
+							<div class="invalid-feedback <?= !empty(form_error('nama_produk')) ? 'd-block' : '' ?>">
+								<?= form_error('nama_produk') ?>
+							</div>
+						</div>
+
+						<!-- KODE PRODUKSI -->
+						<div class="col-sm-6">
+							<label class="form-label font-weight-bold">Kode Produksi</label>
+							<input type="text"
+								name="kode_produksi"
+								class="form-control <?= form_error('kode_produksi') ? 'invalid' : '' ?>"
+								value="<?= set_value('kode_produksi', $magnettrap->kode_produksi); ?>"
+								placeholder="Kode Produksi">
+
+							<div class="invalid-feedback <?= !empty(form_error('kode_produksi')) ? 'd-block' : '' ?>">
+								<?= form_error('kode_produksi') ?>
+							</div>
+						</div>
 				</div>
 
 				<div class="form-group row">

@@ -27,6 +27,8 @@
                         <tr>
                             <th width="20px" class="text-center">No</th>
                             <th>Tanggal / Shift</th>
+							<th>Nama Produk</th>
+							<th>Kode Produksi</th>
                             <th>Tahapan</th>
                             <th>Jenis Kontaminasi</th>
                             <th>Bukti</th>
@@ -46,6 +48,8 @@
                             <tr>
                                 <td class="text-center"><?= $no; ?></td>
                                 <td><?= $datetime . " / " . $val->shift; ?></td>
+								<td><?= $val->nama_produk; ?></td>
+								<td><?= $val->kode_produksi; ?></td>
                                 <td><?= $val->tahapan; ?></td>
                                 <td><?= $val->kontaminasi; ?></td>
                                 <td>

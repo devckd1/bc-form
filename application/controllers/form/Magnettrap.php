@@ -23,8 +23,47 @@ class Magnettrap extends MY_Controller
 
 	public function index()
 	{
+		// Jumlah data per halaman
+		$per_page = 10;
+
+		// Ambil parameter halaman dan filter
+		$page = max(1, (int) $this->input->get('page'));
+		$tanggal = $this->input->get('tanggal', TRUE);
+		$shift = $this->input->get('shift', TRUE);
+
+		// Normalisasi filter
+		$tanggal = !empty($tanggal) ? $tanggal : '';
+		$shift = !empty($shift) ? $shift : '';
+
+		// Hitung total data berdasarkan plant dan filter
+		$total_rows = $this->magnettrap_model->count_data_by_plant(
+			$tanggal,
+			$shift
+		);
+
+		// Hitung jumlah halaman
+		$total_pages = max(1, (int) ceil($total_rows / $per_page));
+
+		// Pastikan halaman tidak melebihi jumlah halaman
+		$page = min($page, $total_pages);
+
+		// Hitung posisi awal data
+		$offset = ($page - 1) * $per_page;
+
+		// Ambil data berdasarkan filter
 		$data = array(
-			'magnettrap' => $this->magnettrap_model->get_data_by_plant()
+			'magnettrap' => $this->magnettrap_model->get_data_by_plant(
+				$per_page,
+				$offset,
+				$tanggal,
+				$shift
+			),
+			'current_page' => $page,
+			'per_page' => $per_page,
+			'total_rows' => $total_rows,
+			'total_pages' => $total_pages,
+			'filter_tanggal' => $tanggal,
+			'filter_shift' => $shift
 		);
 
 		$this->active_nav = 'magnettrap';
@@ -38,9 +77,16 @@ class Magnettrap extends MY_Controller
 		);
 
 		$this->active_nav = 'magnettrap';
-		$this->render('form/magnettrap/magnettrap-detail', $data);
-	}
 
+		// Tandai jika detail dibuka melalui popup modal
+		$data['is_popup'] = ($this->input->get('popup') == '1');
+
+		if ($data['is_popup']) {
+			$this->load->view('form/magnettrap/magnettrap-detail', $data);
+		} else {
+			$this->render('form/magnettrap/magnettrap-detail', $data);
+		}
+	}
 
 	public function file_check($str)
 	{
@@ -229,8 +275,29 @@ class Magnettrap extends MY_Controller
 			'magnettrap' => $this->magnettrap_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-magnettrap';
-		$this->render('form/magnettrap/magnettrap-verifikasi', $data);
+		$this->active_nav = 'magnettrap';
+		$this->render('form/magnettrap/magnettrap', $data);
+	}
+
+	// ======================= Verifikasi Massal SPV =======================
+	public function verifikasi_massal()
+	{
+		if ($this->input->method() !== 'post') {
+			show_404();
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal');
+		$shift = $this->input->post('shift');
+
+		$result = $this->magnettrap_model->verifikasi_massal_spv(
+			$tanggal,
+			$shift
+		);
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($result));
 	}
 
 	public function status($uuid)
@@ -378,6 +445,37 @@ class Magnettrap extends MY_Controller
 		$this->render('form/magnettrap/magnettrap-edit', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$magnettrap = $this->magnettrap_model->get_by_uuid($uuid);
+
+		if (!$magnettrap) {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Magnet Trap tidak ditemukan'
+			);
+
+			redirect('magnettrap');
+			return;
+		}
+
+		$update = $this->magnettrap_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Pemeriksaan Magnet Trap berhasil diverifikasi'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Pemeriksaan Magnet Trap gagal diverifikasi'
+			);
+		}
+
+		redirect('magnettrap');
+	}
+
 	// public function diketahui()
 	// {
 	// 	$data = array(
@@ -429,219 +527,890 @@ class Magnettrap extends MY_Controller
 
 		$plant = $this->session->userdata('plant');
 
-		$magnettrap_data = $this->magnettrap_model->get_by_date($tanggal, $plant, $shift);
-		$magnettrap_data_verif = $this->magnettrap_model->get_last_verif_by_date($tanggal, $plant, $shift);
+		// =====================================================
+		// AMBIL DATA
+		// =====================================================
+		$magnettrap_data = $this->magnettrap_model->get_by_date(
+			$tanggal,
+			$plant,
+			$shift
+		);
+
+		$magnettrap_data_verif = $this->magnettrap_model->get_last_verif_by_date(
+			$tanggal,
+			$plant,
+			$shift
+		);
 
 		if (!$magnettrap_data || !$magnettrap_data_verif) {
-			show_error('Data tidak ditemukan, Pilih tanggal yang ingin dicetak', 404);
+			show_error(
+				'Data tidak ditemukan, Pilih tanggal yang ingin dicetak',
+				404
+			);
 		}
 
 		$data['magnettrap'] = $magnettrap_data_verif;
 
+		// =====================================================
+		// TCPDF
+		// =====================================================
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
-		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
+		$pdf = new TCPDF(
+			PDF_PAGE_ORIENTATION,
+			PDF_UNIT,
+			'LEGAL',
+			true,
+			'UTF-8',
+			false
+		);
+
 		$pdf->setPrintHeader(false);
-		$pdf->SetMargins(17, 16, 15);
+		$pdf->setPrintFooter(false);
+
+		// Margin dibuat sedikit lebih kecil karena sekarang
+		// tabel mempunyai 10 kolom.
+		$pdf->SetMargins(10, 12, 10);
+
+		$pdf->SetAutoPageBreak(true, 15);
+
+		// Landscape Legal
 		$pdf->AddPage('L', 'LEGAL');
+
+		// =====================================================
+		// FONT JUDUL
+		// =====================================================
 		$pdf->SetFont('times', 'B', 13);
 
+		// =====================================================
+		// LOGO
+		// =====================================================
 		$logo_path = FCPATH . 'assets/img/logo.jpg';
+
 		if (file_exists($logo_path)) {
-			$pdf->Image($logo_path, 17, 14, 38);
+			$pdf->Image(
+				$logo_path,
+				10,
+				10,
+				38
+			);
 		} else {
-			$pdf->Write(7, "Logo tidak ditemukan\n");
+			$pdf->Write(
+				7,
+				"Logo tidak ditemukan\n"
+			);
 		}
 
 		$pdf->Write(9, "\n");
-		$pdf->MultiCell(0, 5, 'PEMERIKSAAN MAGNET TRAP', 0, 'C');
-		$pdf->Ln(5);
 
-		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
-		$tanggal = $data['magnettrap']->date;
-		$date = new DateTime($tanggal);
-		$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
+		// =====================================================
+		// JUDUL
+		// =====================================================
+		$pdf->MultiCell(
+			0,
+			5,
+			'PEMERIKSAAN MAGNET TRAP',
+			0,
+			'C'
+		);
 
-		$formatted_date2 = strftime('%d %B %Y', $date->getTimestamp());
+		$pdf->Ln(4);
 
+		// =====================================================
+		// FORMAT TANGGAL
+		// =====================================================
+		setlocale(
+			LC_TIME,
+			'id_ID.UTF-8',
+			'id_ID',
+			'indonesian'
+		);
+
+		$tanggalHeader = $data['magnettrap']->date;
+
+		$date = new DateTime($tanggalHeader);
+
+		$formatted_date = date(
+			'l, d F Y',
+			$date->getTimestamp()
+		);
+
+		$formatted_date2 = date(
+			'l, d F Y',
+			$date->getTimestamp()
+		);
+
+		// =====================================================
+		// INFORMASI PEMERIKSAAN
+		// =====================================================
 		$pdf->SetFont('times', '', 10);
-		$pdf->SetX(16);
-		$pdf->Write(0, 'Hari / Tanggal : ' . $formatted_date);
-		$pdf->SetX($pdf->GetX() + 20);
-		$pdf->Write(0, 'Shift: ' . $data['magnettrap']->shift);
-		$pdf->Ln(5);
 
-		$pdf->SetFont('times', '', 11);
+		$pdf->SetX(10);
 
-		$pdf->Cell(15, 10, 'Pukul', 1, 0, 'C');
-		$pdf->Cell(35, 10, 'Tahapan', 1, 0, 'C');
-		$pdf->Cell(50, 10, 'Jenis Kontaminasi', 1, 0, 'C');
-		$pdf->Cell(45, 10, 'Bukti', 1, 0, 'C');
-		$pdf->Cell(55, 10, 'Analisis Temuan', 1, 0, 'C');
-		$pdf->Cell(50, 10, 'Tindakan Koreksi', 1, 0, 'C');
-		$pdf->Cell(35, 10, 'Verifikasi', 1, 0, 'C');
-		$pdf->Cell(35, 10, 'Keterangan', 1, 1, 'C');
+		$pdf->Write(
+			0,
+			'Hari / Tanggal : ' . $formatted_date
+		);
+
+		$pdf->SetX(
+			$pdf->GetX() + 15
+		);
+
+		$pdf->Write(
+			0,
+			'Shift : ' . $data['magnettrap']->shift
+		);
+
+		$pdf->Ln(6);
+
+		// =====================================================
+		// HEADER TABEL
+		// =====================================================
+
+		$pdf->SetFont('times', 'B', 8);
+
+		/*
+     * Total lebar tabel:
+     *
+     * 13 + 25 + 35 + 28 + 38
+     * + 42 + 48 + 43 + 30 + 30
+     *
+     * = 332 mm
+     *
+     * Legal Landscape = ±356 mm
+     * dengan margin 10 mm kiri/kanan masih cukup.
+     */
+
+		$w = [
+			'pukul'        => 13,
+			'tahapan'      => 25,
+			'produk'       => 35,
+			'kode'         => 28,
+			'kontaminasi'  => 38,
+			'bukti'        => 42,
+			'analisis'     => 48,
+			'tindakan'     => 43,
+			'verifikasi'   => 30,
+			'keterangan'   => 30
+		];
+
+		$headerHeight = 12;
+
+		$pdf->Cell(
+			$w['pukul'],
+			$headerHeight,
+			'Pukul',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['tahapan'],
+			$headerHeight,
+			'Tahapan',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['produk'],
+			$headerHeight,
+			'Nama Produk',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['kode'],
+			$headerHeight,
+			'Kode Produksi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['kontaminasi'],
+			$headerHeight,
+			'Jenis Kontaminasi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['bukti'],
+			$headerHeight,
+			'Bukti',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['analisis'],
+			$headerHeight,
+			'Analisis Temuan',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['tindakan'],
+			$headerHeight,
+			'Tindakan Koreksi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['verifikasi'],
+			$headerHeight,
+			'Verifikasi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['keterangan'],
+			$headerHeight,
+			'Keterangan',
+			1,
+			1,
+			'C'
+		);
+
+		// =====================================================
+		// ISI TABEL
+		// =====================================================
+
+		$pdf->SetFont('times', '', 7.5);
 
 		foreach ($magnettrap_data as $magnettrap) {
 
-			$formattedTime = date('H:i', strtotime($magnettrap->time));
+			$formattedTime = !empty($magnettrap->time)
+				? date(
+					'H:i',
+					strtotime($magnettrap->time)
+				)
+				: '-';
 
-			// Simpan posisi awal baris
-			$startX = $pdf->GetX();
-			$startY = $pdf->GetY();
+			/*
+         * Tinggi baris.
+         * Dibuat 22 supaya teks dan gambar masih nyaman.
+         */
+			$rowHeight = 22;
 
-			$w1 = 15;
-			$w2 = 35;
-			$w3 = 50;
-			$w4 = 45;
-			$w5 = 55;
-			$w6 = 50;
-			$w7 = 35;
-			$w8 = 35;
+			// -------------------------------------------------
+			// Pukul
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['pukul'],
+				$rowHeight,
+				$formattedTime,
+				1,
+				0,
+				'C'
+			);
 
-			// Hitung tinggi yang dibutuhkan teks
-			$hAnalisis   = $pdf->getStringHeight($w5, $magnettrap->analisis);
-			$hTindakan   = $pdf->getStringHeight($w6, $magnettrap->tindakan);
-			$hVerifikasi = $pdf->getStringHeight($w7, $magnettrap->verifikasi);
-			$hKet        = $pdf->getStringHeight($w8, !empty($magnettrap->keterangan) ? $magnettrap->keterangan : '-');
+			// -------------------------------------------------
+			// Tahapan
+			// -------------------------------------------------
+			$pdf->MultiCell(
+				25,
+				22,
+				$magnettrap->tahapan,
+				1,
+				'L',
+				false,
+				0,
+				'',
+				'',
+				true,
+				0,
+				false,
+				true,
+				22,
+				'M'
+			);
 
-			// Tinggi minimum row
-			$rowHeight = max(20, $hAnalisis, $hTindakan, $hVerifikasi, $hKet);
+			// -------------------------------------------------
+			// Nama Produk
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['produk'],
+				$rowHeight,
+				!empty($magnettrap->nama_produk)
+					? $magnettrap->nama_produk
+					: '-',
+				1,
+				0,
+				'L'
+			);
 
-			// Kolom Pukul
-			$pdf->MultiCell($w1, $rowHeight, $formattedTime, 1, 'C', false, 0);
+			// -------------------------------------------------
+			// Kode Produksi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['kode'],
+				$rowHeight,
+				!empty($magnettrap->kode_produksi)
+					? $magnettrap->kode_produksi
+					: '-',
+				1,
+				0,
+				'L'
+			);
 
-			// Kolom Tahapan
-			$pdf->MultiCell($w2, $rowHeight, $magnettrap->tahapan, 1, 'L', false, 0);
+			// -------------------------------------------------
+			// Jenis Kontaminasi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['kontaminasi'],
+				$rowHeight,
+				!empty($magnettrap->kontaminasi)
+					? $magnettrap->kontaminasi
+					: '-',
+				1,
+				0,
+				'L'
+			);
 
-			// Kolom Jenis Kontaminasi
-			$pdf->MultiCell($w3, $rowHeight, $magnettrap->kontaminasi, 1, 'C', false, 0);
+			// -------------------------------------------------
+			// BUKTI / GAMBAR
+			// -------------------------------------------------
+			$colWidth = $w['bukti'];
+			$colHeight = $rowHeight;
 
-			// Simpan posisi kolom bukti
-			$xBukti = $pdf->GetX();
-			$yBukti = $pdf->GetY();
+			$maxWidthImage = 28;
+			$maxHeightImage = 16;
 
-			// Border kolom bukti
-			$pdf->Rect($xBukti, $yBukti, $w4, $rowHeight);
+			$xBeforeImage = $pdf->GetX();
+			$yBeforeImage = $pdf->GetY();
 
-			$image_path = FCPATH . 'uploads/magnettrap/' . $magnettrap->bukti;
+			// Border cell
+			// Simpan posisi awal kolom Bukti
+			$xBeforeImage = $pdf->GetX();
+			$yBeforeImage = $pdf->GetY();
 
-			if (!empty($magnettrap->bukti) && file_exists($image_path)) {
+			// Gambar border satu kali
+			$pdf->Cell($colWidth, $colHeight, '', 1, 0, 'C');
 
-				$maxWidthImage  = 22;
-				$maxHeightImage = min(12, $rowHeight - 2);
+			// Kembalikan posisi ke awal kolom untuk gambar bukti
+			$pdf->SetXY($xBeforeImage, $yBeforeImage);
 
-				list($width, $height) = getimagesize($image_path);
+			// ... kode untuk menampilkan gambar atau teks "Gambar Tidak Ada"
 
-				$aspectRatio = $width / $height;
+			// Pindah ke kolom berikutnya
+			$pdf->SetXY($xBeforeImage + $colWidth, $yBeforeImage);
 
-				if ($width > $height) {
-					$newWidth = $maxWidthImage;
-					$newHeight = $newWidth / $aspectRatio;
-				} else {
-					$newHeight = $maxHeightImage;
-					$newWidth = $newHeight * $aspectRatio;
+			$image_path = null;
+
+			if (!empty($magnettrap->bukti)) {
+
+				$path1 = FCPATH .
+					'uploads/' .
+					$magnettrap->bukti;
+
+				$path2 = FCPATH .
+					'uploads/magnettrap/' .
+					$magnettrap->bukti;
+
+				if (file_exists($path1)) {
+
+					$image_path = $path1;
+				} elseif (file_exists($path2)) {
+
+					$image_path = $path2;
 				}
+			}
 
-				$xPos = $xBukti + (($w4 - $newWidth) / 2);
-				$yPos = $yBukti + (($rowHeight - $newHeight) / 2);
+			if (
+				$image_path &&
+				file_exists($image_path)
+			) {
 
-				$pdf->Image($image_path, $xPos, $yPos, $newWidth, $newHeight);
+				$imageInfo = @getimagesize(
+					$image_path
+				);
+
+				if (
+					$imageInfo &&
+					!empty($imageInfo[0]) &&
+					!empty($imageInfo[1])
+				) {
+
+					$width = $imageInfo[0];
+					$height = $imageInfo[1];
+
+					$aspectRatio =
+						$width / $height;
+
+					if (
+						$width > $maxWidthImage ||
+						$height > $maxHeightImage
+					) {
+
+						if ($width > $height) {
+
+							$newWidth =
+								$maxWidthImage;
+
+							$newHeight =
+								$newWidth /
+								$aspectRatio;
+						} else {
+
+							$newHeight =
+								$maxHeightImage;
+
+							$newWidth =
+								$newHeight *
+								$aspectRatio;
+						}
+					} else {
+
+						$newWidth = $width;
+						$newHeight = $height;
+					}
+
+					// Posisi gambar di tengah cell
+					$xPos =
+						$xBeforeImage +
+						(($colWidth - $newWidth) / 2);
+
+					$yPos =
+						$yBeforeImage +
+						(($colHeight - $newHeight) / 2);
+
+					$pdf->Image(
+						$image_path,
+						$xPos,
+						$yPos,
+						$newWidth,
+						$newHeight
+					);
+				}
 			} else {
 
-				$pdf->SetXY($xBukti, $yBukti);
-				$pdf->MultiCell($w4, $rowHeight, 'Gambar Tidak Ada', 0, 'C', false, 0);
+				$pdf->SetXY(
+					$xBeforeImage,
+					$yBeforeImage
+				);
+
+				$pdf->Cell(
+					$colWidth,
+					$colHeight,
+					'Gambar Tidak Ada',
+					0,
+					0,
+					'C'
+				);
 			}
 
-			$pdf->SetXY($xBukti + $w4, $yBukti);
-			$pdf->MultiCell($w5, $rowHeight, $magnettrap->analisis, 1, 'C', false, 0);
-			$pdf->MultiCell($w6, $rowHeight, $magnettrap->tindakan, 1, 'C', false, 0);
-			$pdf->MultiCell($w7, $rowHeight, $magnettrap->verifikasi, 1, 'C', false, 0);
-			$pdf->MultiCell($w8, $rowHeight, !empty($magnettrap->keterangan) ? $magnettrap->keterangan : '-', 1, 'C', false, 1);
+			// Geser posisi ke kolom berikutnya
+			$pdf->SetXY(
+				$xBeforeImage + $colWidth,
+				$yBeforeImage
+			);
+
+			// -------------------------------------------------
+			// Analisis Temuan
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['analisis'],
+				$rowHeight,
+				!empty($magnettrap->analisis)
+					? $magnettrap->analisis
+					: '-',
+				1,
+				0,
+				'L'
+			);
+
+			// -------------------------------------------------
+			// Tindakan Koreksi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['tindakan'],
+				$rowHeight,
+				!empty($magnettrap->tindakan)
+					? $magnettrap->tindakan
+					: '-',
+				1,
+				0,
+				'L'
+			);
+
+			// -------------------------------------------------
+			// Verifikasi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['verifikasi'],
+				$rowHeight,
+				!empty($magnettrap->verifikasi)
+					? $magnettrap->verifikasi
+					: '-',
+				1,
+				0,
+				'L'
+			);
+
+			// -------------------------------------------------
+			// Keterangan
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['keterangan'],
+				$rowHeight,
+				!empty($magnettrap->keterangan)
+					? $magnettrap->keterangan
+					: '-',
+				1,
+				1,
+				'L'
+			);
 		}
 
-		$pdf->SetY($pdf->GetY() + 3);
-		$pdf->SetFont('times', '', 8);
-		$pdf->Cell(10, 3, 'Catatan : ', 0, 1, 'L');
+		// =====================================================
+		// CATATAN
+		// =====================================================
+
+		$pdf->SetY(
+			$pdf->GetY() + 3
+		);
+
+		$pdf->SetFont(
+			'times',
+			'',
+			8
+		);
+
+		$pdf->Cell(
+			10,
+			3,
+			'Catatan : ',
+			0,
+			1,
+			'L'
+		);
+
 		foreach ($magnettrap_data as $item) {
+
 			if (!empty($item->catatan)) {
-				$pdf->Cell(10, 0, '', 0, 0, 'L');
-				$pdf->Cell(200, 0, ' - ' . $item->catatan, 0, 1, 'L');
+
+				$pdf->Cell(
+					10,
+					0,
+					'',
+					0,
+					0,
+					'L'
+				);
+
+				$pdf->MultiCell(
+					300,
+					0,
+					' - ' . $item->catatan,
+					0,
+					'L',
+					false,
+					1
+				);
 			}
 		}
+
+		// =====================================================
+		// NAMA LENGKAP QC / SPV / ENGINEER
+		// =====================================================
 
 		$this->load->model('pegawai_model');
-		$data['magnettrap']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['magnettrap']->username);
-		$data['magnettrap']->nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap($data['magnettrap']->nama_spv);
-		$data['magnettrap']->nama_lengkap_enginer = $data['magnettrap']->nama_enginer;
 
+		$data['magnettrap']->nama_lengkap_qc =
+			$this->pegawai_model->get_nama_lengkap(
+				$data['magnettrap']->username
+			);
+
+		$data['magnettrap']->nama_lengkap_spv =
+			!empty($data['magnettrap']->nama_spv)
+			? $this->pegawai_model->get_nama_lengkap(
+				$data['magnettrap']->nama_spv
+			)
+			: '';
+
+		$data['magnettrap']->nama_lengkap_enginer =
+			!empty($data['magnettrap']->nama_enginer)
+			? $this->pegawai_model->get_nama_lengkap(
+				$data['magnettrap']->nama_enginer
+			)
+			: '';
+
+		// =====================================================
+		// CEK STATUS VERIFIKASI
+		// =====================================================
+
+		// Cek status verifikasi Engineer dan SPV
 		$y_after_keterangan = $pdf->GetY();
-		$status_verifikasi = true;
+		$status_verifikasi = !empty($magnettrap_data);
+
 		foreach ($magnettrap_data as $item) {
-			if ($item->status_spv != '1') {
+			if (
+				(string) $item->status_enginer !== '1' ||
+				(string) $item->status_spv !== '1'
+			) {
 				$status_verifikasi = false;
 				break;
 			}
 		}
 
-		$pdf->SetFont('times', '', 8);
-		$pdf->SetTextColor(0, 0, 0);
+		// =====================================================
+		// BLOK VERIFIKASI
+		// =====================================================
+
+		$pdf->SetFont(
+			'times',
+			'',
+			8
+		);
+
+		$pdf->SetTextColor(
+			0,
+			0,
+			0
+		);
 
 		if ($status_verifikasi) {
-			$y_verifikasi = $y_after_keterangan;
 
-			// Dibuat oleh (QC)
-			$pdf->SetXY(25, $y_verifikasi + 5);
-			$pdf->Cell(95, 5, 'Dibuat Oleh,', 0, 0, 'C');
-			$pdf->SetXY(25, $y_verifikasi + 10);
-			$pdf->SetFont('times', 'U', 8);
-			$pdf->Cell(95, 5, $data['magnettrap']->nama_lengkap_qc, 0, 1, 'C');
+			// =================================================
+			// DATA VERIFIKASI
+			// =================================================
+
+			$y_verifikasi = $y_after_keterangan + 3;
+
+			$nama_qc = !empty($data['magnettrap']->nama_lengkap_qc)
+				? $data['magnettrap']->nama_lengkap_qc
+				: ($data['magnettrap']->username ?? '-');
+
+			$nama_engineer = !empty($data['magnettrap']->nama_lengkap_enginer)
+				? $data['magnettrap']->nama_lengkap_enginer
+				: '';
+
+			$nama_spv = !empty($data['magnettrap']->nama_lengkap_spv)
+				? $data['magnettrap']->nama_lengkap_spv
+				: '';
+
+			$status_engineer = (string) ($data['magnettrap']->status_enginer ?? '0') === '1';
+			$status_spv = (string) ($data['magnettrap']->status_spv ?? '0') === '1';
+
+			// =================================================
+			// TANGGAL VERIFIKASI
+			// =================================================
+
+			$tanggal_qc = !empty($data['magnettrap']->created_at)
+				? date('d-m-Y | H:i', strtotime($data['magnettrap']->created_at))
+				: date('d-m-Y', strtotime($data['magnettrap']->date));
+
+			$tanggal_engineer = !empty($data['magnettrap']->tgl_update_enginer)
+				? date('d-m-Y | H:i', strtotime($data['magnettrap']->tgl_update_enginer))
+				: '-';
+
+			$tanggal_spv = !empty($data['magnettrap']->tgl_update_spv)
+				? date('d-m-Y | H:i', strtotime($data['magnettrap']->tgl_update_spv))
+				: '-';
+
+			// =================================================
+			// POSISI 3 KOLOM
+			// =================================================
+
+			$col1_x = 15;
+			$col2_x = 120;
+			$col3_x = 225;
+			$col_width = 100;
+
 			$pdf->SetFont('times', '', 8);
-			$pdf->Cell(112, 5, 'QC Inspector', 0, 0, 'C');
+			$pdf->SetTextColor(0, 0, 0);
 
-			// Diketahui oleh (Produksi) - tanpa barcode
-			$pdf->SetXY(90, $y_verifikasi + 5);
-			$pdf->Cell(135, 5, 'Diketahui Oleh,', 0, 0, 'C');
+			// =================================================
+			// JUDUL
+			// =================================================
 
-			if ($data['magnettrap']->status_enginer == 1 && !empty($data['magnettrap']->nama_enginer)) {
-				$update_tanggal_enginer = (new DateTime($data['magnettrap']->tgl_update_enginer))->format('d-m-Y | H:i');
+			$pdf->SetXY($col1_x, $y_verifikasi);
+			$pdf->Cell($col_width, 5, 'Dibuat Oleh,', 0, 0, 'C');
 
-				$pdf->SetFont('times', 'U', 8);
-				$pdf->SetXY(90, $y_verifikasi + 10);
-				$pdf->Cell(135, 5, $data['magnettrap']->nama_enginer, 0, 1, 'C');
+			$pdf->SetXY($col2_x, $y_verifikasi);
+			$pdf->Cell($col_width, 5, 'Diketahui Oleh,', 0, 0, 'C');
 
-				$pdf->SetFont('times', '', 8);
-				$pdf->SetXY(90, $y_verifikasi + 15);
-				$pdf->Cell(135, 5, 'Foreman/Forelady Engineering', 0, 1, 'C');
+			$pdf->SetXY($col3_x, $y_verifikasi);
+			$pdf->Cell($col_width, 5, 'Disetujui Oleh,', 0, 0, 'C');
 
-				// $pdf->SetXY(90, $y_verifikasi + 20);
-				// $pdf->Cell(135, 5, $update_tanggal_enginer, 0, 0, 'C');
-			} else {
-				$pdf->SetFont('times', '', 8);
-				$pdf->SetXY(90, $y_verifikasi + 10);
-				$pdf->Cell(135, 5, 'Belum Diverifikasi', 0, 0, 'C');
+			// =================================================
+			// QR CODE QC
+			// =================================================
+
+			if (!empty($nama_qc) && $nama_qc !== '-') {
+				$qr_qc =
+					"Diverifikasi secara digital oleh,\n" .
+					$nama_qc .
+					"\nQC Inspector\n" .
+					$tanggal_qc;
+
+				$pdf->write2DBarcode(
+					$qr_qc,
+					'QRCODE,L',
+					$col1_x + 42,
+					$y_verifikasi + 7,
+					18,
+					18,
+					null,
+					'N'
+				);
 			}
 
+			// =================================================
+			// QR CODE ENGINEER
+			// =================================================
 
-			// Disetujui oleh (SPV)
-			$pdf->SetXY(150, $y_verifikasi + 5);
-			$pdf->Cell(189, 5, 'Disetujui Oleh,', 0, 0, 'C');
-			$update_tanggal = (new DateTime($data['magnettrap']->tgl_update_spv))->format('d-m-Y | H:i');
-			$qr_text = "Diverifikasi secara digital oleh,\n" . $data['magnettrap']->nama_lengkap_spv . "\nSPV QC Bread Crumb\n" . $update_tanggal;
-			$pdf->write2DBarcode($qr_text, 'QRCODE,L', 237, $y_verifikasi + 10, 15, 15, null, 'N');
-			$pdf->SetXY(170, $y_verifikasi + 24);
-			$pdf->Cell(149, 5, 'Supervisor QC', 0, 0, 'C');
-		} else {
-			$pdf->SetTextColor(255, 0, 0);
+			if ($status_engineer && !empty($nama_engineer)) {
+				$qr_engineer =
+					"Diverifikasi secara digital oleh,\n" .
+					$nama_engineer .
+					"\nForeman/Forelady Engineering\n" .
+					$tanggal_engineer;
+
+				$pdf->write2DBarcode(
+					$qr_engineer,
+					'QRCODE,L',
+					$col2_x + 42,
+					$y_verifikasi + 7,
+					18,
+					18,
+					null,
+					'N'
+				);
+			}
+
+			// =================================================
+			// QR CODE SPV
+			// =================================================
+
+			if ($status_spv && !empty($nama_spv)) {
+				$qr_spv =
+					"Diverifikasi secara digital oleh,\n" .
+					$nama_spv .
+					"\nSPV QC Bread Crumb\n" .
+					$tanggal_spv;
+
+				$pdf->write2DBarcode(
+					$qr_spv,
+					'QRCODE,L',
+					$col3_x + 42,
+					$y_verifikasi + 7,
+					18,
+					18,
+					null,
+					'N'
+				);
+			}
+
+			// =================================================
+			// NAMA QC
+			// =================================================
+
+			$pdf->SetFont('times', 'U', 8);
+			$pdf->SetXY($col1_x, $y_verifikasi + 26);
+			$pdf->Cell($col_width, 5, $nama_qc, 0, 0, 'C');
+
+			// =================================================
+			// NAMA ENGINEER
+			// =================================================
+
+			$pdf->SetXY($col2_x, $y_verifikasi + 26);
+
+			if ($status_engineer && !empty($nama_engineer)) {
+				$pdf->SetFont('times', 'U', 8);
+				$pdf->Cell($col_width, 5, $nama_engineer, 0, 0, 'C');
+			} else {
+				$pdf->SetFont('times', '', 8);
+				$pdf->Cell($col_width, 5, 'Belum Diverifikasi', 0, 0, 'C');
+			}
+
+			// =================================================
+			// NAMA SPV
+			// =================================================
+
+			$pdf->SetXY($col3_x, $y_verifikasi + 26);
+
+			if ($status_spv && !empty($nama_spv)) {
+				$pdf->SetFont('times', 'U', 8);
+				$pdf->Cell($col_width, 5, $nama_spv, 0, 0, 'C');
+			} else {
+				$pdf->SetFont('times', '', 8);
+				$pdf->Cell($col_width, 5, 'Belum Diverifikasi', 0, 0, 'C');
+			}
+
+			// =================================================
+			// JABATAN
+			// =================================================
+
 			$pdf->SetFont('times', '', 8);
-			$pdf->SetXY(200, $y_after_keterangan);
-			$pdf->Cell(80, 5, 'Data Belum Diverifikasi', 0, 0, 'C');
+
+			$pdf->SetXY($col1_x, $y_verifikasi + 31);
+			$pdf->Cell($col_width, 5, 'QC Inspector', 0, 0, 'C');
+
+			$pdf->SetXY($col2_x, $y_verifikasi + 31);
+			$pdf->Cell($col_width, 5, 'Foreman/Forelady Engineering', 0, 0, 'C');
+
+			$pdf->SetXY($col3_x, $y_verifikasi + 31);
+			$pdf->Cell($col_width, 5, 'Supervisor QC', 0, 0, 'C');
+		} else {
+
+			// =================================================
+			// BELUM DIVERIFIKASI
+			// =================================================
+
+			$pdf->SetTextColor(
+				255,
+				0,
+				0
+			);
+
+			$pdf->SetFont(
+				'times',
+				'',
+				8
+			);
+
+			$pdf->SetXY(
+				200,
+				$y_after_keterangan
+			);
+
+			$pdf->Cell(
+				80,
+				5,
+				'Data Belum Diverifikasi',
+				0,
+				0,
+				'C'
+			);
 		}
 
+		// =====================================================
+		// OUTPUT PDF
+		// =====================================================
 
-		$pdf->setPrintFooter(false);
-		$filename = "Pemeriksaan Magnet Trap_{$formatted_date2}.pdf";
-		$pdf->Output($filename, 'I');
+		$filename =
+			"Pemeriksaan Magnet Trap_{$formatted_date2}.pdf";
+
+		$pdf->Output(
+			$filename,
+			'I'
+		);
 	}
 
 	public function cetak_audit()
@@ -657,238 +1426,1037 @@ class Magnettrap extends MY_Controller
 
 		$plant = $this->session->userdata('plant');
 
-		$magnettrap_data = $this->magnettrap_model->get_audit_by_date($tanggal, $plant, $shift);
-		$magnettrap_data_verif = $this->magnettrap_model->get_last_verif_by_date($tanggal, $plant, $shift);
+		// =====================================================
+		// AMBIL DATA
+		// =====================================================
+		$magnettrap_data = $this->magnettrap_model->get_audit_by_date(
+			$tanggal,
+			$plant,
+			$shift
+		);
+
+		$magnettrap_data_verif = $this->magnettrap_model->get_last_verif_by_date(
+			$tanggal,
+			$plant,
+			$shift
+		);
 
 		if (!$magnettrap_data || !$magnettrap_data_verif) {
-			show_error('Data tidak ditemukan, Pilih tanggal yang ingin dicetak', 404);
+			show_error(
+				'Data tidak ditemukan, Pilih tanggal yang ingin dicetak',
+				404
+			);
 		}
 
 		$data['magnettrap'] = $magnettrap_data_verif;
 
+		// =====================================================
+		// TCPDF
+		// =====================================================
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
-		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
+		$pdf = new TCPDF(
+			PDF_PAGE_ORIENTATION,
+			PDF_UNIT,
+			'LEGAL',
+			true,
+			'UTF-8',
+			false
+		);
+
 		$pdf->setPrintHeader(false);
-		$pdf->SetMargins(17, 16, 15);
+		$pdf->setPrintFooter(false);
+
+		// Margin dibuat sedikit lebih kecil karena sekarang
+		// tabel mempunyai 10 kolom.
+		$pdf->SetMargins(10, 12, 10);
+
+		$pdf->SetAutoPageBreak(true, 15);
+
+		// Landscape Legal
 		$pdf->AddPage('L', 'LEGAL');
+
+		// =====================================================
+		// FONT JUDUL
+		// =====================================================
 		$pdf->SetFont('times', 'B', 13);
 
+		// =====================================================
+		// LOGO
+		// =====================================================
 		$logo_path = FCPATH . 'assets/img/logo.jpg';
+
 		if (file_exists($logo_path)) {
-			$pdf->Image($logo_path, 17, 14, 38);
+			$pdf->Image(
+				$logo_path,
+				10,
+				10,
+				38
+			);
 		} else {
-			$pdf->Write(7, "Logo tidak ditemukan\n");
+			$pdf->Write(
+				7,
+				"Logo tidak ditemukan\n"
+			);
 		}
 
 		$pdf->Write(9, "\n");
-		$pdf->MultiCell(0, 5, 'PEMERIKSAAN MAGNET TRAP', 0, 'C');
-		$pdf->Ln(5);
 
-		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
-		$tanggal = $data['magnettrap']->date;
-		$date = new DateTime($tanggal);
-		$timestamp = strtotime($tanggal);
+		// =====================================================
+		// JUDUL
+		// =====================================================
+		$pdf->MultiCell(
+			0,
+			5,
+			'PEMERIKSAAN MAGNET TRAP',
+			0,
+			'C'
+		);
 
-		$bulan = [
-			1 => 'Januari',
-			2 => 'Februari',
-			3 => 'Maret',
-			4 => 'April',
-			5 => 'Mei',
-			6 => 'Juni',
-			7 => 'Juli',
-			8 => 'Agustus',
-			9 => 'September',
-			10 => 'Oktober',
-			11 => 'November',
-			12 => 'Desember'
+		$pdf->Ln(4);
+
+		// =====================================================
+		// FORMAT TANGGAL
+		// =====================================================
+		setlocale(
+			LC_TIME,
+			'id_ID.UTF-8',
+			'id_ID',
+			'indonesian'
+		);
+
+		$tanggalHeader = $data['magnettrap']->date;
+
+		$date = new DateTime($tanggalHeader);
+
+		$formatted_date = date(
+			'l, d F Y',
+			$date->getTimestamp()
+		);
+
+		$formatted_date2 = date(
+			'l, d F Y',
+			$date->getTimestamp()
+		);
+
+		// =====================================================
+		// INFORMASI PEMERIKSAAN
+		// =====================================================
+		$pdf->SetFont('times', '', 10);
+
+		$pdf->SetX(10);
+
+		$pdf->Write(
+			0,
+			'Hari / Tanggal : ' . $formatted_date
+		);
+
+		$pdf->SetX(
+			$pdf->GetX() + 15
+		);
+
+		$pdf->Write(
+			0,
+			'Shift : ' . $data['magnettrap']->shift
+		);
+
+		$pdf->Ln(6);
+
+		// =====================================================
+		// HEADER TABEL
+		// =====================================================
+
+		$pdf->SetFont('times', 'B', 8);
+
+		/*
+     * Total lebar tabel:
+     *
+     * 13 + 25 + 35 + 28 + 38
+     * + 42 + 48 + 43 + 30 + 30
+     *
+     * = 332 mm
+     *
+     * Legal Landscape = ±356 mm
+     * dengan margin 10 mm kiri/kanan masih cukup.
+     */
+
+		$w = [
+			'pukul'        => 13,
+			'tahapan'      => 25,
+			'produk'       => 35,
+			'kode'         => 28,
+			'kontaminasi'  => 38,
+			'bukti'        => 42,
+			'analisis'     => 48,
+			'tindakan'     => 43,
+			'verifikasi'   => 30,
+			'keterangan'   => 30
 		];
 
-		$formatted_date = date('d', $timestamp) . ' ' .
-			$bulan[(int) date('n', $timestamp)] . ' ' .
-			date('Y', $timestamp);
+		$headerHeight = 12;
 
-		$formatted_date2 = date('d-m-Y', $timestamp);
+		$pdf->Cell(
+			$w['pukul'],
+			$headerHeight,
+			'Pukul',
+			1,
+			0,
+			'C'
+		);
 
-		$pdf->SetFont('times', '', 10);
-		$pdf->SetX(16);
-		$pdf->Write(0, 'Hari / Tanggal : ' . $formatted_date);
-		$pdf->SetX($pdf->GetX() + 20);
-		$pdf->Write(0, 'Shift: ' . $data['magnettrap']->shift);
-		$pdf->Ln(5);
+		$pdf->Cell(
+			$w['tahapan'],
+			$headerHeight,
+			'Tahapan',
+			1,
+			0,
+			'C'
+		);
 
-		$pdf->SetFont('times', '', 11);
+		$pdf->Cell(
+			$w['produk'],
+			$headerHeight,
+			'Nama Produk',
+			1,
+			0,
+			'C'
+		);
 
-		$pdf->Cell(15, 10, 'Pukul', 1, 0, 'C');
-		$pdf->Cell(35, 10, 'Tahapan', 1, 0, 'C');
-		$pdf->Cell(50, 10, 'Jenis Kontaminasi', 1, 0, 'C');
-		$pdf->Cell(45, 10, 'Bukti', 1, 0, 'C');
-		$pdf->Cell(55, 10, 'Analisis Temuan', 1, 0, 'C');
-		$pdf->Cell(50, 10, 'Tindakan Koreksi', 1, 0, 'C');
-		$pdf->Cell(35, 10, 'Verifikasi', 1, 0, 'C');
-		$pdf->Cell(35, 10, 'Keterangan', 1, 1, 'C');
+		$pdf->Cell(
+			$w['kode'],
+			$headerHeight,
+			'Kode Produksi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['kontaminasi'],
+			$headerHeight,
+			'Jenis Kontaminasi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['bukti'],
+			$headerHeight,
+			'Bukti',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['analisis'],
+			$headerHeight,
+			'Analisis Temuan',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['tindakan'],
+			$headerHeight,
+			'Tindakan Koreksi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['verifikasi'],
+			$headerHeight,
+			'Verifikasi',
+			1,
+			0,
+			'C'
+		);
+
+		$pdf->Cell(
+			$w['keterangan'],
+			$headerHeight,
+			'Keterangan',
+			1,
+			1,
+			'C'
+		);
+
+		// =====================================================
+		// ISI TABEL
+		// =====================================================
+
+		$pdf->SetFont('times', '', 7.5);
 
 		foreach ($magnettrap_data as $magnettrap) {
 
-			$formattedTime = date('H:i', strtotime($magnettrap->time));
+			$formattedTime = !empty($magnettrap->time)
+				? date(
+					'H:i',
+					strtotime($magnettrap->time)
+				)
+				: '-';
 
-			// Simpan posisi awal baris
-			$startX = $pdf->GetX();
-			$startY = $pdf->GetY();
+			/*
+         * Tinggi baris.
+         * Dibuat 22 supaya teks dan gambar masih nyaman.
+         */
+			$rowHeight = 22;
 
-			$w1 = 15;
-			$w2 = 35;
-			$w3 = 50;
-			$w4 = 45;
-			$w5 = 55;
-			$w6 = 50;
-			$w7 = 35;
-			$w8 = 35;
+			// -------------------------------------------------
+			// Pukul
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['pukul'],
+				$rowHeight,
+				$formattedTime,
+				1,
+				0,
+				'C'
+			);
 
-			// Hitung tinggi yang dibutuhkan teks
-			$hAnalisis   = $pdf->getStringHeight($w5, $magnettrap->analisis);
-			$hTindakan   = $pdf->getStringHeight($w6, $magnettrap->tindakan);
-			$hVerifikasi = $pdf->getStringHeight($w7, $magnettrap->verifikasi);
-			$hKet        = $pdf->getStringHeight($w8, !empty($magnettrap->keterangan) ? $magnettrap->keterangan : '-');
+			// -------------------------------------------------
+			// Tahapan
+			// -------------------------------------------------
+			$pdf->MultiCell(
+				25,
+				22,
+				$magnettrap->tahapan,
+				1,
+				'L',
+				false,
+				0,
+				'',
+				'',
+				true,
+				0,
+				false,
+				true,
+				22,
+				'M'
+			);
 
-			// Tinggi minimum row
-			$rowHeight = max(20, $hAnalisis, $hTindakan, $hVerifikasi, $hKet);
+			// -------------------------------------------------
+			// Nama Produk
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['produk'],
+				$rowHeight,
+				!empty($magnettrap->nama_produk)
+					? $magnettrap->nama_produk
+					: '-',
+				1,
+				0,
+				'L'
+			);
 
-			// Kolom Pukul
-			$pdf->MultiCell($w1, $rowHeight, $formattedTime, 1, 'C', false, 0);
+			// -------------------------------------------------
+			// Kode Produksi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['kode'],
+				$rowHeight,
+				!empty($magnettrap->kode_produksi)
+					? $magnettrap->kode_produksi
+					: '-',
+				1,
+				0,
+				'L'
+			);
 
-			// Kolom Tahapan
-			$pdf->MultiCell($w2, $rowHeight, $magnettrap->tahapan, 1, 'L', false, 0);
+			// -------------------------------------------------
+			// Jenis Kontaminasi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['kontaminasi'],
+				$rowHeight,
+				!empty($magnettrap->kontaminasi)
+					? $magnettrap->kontaminasi
+					: '-',
+				1,
+				0,
+				'L'
+			);
 
-			// Kolom Jenis Kontaminasi
-			$pdf->MultiCell($w3, $rowHeight, $magnettrap->kontaminasi, 1, 'C', false, 0);
+			// -------------------------------------------------
+			// BUKTI / GAMBAR
+			// -------------------------------------------------
+			$colWidth = $w['bukti'];
+			$colHeight = $rowHeight;
 
-			// Simpan posisi kolom bukti
-			$xBukti = $pdf->GetX();
-			$yBukti = $pdf->GetY();
+			$maxWidthImage = 28;
+			$maxHeightImage = 16;
 
-			// Border kolom bukti
-			$pdf->Rect($xBukti, $yBukti, $w4, $rowHeight);
+			$xBeforeImage = $pdf->GetX();
+			$yBeforeImage = $pdf->GetY();
 
-			$image_path = FCPATH . 'uploads/magnettrap/' . $magnettrap->bukti;
+			// Border cell
+			$pdf->Rect(
+				$xBeforeImage,
+				$yBeforeImage,
+				$colWidth,
+				$colHeight
+			);
 
-			if (!empty($magnettrap->bukti) && file_exists($image_path)) {
+			$image_path = null;
 
-				$maxWidthImage  = 22;
-				$maxHeightImage = min(12, $rowHeight - 2);
+			if (!empty($magnettrap->bukti)) {
 
-				list($width, $height) = getimagesize($image_path);
+				$path1 = FCPATH .
+					'uploads/' .
+					$magnettrap->bukti;
 
-				$aspectRatio = $width / $height;
+				$path2 = FCPATH .
+					'uploads/magnettrap/' .
+					$magnettrap->bukti;
 
-				if ($width > $height) {
-					$newWidth = $maxWidthImage;
-					$newHeight = $newWidth / $aspectRatio;
-				} else {
-					$newHeight = $maxHeightImage;
-					$newWidth = $newHeight * $aspectRatio;
+				if (file_exists($path1)) {
+
+					$image_path = $path1;
+				} elseif (file_exists($path2)) {
+
+					$image_path = $path2;
 				}
+			}
 
-				$xPos = $xBukti + (($w4 - $newWidth) / 2);
-				$yPos = $yBukti + (($rowHeight - $newHeight) / 2);
+			if (
+				$image_path &&
+				file_exists($image_path)
+			) {
 
-				$pdf->Image($image_path, $xPos, $yPos, $newWidth, $newHeight);
+				$imageInfo = @getimagesize(
+					$image_path
+				);
+
+				if (
+					$imageInfo &&
+					!empty($imageInfo[0]) &&
+					!empty($imageInfo[1])
+				) {
+
+					$width = $imageInfo[0];
+					$height = $imageInfo[1];
+
+					$aspectRatio =
+						$width / $height;
+
+					if (
+						$width > $maxWidthImage ||
+						$height > $maxHeightImage
+					) {
+
+						if ($width > $height) {
+
+							$newWidth =
+								$maxWidthImage;
+
+							$newHeight =
+								$newWidth /
+								$aspectRatio;
+						} else {
+
+							$newHeight =
+								$maxHeightImage;
+
+							$newWidth =
+								$newHeight *
+								$aspectRatio;
+						}
+					} else {
+
+						$newWidth = $width;
+						$newHeight = $height;
+					}
+
+					// Posisi gambar di tengah cell
+					$xPos =
+						$xBeforeImage +
+						(($colWidth - $newWidth) / 2);
+
+					$yPos =
+						$yBeforeImage +
+						(($colHeight - $newHeight) / 2);
+
+					$pdf->Image(
+						$image_path,
+						$xPos,
+						$yPos,
+						$newWidth,
+						$newHeight
+					);
+				}
 			} else {
 
-				$pdf->SetXY($xBukti, $yBukti);
-				$pdf->MultiCell($w4, $rowHeight, 'Gambar Tidak Ada', 0, 'C', false, 0);
+				$pdf->SetXY(
+					$xBeforeImage,
+					$yBeforeImage
+				);
+
+				$pdf->Cell(
+					$colWidth,
+					$colHeight,
+					'Gambar Tidak Ada',
+					0,
+					0,
+					'C'
+				);
 			}
 
-			$pdf->SetXY($xBukti + $w4, $yBukti);
-			$pdf->MultiCell($w5, $rowHeight, $magnettrap->analisis, 1, 'C', false, 0);
-			$pdf->MultiCell($w6, $rowHeight, $magnettrap->tindakan, 1, 'C', false, 0);
-			$pdf->MultiCell($w7, $rowHeight, $magnettrap->verifikasi, 1, 'C', false, 0);
-			$pdf->MultiCell($w8, $rowHeight, !empty($magnettrap->keterangan) ? $magnettrap->keterangan : '-', 1, 'C', false, 1);
+			// Geser posisi ke kolom berikutnya
+			$pdf->SetXY(
+				$xBeforeImage + $colWidth,
+				$yBeforeImage
+			);
+
+			// -------------------------------------------------
+			// Analisis Temuan
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['analisis'],
+				$rowHeight,
+				!empty($magnettrap->analisis)
+					? $magnettrap->analisis
+					: '-',
+				1,
+				0,
+				'L'
+			);
+
+			// -------------------------------------------------
+			// Tindakan Koreksi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['tindakan'],
+				$rowHeight,
+				!empty($magnettrap->tindakan)
+					? $magnettrap->tindakan
+					: '-',
+				1,
+				0,
+				'L'
+			);
+
+			// -------------------------------------------------
+			// Verifikasi
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['verifikasi'],
+				$rowHeight,
+				!empty($magnettrap->verifikasi)
+					? $magnettrap->verifikasi
+					: '-',
+				1,
+				0,
+				'L'
+			);
+
+			// -------------------------------------------------
+			// Keterangan
+			// -------------------------------------------------
+			$pdf->Cell(
+				$w['keterangan'],
+				$rowHeight,
+				!empty($magnettrap->keterangan)
+					? $magnettrap->keterangan
+					: '-',
+				1,
+				1,
+				'L'
+			);
 		}
 
-		$pdf->SetY($pdf->GetY() + 3);
-		$pdf->SetFont('times', '', 8);
-		$pdf->Cell(10, 3, 'Catatan : ', 0, 1, 'L');
+		// =====================================================
+		// CATATAN
+		// =====================================================
+
+		$pdf->SetY(
+			$pdf->GetY() + 3
+		);
+
+		$pdf->SetFont(
+			'times',
+			'',
+			8
+		);
+
+		$pdf->Cell(
+			10,
+			3,
+			'Catatan : ',
+			0,
+			1,
+			'L'
+		);
+
 		foreach ($magnettrap_data as $item) {
+
 			if (!empty($item->catatan)) {
-				$pdf->Cell(10, 0, '', 0, 0, 'L');
-				$pdf->Cell(200, 0, ' - ' . $item->catatan, 0, 1, 'L');
+
+				$pdf->Cell(
+					10,
+					0,
+					'',
+					0,
+					0,
+					'L'
+				);
+
+				$pdf->MultiCell(
+					300,
+					0,
+					' - ' . $item->catatan,
+					0,
+					'L',
+					false,
+					1
+				);
 			}
 		}
 
-		$this->load->model('pegawai_model');
-		$data['magnettrap']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['magnettrap']->username);
-		$data['magnettrap']->nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap($data['magnettrap']->nama_spv);
-		$data['magnettrap']->nama_lengkap_enginer = $data['magnettrap']->nama_enginer;
+		// =====================================================
+		// NAMA LENGKAP QC / SPV / ENGINEER
+		// =====================================================
 
-		$y_after_keterangan = $pdf->GetY();
+		$this->load->model(
+			'pegawai_model'
+		);
+
+		$data['magnettrap']->nama_lengkap_qc =
+			$this->pegawai_model->get_nama_lengkap(
+				$data['magnettrap']->username
+			);
+
+		$data['magnettrap']->nama_lengkap_spv =
+			$this->pegawai_model->get_nama_lengkap(
+				$data['magnettrap']->nama_spv
+			);
+
+		$data['magnettrap']->nama_lengkap_enginer =
+			!empty($data['magnettrap']->nama_enginer)
+			? $this->pegawai_model->get_nama_lengkap(
+				$data['magnettrap']->nama_enginer
+			)
+			: '';
+
+		// =====================================================
+		// CEK STATUS VERIFIKASI
+		// =====================================================
+
+		$y_after_keterangan =
+			$pdf->GetY();
+
 		$status_verifikasi = true;
+
 		foreach ($magnettrap_data as $item) {
+
 			if ($item->status_spv != '1') {
+
 				$status_verifikasi = false;
+
 				break;
 			}
 		}
 
-		$pdf->SetFont('times', '', 8);
-		$pdf->SetTextColor(0, 0, 0);
+		// =====================================================
+		// BLOK VERIFIKASI
+		// =====================================================
+
+		$pdf->SetFont(
+			'times',
+			'',
+			8
+		);
+
+		$pdf->SetTextColor(
+			0,
+			0,
+			0
+		);
 
 		if ($status_verifikasi) {
-			$y_verifikasi = $y_after_keterangan;
 
-			// Dibuat oleh (QC)
-			$pdf->SetXY(25, $y_verifikasi + 5);
-			$pdf->Cell(95, 5, 'Dibuat Oleh,', 0, 0, 'C');
-			$pdf->SetXY(25, $y_verifikasi + 10);
-			$pdf->SetFont('times', 'U', 8);
-			$pdf->Cell(95, 5, $data['magnettrap']->nama_lengkap_qc, 0, 1, 'C');
-			$pdf->SetFont('times', '', 8);
-			$pdf->Cell(112, 5, 'QC Inspector', 0, 0, 'C');
+			$y_verifikasi = $y_after_keterangan + 3;
 
-			// Diketahui oleh (Produksi) - tanpa barcode
-			$pdf->SetXY(90, $y_verifikasi + 5);
-			$pdf->Cell(135, 5, 'Diketahui Oleh,', 0, 0, 'C');
+			// =================================================
+			// DATA VERIFIKASI
+			// =================================================
 
-			if ($data['magnettrap']->status_enginer == 1 && !empty($data['magnettrap']->nama_enginer)) {
-				$update_tanggal_enginer = (new DateTime($data['magnettrap']->tgl_update_enginer))->format('d-m-Y | H:i');
+			$nama_qc = !empty($data['magnettrap']->nama_lengkap_qc)
+				? $data['magnettrap']->nama_lengkap_qc
+				: $data['magnettrap']->username;
 
-				$pdf->SetFont('times', 'U', 8);
-				$pdf->SetXY(90, $y_verifikasi + 10);
-				$pdf->Cell(135, 5, $data['magnettrap']->nama_enginer, 0, 1, 'C');
+			$nama_engineer = !empty($data['magnettrap']->nama_enginer)
+				? $data['magnettrap']->nama_enginer
+				: '-';
 
-				$pdf->SetFont('times', '', 8);
-				$pdf->SetXY(90, $y_verifikasi + 15);
-				$pdf->Cell(135, 5, 'Foreman/Forelady Engineering', 0, 1, 'C');
+			$nama_spv = !empty($data['magnettrap']->nama_lengkap_spv)
+				? $data['magnettrap']->nama_lengkap_spv
+				: '-';
 
-				// $pdf->SetXY(90, $y_verifikasi + 20);
-				// $pdf->Cell(135, 5, $update_tanggal_enginer, 0, 0, 'C');
-			} else {
-				$pdf->SetFont('times', '', 8);
-				$pdf->SetXY(90, $y_verifikasi + 10);
-				$pdf->Cell(135, 5, 'Belum Diverifikasi', 0, 0, 'C');
+			// =================================================
+			// TANGGAL VERIFIKASI
+			// =================================================
+
+			$tanggal_qc = !empty($data['magnettrap']->created_at)
+				? (new DateTime(
+					$data['magnettrap']->created_at
+				))->format('d-m-Y | H:i')
+				: (new DateTime(
+					$data['magnettrap']->date
+				))->format('d-m-Y');
+
+			$tanggal_engineer = !empty($data['magnettrap']->tgl_update_enginer)
+				? (new DateTime(
+					$data['magnettrap']->tgl_update_enginer
+				))->format('d-m-Y | H:i')
+				: '-';
+
+			$tanggal_spv = !empty($data['magnettrap']->tgl_update_spv)
+				? (new DateTime(
+					$data['magnettrap']->tgl_update_spv
+				))->format('d-m-Y | H:i')
+				: '-';
+
+
+			// =================================================
+			// POSISI 3 KOLOM
+			// =================================================
+
+			$col1_x = 15;
+			$col2_x = 120;
+			$col3_x = 225;
+
+			$col_width = 100;
+
+			// =================================================
+			// JUDUL
+			// =================================================
+
+			$pdf->SetFont(
+				'times',
+				'',
+				8
+			);
+
+			// QC
+			$pdf->SetXY(
+				$col1_x,
+				$y_verifikasi
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				'Dibuat Oleh,',
+				0,
+				0,
+				'C'
+			);
+
+			// ENGINEERING
+			$pdf->SetXY(
+				$col2_x,
+				$y_verifikasi
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				'Diketahui Oleh,',
+				0,
+				0,
+				'C'
+			);
+
+			// SPV
+			$pdf->SetXY(
+				$col3_x,
+				$y_verifikasi
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				'Disetujui Oleh,',
+				0,
+				0,
+				'C'
+			);
+
+
+			// =================================================
+			// QR CODE QC INSPECTOR
+			// =================================================
+
+			if (!empty($nama_qc)) {
+
+				$qr_qc =
+					"Diverifikasi secara digital oleh,\n" .
+					$nama_qc .
+					"\nQC Inspector\n" .
+					$tanggal_qc;
+
+				$pdf->write2DBarcode(
+					$qr_qc,
+					'QRCODE,L',
+					$col1_x + 42,
+					$y_verifikasi + 7,
+					18,
+					18,
+					null,
+					'N'
+				);
 			}
 
 
-			// Disetujui oleh (SPV)
-			$pdf->SetXY(150, $y_verifikasi + 5);
-			$pdf->Cell(189, 5, 'Disetujui Oleh,', 0, 0, 'C');
-			$update_tanggal = (new DateTime($data['magnettrap']->tgl_update_spv))->format('d-m-Y | H:i');
-			$qr_text = "Diverifikasi secara digital oleh,\n" . $data['magnettrap']->nama_lengkap_spv . "\nSPV QC Bread Crumb\n" . $update_tanggal;
-			$pdf->write2DBarcode($qr_text, 'QRCODE,L', 237, $y_verifikasi + 10, 15, 15, null, 'N');
-			$pdf->SetXY(170, $y_verifikasi + 24);
-			$pdf->Cell(149, 5, 'Supervisor QC', 0, 0, 'C');
+			// =================================================
+			// QR CODE FOREMAN / FORELADY ENGINEERING
+			// =================================================
+
+			if (
+				$data['magnettrap']->status_enginer == 1 &&
+				!empty($nama_engineer)
+			) {
+
+				$qr_engineer =
+					"Diverifikasi secara digital oleh,\n" .
+					$nama_engineer .
+					"\nForeman/Forelady Engineering\n" .
+					$tanggal_engineer;
+
+				$pdf->write2DBarcode(
+					$qr_engineer,
+					'QRCODE,L',
+					$col2_x + 42,
+					$y_verifikasi + 7,
+					18,
+					18,
+					null,
+					'N'
+				);
+			}
+
+
+			// =================================================
+			// QR CODE SPV
+			// =================================================
+
+			if (
+				!empty($nama_spv) &&
+				$data['magnettrap']->status_spv == 1
+			) {
+
+				$qr_spv =
+					"Diverifikasi secara digital oleh,\n" .
+					$nama_spv .
+					"\nSPV QC Bread Crumb\n" .
+					$tanggal_spv;
+
+				$pdf->write2DBarcode(
+					$qr_spv,
+					'QRCODE,L',
+					$col3_x + 42,
+					$y_verifikasi + 7,
+					18,
+					18,
+					null,
+					'N'
+				);
+			}
+
+
+			// =================================================
+			// NAMA QC
+			// =================================================
+
+			$pdf->SetFont(
+				'times',
+				'U',
+				8
+			);
+
+			$pdf->SetXY(
+				$col1_x,
+				$y_verifikasi + 26
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				$nama_qc,
+				0,
+				0,
+				'C'
+			);
+
+
+			// =================================================
+			// NAMA ENGINEERING
+			// =================================================
+
+			$pdf->SetXY(
+				$col2_x,
+				$y_verifikasi + 26
+			);
+
+			if (
+				$data['magnettrap']->status_enginer == 1 &&
+				!empty($nama_engineer)
+			) {
+
+				$pdf->Cell(
+					$col_width,
+					5,
+					$nama_engineer,
+					0,
+					0,
+					'C'
+				);
+			} else {
+
+				$pdf->SetFont(
+					'times',
+					'',
+					8
+				);
+
+				$pdf->Cell(
+					$col_width,
+					5,
+					'Belum Diverifikasi',
+					0,
+					0,
+					'C'
+				);
+
+				$pdf->SetFont(
+					'times',
+					'U',
+					8
+				);
+			}
+
+
+			// =================================================
+			// NAMA SPV
+			// =================================================
+
+			$pdf->SetXY(
+				$col3_x,
+				$y_verifikasi + 26
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				$nama_spv,
+				0,
+				0,
+				'C'
+			);
+
+
+			// =================================================
+			// JABATAN
+			// =================================================
+
+			$pdf->SetFont(
+				'times',
+				'',
+				8
+			);
+
+			// QC
+			$pdf->SetXY(
+				$col1_x,
+				$y_verifikasi + 31
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				'QC Inspector',
+				0,
+				0,
+				'C'
+			);
+
+			// Engineering
+			$pdf->SetXY(
+				$col2_x,
+				$y_verifikasi + 31
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				'Foreman/Forelady Engineering',
+				0,
+				0,
+				'C'
+			);
+
+			// SPV
+			$pdf->SetXY(
+				$col3_x,
+				$y_verifikasi + 31
+			);
+
+			$pdf->Cell(
+				$col_width,
+				5,
+				'Supervisor QC',
+				0,
+				0,
+				'C'
+			);
 		} else {
-			$pdf->SetTextColor(255, 0, 0);
-			$pdf->SetFont('times', '', 8);
-			$pdf->SetXY(200, $y_after_keterangan);
-			$pdf->Cell(80, 5, 'Data Belum Diverifikasi', 0, 0, 'C');
+
+			// =================================================
+			// BELUM DIVERIFIKASI
+			// =================================================
+
+			$pdf->SetTextColor(
+				255,
+				0,
+				0
+			);
+
+			$pdf->SetFont(
+				'times',
+				'',
+				8
+			);
+
+			$pdf->SetXY(
+				200,
+				$y_after_keterangan
+			);
+
+			$pdf->Cell(
+				80,
+				5,
+				'Data Belum Diverifikasi',
+				0,
+				0,
+				'C'
+			);
 		}
 
+		// =====================================================
+		// OUTPUT PDF
+		// =====================================================
 
-		$pdf->setPrintFooter(false);
-		$filename = "Pemeriksaan Magnet Trap_{$formatted_date2}.pdf";
-		$pdf->Output($filename, 'I');
+		$filename =
+			"Pemeriksaan Magnet Trap_{$formatted_date2}.pdf";
+
+		$pdf->Output(
+			$filename,
+			'I'
+		);
 	}
 
 	public function export_excel()

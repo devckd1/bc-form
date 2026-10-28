@@ -60,6 +60,8 @@ $tipe_user = $this->session->userdata('tipe_user');
 						<tr>
 							<th width="40px" class="text-center">No</th>
 							<th>Tanggal / Shift</th>
+							<th>Nama Produk</th>
+							<th>Kode Produksi</th>
 							<th>Waktu</th>
 							<th>Tahapan</th>
 							<th>Jenis Kontaminasi</th>
@@ -107,6 +109,9 @@ $tipe_user = $this->session->userdata('tipe_user');
 									<td>
 										<?= html_escape($datetime . ' / ' . ($val->shift ?? '-')); ?>
 									</td>
+
+									<td><?= html_escape($val->nama_produk?? '-'); ?></td>
+									<td><?= html_escape($val->kode_produksi?? '-'); ?></td>
 
 									<td>
 										<?= html_escape($val->time ?? '-'); ?>

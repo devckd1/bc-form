@@ -95,11 +95,7 @@
 							</th>
 
 							<th>
-								Last Updated
-							</th>
-
-							<th>
-								Last Verified
+								Finish Product
 							</th>
 
 							<th>
@@ -162,22 +158,10 @@
 											: '-'; ?>
 									</td>
 
-									<td>
-										<?= !empty($val->modified_at)
-											? date(
-												'H:i - d m Y',
-												strtotime($val->modified_at)
-											)
-											: '-'; ?>
-									</td>
-
-									<td>
-										<?= !empty($val->tgl_update)
-											? date(
-												'H:i - d m Y',
-												strtotime($val->tgl_update)
-											)
-											: '-'; ?>
+									<td class="text-center">
+										<a href="<?= base_url('proses/audit/packing/' . $val->uuid); ?>" class="btn btn-primary btn-icon-split">
+											<span class="text">Finish Product</span>
+										</a>
 									</td>
 
 									<td class="text-center">

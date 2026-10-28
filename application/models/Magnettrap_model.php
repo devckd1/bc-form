@@ -16,6 +16,16 @@ class Magnettrap_model extends CI_Model
 				'rules' => 'required'
 			],
 			[
+				'field' => 'nama_produk',
+				'label' => 'Nama Produk',
+				'rules' => 'required'
+			],
+			[
+				'field' => 'kode_produksi',
+				'label' => 'Kode Produksi',
+				'rules' => 'required'
+			],
+			[
 				'field' => 'shift',
 				'label' => 'Shift',
 				'rules' => 'required'
@@ -77,6 +87,8 @@ class Magnettrap_model extends CI_Model
 			'source_uuid' => null,
 			'username' => $username,
 			'plant' => $plant,
+			'nama_produk' => $this->input->post('nama_produk'),
+			'kode_produksi' => $this->input->post('kode_produksi'),
 			'date' => $this->input->post('date'),
 			'shift' => $this->input->post('shift'),
 			'time' => $this->input->post('time'),
@@ -88,8 +100,8 @@ class Magnettrap_model extends CI_Model
 			'catatan' => $this->input->post('catatan'),
 			'keterangan' => $this->input->post('keterangan'),
 			'bukti' => $file_name,
-			'status_enginer' => '1',
-			'nama_enginer' => $nama_produksi,
+			'status_enginer' => '0',
+			'nama_enginer' => '',
 			'status_spv' => '0',
 			'created_at' => date('Y-m-d H:i:s')
 		];
@@ -138,6 +150,8 @@ class Magnettrap_model extends CI_Model
 
 		$data = [
 			'username' => $this->session->userdata('username'),
+			'nama_produk' => $this->input->post('nama_produk'),
+			'kode_produksi' => $this->input->post('kode_produksi'),
 			'date' => $this->input->post('date'),
 			'shift' => $this->input->post('shift'),
 			'time' => $this->input->post('time'),
@@ -210,6 +224,116 @@ class Magnettrap_model extends CI_Model
 
 		$this->db->update('magnet_trap', $data, array('uuid' => $uuid));
 		return ($this->db->affected_rows() > 0) ? true : false;
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		$nama_enginer = $this->session->userdata('username');
+
+		$data = [
+			'nama_enginer' => $nama_enginer,
+			'status_enginer' => '1',
+			'tgl_update_enginer' => date('Y-m-d H:i:s')
+		];
+
+		$this->db->where('uuid', $uuid);
+		$this->db->update('magnet_trap', $data);
+
+		return ($this->db->affected_rows() > 0);
+	}
+
+	public function verifikasi_massal_spv($tanggal, $shift)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($shift)) {
+			return [
+				'success' => false,
+				'message' => 'Tanggal dan shift wajib dipilih.'
+			];
+		}
+
+		// Fungsi filter tanggal, shift, audit, dan plant
+		$filter_data = function () use ($tanggal, $shift, $type_user, $plant) {
+			$this->db
+				->where('DATE(date)', $tanggal)
+				->where('is_audit', 0);
+
+			// Jika memilih Semua Shift, filter shift tidak diterapkan
+			if ($shift !== 'semua') {
+				$this->db->where('shift', $shift);
+			}
+
+			// User tipe 1 dan 9 dapat melihat lintas plant
+			if ($type_user != 9 && $type_user != 1) {
+				$this->db->where('plant', $plant);
+			}
+		};
+
+		// Hitung seluruh data QC sesuai filter
+		$filter_data();
+		$total = $this->db->count_all_results('magnet_trap');
+
+		// Hitung data yang belum diverifikasi Produksi/Engineering
+		$filter_data();
+		$this->db->where('status_enginer !=', '1');
+		$belum_engineer = $this->db->count_all_results('magnet_trap');
+
+		// Hitung data yang siap diverifikasi SPV
+		$filter_data();
+		$this->db
+			->where('status_enginer', '1')
+			->where_in('status_spv', ['0', '2']);
+
+		$siap_verifikasi = $this->db->count_all_results('magnet_trap');
+
+		if ($siap_verifikasi == 0) {
+			return [
+				'success' => true,
+				'total' => $total,
+				'updated' => 0,
+				'belum_engineer' => $belum_engineer,
+				'message' => 'Tidak ada data yang siap diverifikasi SPV.'
+			];
+		}
+
+		$data = [
+			'nama_spv' => $nama_spv,
+			'status_spv' => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		];
+
+		$this->db->trans_begin();
+
+		// Update hanya data yang sudah diverifikasi Engineering
+		// dan belum selesai diverifikasi SPV
+		$filter_data();
+		$this->db
+			->where('status_enginer', '1')
+			->where_in('status_spv', ['0', '2']);
+
+		$this->db->update('magnet_trap', $data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+
+			return [
+				'success' => false,
+				'message' => 'Verifikasi massal gagal disimpan.'
+			];
+		}
+
+		$this->db->trans_commit();
+
+		return [
+			'success' => true,
+			'total' => $total,
+			'updated' => $siap_verifikasi,
+			'belum_engineer' => $belum_engineer,
+			'message' => 'Verifikasi massal berhasil diproses.'
+		];
 	}
 
 	public function rules_diketahui()
@@ -299,7 +423,57 @@ class Magnettrap_model extends CI_Model
 		return $data_magnet_trap;
 	}
 
-	public function get_data_by_plant()
+	//public function get_data_by_plant()
+	//{
+	//	$plant = $this->session->userdata('plant');
+	//	$type_user = $this->session->userdata('tipe_user');
+
+	//	$this->db->where('is_audit', 0);
+
+	//	if ($type_user != 9 && $type_user != 1) {
+	//		$this->db->where('plant', $plant);
+	//	}
+
+	//	return $this->db
+	//		->order_by('created_at', 'DESC')
+	//		->get('magnet_trap')
+	//		->result();
+	//}
+
+
+	public function get_data_by_plant(
+		$limit = 10,
+		$offset = 0,
+		$tanggal = '',
+		$shift = ''
+	) {
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		// Filter shift
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db
+			->order_by('created_at', 'DESC')
+			->limit($limit, $offset)
+			->get('magnet_trap')
+			->result();
+	}
+
+	public function count_data_by_plant($tanggal = '', $shift = '')
 	{
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
@@ -310,10 +484,17 @@ class Magnettrap_model extends CI_Model
 			$this->db->where('plant', $plant);
 		}
 
-		return $this->db
-			->order_by('created_at', 'DESC')
-			->get('magnet_trap')
-			->result();
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal, FALSE);
+		}
+
+		// Filter shift
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db->count_all_results('magnet_trap');
 	}
 
 	public function delete_by_uuid($uuid)
@@ -339,6 +520,7 @@ class Magnettrap_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -349,21 +531,36 @@ class Magnettrap_model extends CI_Model
 		}
 
 		$this->db->order_by('date', 'ASC');
+
 		$query = $this->db->get('magnet_trap');
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return $query->num_rows() > 0 ? $query->result() : false;
 	}
 
 	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, date, username, shift, nama_enginer, status_enginer, tgl_update_enginer');
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->select('
+        username,
+        nama_spv,
+        nama_enginer,
+        status_spv,
+        status_enginer,
+        tgl_update_spv,
+        tgl_update_enginer,
+        date,
+        created_at,
+        shift,
+        plant
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -374,12 +571,13 @@ class Magnettrap_model extends CI_Model
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->order_by('tgl_update_enginer', 'DESC');
+		$this->db->order_by('date', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('magnet_trap');
 
-		return $query->row();
+		return $this->db->get('magnet_trap')->row();
 	}
-
+	
 	public function get_by_month($tahun, $bulan, $plant)
 	{
 		return $this->db

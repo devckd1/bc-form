@@ -48,6 +48,10 @@ class Proses_model extends CI_Model
 		$nama_produk = $this->input->post('nama_produk');
 		$catatan = $this->input->post('catatan');
 
+		// Jumlah kolom input yang dipilih pengguna.
+		$jumlah_kolom = (int) $this->input->post('jumlah_kolom');
+		$jumlah_kolom = max(1, min(10, $jumlah_kolom));
+
 		$status_produksi = '1';
 		$status_spv = '0';
 
@@ -69,7 +73,12 @@ class Proses_model extends CI_Model
 						if ($kategori == 'kondisi_rm' && $i == 0) {
 							$cleaned[$kategori][$param][$i] = $cols[0] ?? '';
 						} else {
-							$cleaned[$kategori][$param][$i] = $cols[$i] ?? '';
+							// Kosongkan kolom yang tidak aktif.
+							if ($i > $jumlah_kolom) {
+								$cleaned[$kategori][$param][$i] = '';
+							} else {
+								$cleaned[$kategori][$param][$i] = $cols[$i] ?? '';
+							}
 						}
 
 						// Nilai default yang sudah digunakan sebelumnya.
@@ -93,6 +102,9 @@ class Proses_model extends CI_Model
 			}
 		}
 
+		// Simpan metadata jumlah kolom agar bisa digunakan di Edit dan Detail.
+		$cleaned['_meta']['jumlah_kolom'] = $jumlah_kolom;
+
 		$json_proses = json_encode($cleaned, JSON_UNESCAPED_UNICODE);
 
 		$data = [
@@ -100,7 +112,7 @@ class Proses_model extends CI_Model
 			'username'        => $username,
 			'plant'           => $plant,
 			'date'            => $date,
-			'shift'           => $shift,
+			'shift'            => $shift,
 			'jenis_produk'    => $nama_produk,
 			'nama_produk'     => $nama_produk,
 			'catatan'         => $catatan,
@@ -147,35 +159,90 @@ class Proses_model extends CI_Model
 		$nama_produk = $this->input->post('nama_produk');
 		$catatan = $this->input->post('catatan');
 
-		// Get existing record for logging
-		$old_data = $this->db->get_where($this->table, ['uuid' => $uuid])->row_array();
+		// Get existing record for logging.
+		$old_data = $this->db->get_where(
+			$this->table,
+			['uuid' => $uuid]
+		)->row_array();
+
+		// Jumlah kolom aktif dari form Edit.
+		$jumlah_kolom = (int) $this->input->post('jumlah_kolom');
+		$jumlah_kolom = max(1, min(10, $jumlah_kolom));
 
 		$proses_input = $this->input->post('proses_produksi');
-		$cleaned = []; // always start fresh
+		$cleaned = [];
 
 		if (is_array($proses_input)) {
 			foreach ($proses_input as $kategori => $params) {
+				if (!is_array($params)) {
+					continue;
+				}
+
 				foreach ($params as $param => $cols) {
+					if (!is_array($cols)) {
+						continue;
+					}
+
 					for ($i = 0; $i < 11; $i++) {
-						// Always use submitted value, even if empty (user intentionally cleared it)
-						if (isset($cols[$i])) {
-							$cleaned[$kategori][$param][$i] = trim($cols[$i]);
-						} else {
-							// Field not submitted at all (e.g. unchecked checkbox) = clear it
+						if ($kategori === 'kondisi_rm' && $i === 0) {
+							// Std. Berat tetap disimpan pada indeks 0.
+							$cleaned[$kategori][$param][$i] = trim(
+								(string) ($cols[$i] ?? '')
+							);
+						} elseif ($i > $jumlah_kolom) {
+							// Kosongkan kolom yang tidak aktif.
 							$cleaned[$kategori][$param][$i] = '';
+						} else {
+							// Field kosong tetap disimpan sebagai string kosong.
+							$cleaned[$kategori][$param][$i] = trim(
+								(string) ($cols[$i] ?? '')
+							);
 						}
 
-						// Defaults
-						if ($kategori == 'mixing' && $param == 'waktu_mixing_1' && $i == 0) $cleaned[$kategori][$param][$i] = '3';
-						if ($kategori == 'mixing' && $param == 'waktu_mixing_2' && $i == 0) $cleaned[$kategori][$param][$i] = '8';
-						if ($kategori == 'electric_baking' && $param == 'baking_time_high' && $i == 0) $cleaned[$kategori][$param][$i] = '5';
-						if ($kategori == 'electric_baking' && $param == 'baking_time_low' && $i == 0) $cleaned[$kategori][$param][$i] = '7';
+						// Defaults yang sudah digunakan sebelumnya.
+						if (
+							$kategori === 'mixing' &&
+							$param === 'waktu_mixing_1' &&
+							$i === 0
+						) {
+							$cleaned[$kategori][$param][$i] = '3';
+						}
+
+						if (
+							$kategori === 'mixing' &&
+							$param === 'waktu_mixing_2' &&
+							$i === 0
+						) {
+							$cleaned[$kategori][$param][$i] = '8';
+						}
+
+						if (
+							$kategori === 'electric_baking' &&
+							$param === 'baking_time_high' &&
+							$i === 0
+						) {
+							$cleaned[$kategori][$param][$i] = '5';
+						}
+
+						if (
+							$kategori === 'electric_baking' &&
+							$param === 'baking_time_low' &&
+							$i === 0
+						) {
+							$cleaned[$kategori][$param][$i] = '7';
+						}
 					}
 				}
 			}
 		}
 
-		$json_proses = json_encode($cleaned);
+		// Simpan metadata jumlah kolom aktif.
+		$cleaned['_meta']['jumlah_kolom'] = $jumlah_kolom;
+
+		$json_proses = json_encode(
+			$cleaned,
+			JSON_UNESCAPED_UNICODE
+		);
 
 		$data = [
 			'date'            => $date,
@@ -191,7 +258,10 @@ class Proses_model extends CI_Model
 		$this->db->update($this->table, $data);
 
 		if ($this->db->affected_rows() > 0) {
-			$new_data = $this->db->get_where($this->table, ['uuid' => $uuid])->row_array();
+			$new_data = $this->db->get_where(
+				$this->table,
+				['uuid' => $uuid]
+			)->row_array();
 
 			if (property_exists($this, 'activity_logger')) {
 				$this->activity_logger->log_activity(
@@ -204,6 +274,25 @@ class Proses_model extends CI_Model
 			}
 
 			return true;
+		}
+
+		// Tetap anggap berhasil jika data memang tidak berubah.
+		if ($old_data) {
+			$current_data = $this->db->get_where(
+				$this->table,
+				['uuid' => $uuid]
+			)->row_array();
+
+			if (
+				$current_data &&
+				$current_data['proses_produksi'] === $json_proses &&
+				$current_data['date'] == $date &&
+				$current_data['shift'] == $shift &&
+				$current_data['nama_produk'] == $nama_produk &&
+				$current_data['catatan'] == $catatan
+			) {
+				return true;
+			}
 		}
 
 		return false;
@@ -237,8 +326,17 @@ class Proses_model extends CI_Model
 		$proses_packing  = $this->input->post('packing');
 		$catatan_packing = $this->input->post('catatan_packing');
 
-		// Ambil data lama
-		$old_data = $this->db->get_where('mixing', ['uuid' => $uuid])->row_array();
+		$plant = $this->session->userdata('plant');
+
+		// Ambil data QC lama yang masih aktif.
+		$old_data = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('deleted_at IS NULL', null, false)
+			->get('mixing')
+			->row_array();
+
 		if (!$old_data) {
 			return false;
 		}
@@ -247,41 +345,47 @@ class Proses_model extends CI_Model
 			$proses_packing = [];
 		}
 
-		// === Ambil data dari proses_produksi index ke-1 ===
+		// Ambil data dari proses_produksi index ke-1.
 		$proses_produksi = json_decode($old_data['proses_produksi'], true);
 		$nama_produk = '';
 		$kode_produksi = '';
 
 		if (isset($proses_produksi['dough_mixing'])) {
 			$dm = $proses_produksi['dough_mixing'];
-			$nama_produk   = isset($dm['nama_produk'][1]) ? $dm['nama_produk'][1] : '';
-			$kode_produksi = isset($dm['kode_produksi'][1]) ? $dm['kode_produksi'][1] : '';
+			$nama_produk = $dm['nama_produk'][1] ?? '';
+			$kode_produksi = $dm['kode_produksi'][1] ?? '';
 		}
 
-		// === Tambahkan nama_produk & kode_produksi ke proses_packing ===
-		$proses_packing['nama_produk']   = $nama_produk;
+		// Tambahkan nama_produk dan kode_produksi ke proses_packing.
+		$proses_packing['nama_produk'] = $nama_produk;
 		$proses_packing['kode_produksi'] = $kode_produksi;
 
-		// === Upload Gambar ===
-		if (!empty($_FILES['packing']['name']) && is_array($_FILES['packing']['name'])) {
+		// Upload gambar.
+		if (
+			!empty($_FILES['packing']['name']) &&
+			is_array($_FILES['packing']['name'])
+		) {
 			foreach ($_FILES['packing']['name'] as $col => $kategori_arr) {
 				if (
 					isset($kategori_arr['pemeriksaan_finished_product']['bukti_labelisasi'][0]) &&
 					!empty($kategori_arr['pemeriksaan_finished_product']['bukti_labelisasi'][0])
 				) {
-
 					$file_name = $_FILES['packing']['name'][$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0];
-					$tmp_name  = $_FILES['packing']['tmp_name'][$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0];
+
+					$tmp_name = $_FILES['packing']['tmp_name'][$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0];
 
 					$upload_path = './uploads/bukti_labelisasi/';
+
 					if (!is_dir($upload_path)) {
 						mkdir($upload_path, 0777, true);
 					}
 
-					$new_name = uniqid('bukti_') . '_' . preg_replace('/\s+/', '_', $file_name);
+					$new_name = uniqid('bukti_') . '_' .
+						preg_replace('/\s+/', '_', $file_name);
+
 					$target_file = $upload_path . $new_name;
 
-					// Kompres dan resize
+					// Kompres dan resize.
 					$info = @getimagesize($tmp_name);
 					$mime = $info ? $info['mime'] : null;
 
@@ -307,7 +411,20 @@ class Proses_model extends CI_Model
 						$new_height = ($height / $width) * $new_width;
 
 						$tmp = imagecreatetruecolor($new_width, $new_height);
-						imagecopyresampled($tmp, $image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+
+						imagecopyresampled(
+							$tmp,
+							$image,
+							0,
+							0,
+							0,
+							0,
+							$new_width,
+							$new_height,
+							$width,
+							$height
+						);
+
 						imagejpeg($tmp, $target_file, 70);
 
 						imagedestroy($image);
@@ -316,10 +433,18 @@ class Proses_model extends CI_Model
 						$proses_packing[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0] = $new_name;
 					}
 				} else {
-					// Tidak upload baru, ambil file lama
+					// Tidak upload baru: pertahankan file lama.
 					if (!empty($old_data['proses_packing'])) {
-						$old_json = json_decode($old_data['proses_packing'], true);
-						if (isset($old_json[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0])) {
+						$old_json = json_decode(
+							$old_data['proses_packing'],
+							true
+						);
+
+						if (
+							isset(
+								$old_json[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0]
+							)
+						) {
 							$proses_packing[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0] =
 								$old_json[$col]['pemeriksaan_finished_product']['bukti_labelisasi'][0];
 						}
@@ -328,34 +453,65 @@ class Proses_model extends CI_Model
 			}
 		}
 
-		// === Encode JSON ===
-		$packing_json = json_encode($proses_packing, JSON_UNESCAPED_UNICODE);
+		// Encode JSON.
+		$packing_json = json_encode(
+			$proses_packing,
+			JSON_UNESCAPED_UNICODE
+		);
 
-		// === Update ke database ===
+		$updated_at = date('Y-m-d H:i:s');
+
 		$data = [
 			'date_stall'      => $date_stall,
 			'shift_pack'      => $shift_pack,
 			'catatan_packing' => $catatan_packing,
 			'proses_packing'  => $packing_json,
-			'updated_at'      => date('Y-m-d H:i:s')
+			'updated_at'      => $updated_at
 		];
 
-		$this->db->where('uuid', $uuid);
-		$this->db->update('mixing', $data);
+		// Update QC dan snapshot Audit dalam satu transaksi.
+		$this->db->trans_begin();
 
-		// === Logging jika ada perubahan ===
-		if ($this->db->affected_rows() > 0) {
-			$new_data = $this->db->get_where('mixing', ['uuid' => $uuid])->row_array();
-			if (isset($this->activity_logger)) {
-				$this->activity_logger->log_activity('update', 'mixing_logs', $uuid, $old_data, $new_data);
-			}
-			return true;
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('deleted_at IS NULL', null, false)
+			->update('mixing', $data);
+
+		// Sinkronkan packing ke snapshot Audit yang masih aktif.
+		$this->db
+			->where('source_uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->where('deleted_at IS NULL', null, false)
+			->update('mixing', $data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
 		}
 
-		return false;
+		$this->db->trans_commit();
+
+		// Logging perubahan QC.
+		$new_data = $this->db
+			->where('uuid', $uuid)
+			->get('mixing')
+			->row_array();
+
+		if (isset($this->activity_logger)) {
+			$this->activity_logger->log_activity(
+				'update',
+				'mixing_logs',
+				$uuid,
+				$old_data,
+				$new_data
+			);
+		}
+
+		return true;
 	}
-
-
 
 	public function rules_verifikasi()
 	{
@@ -571,8 +727,52 @@ class Proses_model extends CI_Model
 
 	public function delete_by_uuid($uuid)
 	{
-		$this->db->where('uuid', $uuid);
-		return $this->db->delete('mixing');
+		$plant = $this->session->userdata('plant');
+		$deleted_at = date('Y-m-d H:i:s');
+
+		// Pastikan data QC aktif ditemukan di plant yang sedang dipilih.
+		$qc = $this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('deleted_at IS NULL', null, false)
+			->get($this->table)
+			->row();
+
+		if (!$qc) {
+			return false;
+		}
+
+		$this->db->trans_begin();
+
+		// Soft delete data QC.
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('deleted_at IS NULL', null, false)
+			->update($this->table, [
+				'deleted_at' => $deleted_at
+			]);
+
+		// Soft delete snapshot Audit milik data QC tersebut.
+		$this->db
+			->where('source_uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 1)
+			->where('deleted_at IS NULL', null, false)
+			->update($this->table, [
+				'deleted_at' => $deleted_at
+			]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return true;
 	}
 
 	// application/models/Proses_model.php

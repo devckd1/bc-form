@@ -354,6 +354,32 @@ class Suhu extends MY_Controller
 		$this->render('form/suhu/audit', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		if ($tipe_user !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$update = $this->suhu_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Verifikasi Produksi Suhu berhasil.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Verifikasi Produksi gagal. Data mungkin sudah diverifikasi atau tidak ditemukan.'
+			);
+		}
+
+		redirect('suhu');
+	}
+
 	public function copy_to_audit($uuid)
 	{
 		$this->load->library('audit_library');

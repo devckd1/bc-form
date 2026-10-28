@@ -9,7 +9,7 @@
 
 </head>
 
-	<?php if (!empty($show_modal)): ?>
+<?php if (!empty($show_modal)): ?>
 
 	<!-- =====================================================
 		MODAL INPUT DATA PRODUKSI
@@ -153,14 +153,15 @@
 
 
 	<script>
-	$(document).ready(function() {
+		$(document).ready(function() {
 
-		$('#produksiModal').modal('show');
+			$('#produksiModal').modal('show');
 
-	});
+		});
 	</script>
 
-	<?php endif; ?>
+<?php endif; ?>
+
 <body>
 
 	<div class="container-fluid dashboard-wrapper">
@@ -170,12 +171,12 @@
 				FILTER RANGE TANGGAL
 			===================================================== -->
 			<?php
-		$shift = $this->input->get('shift');
+			$shift = $this->input->get('shift');
 
-		if ($shift === null || $shift === '') {
-			$shift = 'All';
-		}
-		?>
+			if ($shift === null || $shift === '') {
+				$shift = 'All';
+			}
+			?>
 			<div class="card shadow-sm mb-4"
 				style="border:0; border-radius:15px;">
 
@@ -424,12 +425,12 @@
 					<div class="monitor-card">
 
 						<div class="monitor-title">
-							KETIDAKSESUAIAN MD
+							KESESUAIAN MD
 						</div>
 
 						<div class="grafana-wrapper">
 							<iframe
-								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&timezone=browser&refresh=1m&theme=light&panelId=panel-19&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&kiosk=true&hideLogo=true&fullscreen=true&transparent=true"
+								src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&from=<?= urlencode($from_date . ' 00:00:00') ?>&to=<?= urlencode($to_date . ' 23:59:59') ?>&timezone=browser&refresh=1m&theme=light&panelId=panel-26&var-id_plant=<?= urlencode($plant_uuid) ?>&var-Shift=<?= urlencode($shift) ?>&kiosk=true&hideLogo=true&fullscreen=true&transparent=true"
 								loading="lazy">
 							</iframe>
 						</div>
@@ -470,7 +471,7 @@
 							<!-- SALATIGA : GRAFANA -->
 							<div class="grafana-wrapper">
 								<iframe
-									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=20&var-id_plant=<?= urlencode($plant_uuid) ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
+									src="http://10.71.3.27:3001/d-solo/adpn5jz/paperless-bc?orgId=1&panelId=20&from=now-24h&to=now&var-id_plant=<?= urlencode($plant_uuid) ?>&kiosk=true&hideLogo=true&fullscreen=true&theme=light&transparent=true&timezone=browser&refresh=1m"
 									loading="lazy">
 								</iframe>
 							</div>
@@ -1347,6 +1348,7 @@
 		padding: 9px 25px;
 		font-weight: 600;
 	}
+
 	/* =====================================================
 	MODAL DI ATAS LAZY LOADING GRAFANA
 	===================================================== */
@@ -1372,6 +1374,7 @@
 	.grafana-loading-line {
 		z-index: 100 !important;
 	}
+
 	/* =====================================================
 	MODAL INPUT PRODUKSI DI ATAS GRAFANA LAZY LOAD
 	===================================================== */

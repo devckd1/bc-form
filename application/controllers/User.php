@@ -15,6 +15,7 @@ class User extends CI_Controller {
 	{
 		$mapping = [
 			'admin' => 0,
+			'superadmin' => 9,
 			'Manager' => 1,
 			'SPV QC' => 2,
 			'Produksi' => 3,
