@@ -552,6 +552,21 @@ class Magnettrap extends MY_Controller
 		$data['magnettrap'] = $magnettrap_data_verif;
 
 		// =====================================================
+		// AMBIL MASTER DOKUMEN BERDASARKAN UUID
+		// =====================================================
+		// =====================================================
+		// AMBIL MASTER DOKUMEN BERDASARKAN UUID DAN PLANT
+		// =====================================================
+		$dokumen_uuid = 'f102ad1d-4dd9-4010-9812-cd32a4472662';
+
+		$dokumen = $this->db
+			->where('uuid', $dokumen_uuid)
+			->where('plant', $plant)
+			->where('deleted_at IS NULL', null, false)
+			->get('master_dokumen')
+			->row();
+
+		// =====================================================
 		// TCPDF
 		// =====================================================
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
@@ -604,16 +619,13 @@ class Magnettrap extends MY_Controller
 		$pdf->Write(9, "\n");
 
 		// =====================================================
-		// JUDUL
+		// JUDUL DARI MASTER DOKUMEN
 		// =====================================================
-		$pdf->MultiCell(
-			0,
-			5,
-			'PEMERIKSAAN MAGNET TRAP',
-			0,
-			'C'
-		);
+		$judul = !empty($dokumen->nama_dokumen)
+			? $dokumen->nama_dokumen
+			: 'PEMERIKSAAN MAGNET TRAP';
 
+		$pdf->MultiCell(0, 5, $judul, 0, 'C');
 		$pdf->Ln(4);
 
 		// =====================================================
@@ -1075,6 +1087,17 @@ class Magnettrap extends MY_Controller
 				1,
 				'L'
 			);
+		}
+
+		// =====================================================
+		// NOMOR DOKUMEN
+		// =====================================================
+		if (!empty($dokumen)) {
+			$nomor = $dokumen->nomor_dokumen . '/' . $dokumen->revisi;
+
+			$pdf->Ln(2);
+			$pdf->SetFont('helvetica', '', 8);
+			$pdf->Cell(0, 5, $nomor, 0, 1, 'R');
 		}
 
 		// =====================================================

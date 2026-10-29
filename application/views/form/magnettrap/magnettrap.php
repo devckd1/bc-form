@@ -41,34 +41,39 @@
 						method="post"
 						class="d-flex align-items-center flex-wrap mb-2">
 
-						<input
-							type="date"
-							name="tanggal"
-							id="tanggal_massal"
-							class="form-control form-control-sm mr-2 mb-1"
-							style="width: 155px;"
-							value="<?= html_escape($filter_tanggal ?? ''); ?>"
-							required>
+						<div class="d-flex align-items-center mr-2 mb-1">
+							<i class="fas fa-calendar-alt text-muted mr-2"></i>
+							<input
+								type="date"
+								name="tanggal"
+								id="tanggal_massal"
+								class="form-control form-control-sm"
+								style="width: 145px;"
+								value="<?= html_escape($filter_tanggal ?? ''); ?>"
+								required>
+						</div>
 
-						<select
-							name="shift"
-							id="shift_massal"
-							class="form-control form-control-sm mr-2 mb-1"
-							style="width: 135px;">
-							<option value="">-- Pilih Shift --</option>
-							<option value="semua" <?= ($filter_shift ?? '') === 'semua' ? 'selected' : ''; ?>>
-								Semua Shift
-							</option>
-							<option value="1" <?= ($filter_shift ?? '') === '1' ? 'selected' : ''; ?>>
-								Shift 1
-							</option>
-							<option value="2" <?= ($filter_shift ?? '') === '2' ? 'selected' : ''; ?>>
-								Shift 2
-							</option>
-							<option value="3" <?= ($filter_shift ?? '') === '3' ? 'selected' : ''; ?>>
-								Shift 3
-							</option>
-						</select>
+						<div class="mr-2 mb-1">
+							<select
+								name="shift"
+								id="shift_massal"
+								class="form-control form-control-sm"
+								style="width: 125px;">
+								<option value="">Pilih Shift</option>
+								<option value="semua" <?= ($filter_shift ?? '') === 'semua' ? 'selected' : ''; ?>>
+									Semua Shift
+								</option>
+								<option value="1" <?= ($filter_shift ?? '') === '1' ? 'selected' : ''; ?>>
+									Shift 1
+								</option>
+								<option value="2" <?= ($filter_shift ?? '') === '2' ? 'selected' : ''; ?>>
+									Shift 2
+								</option>
+								<option value="3" <?= ($filter_shift ?? '') === '3' ? 'selected' : ''; ?>>
+									Shift 3
+								</option>
+							</select>
+						</div>
 
 						<button type="submit"
 							class="btn btn-primary btn-sm mr-2 mb-1">
@@ -297,35 +302,79 @@
 			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 				<br>
 				<hr>
-				<div class="form-group">
-					<form action="<?= base_url('magnettrap/cetak') ?>" method="post" class="form-inline">
-						<label for="tanggal" class="mr-2 font-weight-bold">Pilih Tanggal:</label>
-						<input type="date" name="tanggal" class="form-control mr-2" required>
 
-						<label for="shift" class="mr-2 font-weight-bold">Shift:</label>
-						<select name="shift" class="form-control mr-2" required>
-							<option value="">-- Pilih Shift --</option>
-							<option value="1">Shift 1</option>
-							<option value="2">Shift 2</option>
-							<option value="3">Shift 3</option>
-						</select>
 
-						<button type="submit" class="btn btn-success">
-							<i class="fas fa-print fa-sm text-white-50"></i> Cetak PDF
-						</button>
-					</form>
+				<div class="row">
+
+					<!-- CETAK PDF -->
+					<div class="col-lg-6 mb-3">
+						<div class="card shadow-sm">
+							<div class="card-body py-3">
+								<form action="<?= base_url('magnettrap/cetak') ?>"
+									method="post">
+									<label class="font-weight-bold text-success mb-2">
+										<i class="fas fa-file-pdf mr-1"></i> Cetak PDF
+									</label>
+
+									<div class="form-row align-items-center">
+										<div class="col-md-5 mb-2 mb-md-0">
+											<input type="date" name="tanggal"
+												class="form-control form-control-sm" required>
+										</div>
+
+										<div class="col-md-3 mb-2 mb-md-0">
+											<select name="shift"
+												class="form-control form-control-sm" required>
+												<option value="">Shift</option>
+												<option value="1">Shift 1</option>
+												<option value="2">Shift 2</option>
+												<option value="3">Shift 3</option>
+											</select>
+										</div>
+
+										<div class="col-md-4">
+											<button type="submit"
+												class="btn btn-success btn-sm btn-block">
+												<i class="fas fa-print mr-1"></i> Cetak
+											</button>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+
+					<!-- EXPORT EXCEL -->
+					<div class="col-lg-6 mb-3">
+						<div class="card shadow-sm">
+							<div class="card-body py-3">
+								<form action="<?= base_url('magnettrap/export_excel') ?>"
+									method="post">
+									<label class="font-weight-bold text-primary mb-2">
+										<i class="fas fa-file-excel mr-1"></i> Export Excel Bulanan
+									</label>
+
+									<div class="form-row align-items-center">
+										<div class="col-md-8 mb-2 mb-md-0">
+											<input type="month" name="bulan"
+												class="form-control form-control-sm" required>
+										</div>
+
+										<div class="col-md-4">
+											<button type="submit"
+												class="btn btn-primary btn-sm btn-block">
+												<i class="fas fa-file-excel mr-1"></i> Export
+											</button>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+
 				</div>
-				<hr>
-				<div class="form-group mt-3">
-					<form action="<?= base_url('magnettrap/export_excel') ?>" method="post" class="form-inline">
-						<label for="bulan" class="mr-2 font-weight-bold">Export Excel Bulanan:</label>
-						<input type="month" name="bulan" class="form-control mr-2" required>
 
-						<button type="submit" class="btn btn-success">
-							<i class="fas fa-file-excel"></i> Export Excel
-						</button>
-					</form>
-				</div>
+
 			<?php endif; ?>
 		</div>
 	</div>

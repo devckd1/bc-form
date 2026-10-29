@@ -115,4 +115,15 @@ class Master_dokumen_model extends CI_Model
 				'deleted_at' => date('Y-m-d H:i:s')
 			]);
 	}
+
+	public function get_by_nama_dokumen($nama_dokumen)
+	{
+		return $this->db
+			->where('nama_dokumen', $nama_dokumen)
+			->where('deleted_at IS NULL', null, false)
+			->order_by('nomor_dokumen', 'ASC')
+			->limit(1)
+			->get($this->table)
+			->row();
+	}
 }
