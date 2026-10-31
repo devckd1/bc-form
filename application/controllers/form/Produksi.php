@@ -491,15 +491,6 @@ class Produksi extends MY_Controller
 		$this->render('form/produksi/produksi-packing', $data);
 	}
 
-	public function verifikasi()
-	{
-		$data = array(
-			'produksi' => $this->produksi_model->get_data_by_plant()
-		);
-
-		$this->active_nav = 'verifikasi-produksi';
-		$this->render('form/produksi/produksi-verifikasi', $data);
-	}
 
 	public function halus($uuid)
 	{
@@ -546,6 +537,40 @@ class Produksi extends MY_Controller
 			'form/produksi/produksi-halus',
 			$data
 		);
+	}
+
+	public function verifikasi()
+	{
+		$data = array(
+			'produksi' => $this->produksi_model->get_data_by_plant()
+		);
+
+		$this->active_nav = 'verifikasi-produksi';
+		$this->render('form/produksi/produksi-verifikasi', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->produksi_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Verifikasi Produksi berhasil di-approve.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('produksi/verifikasi');
 	}
 
 	public function status($uuid)

@@ -78,8 +78,8 @@ class Kebersihanmesin_model extends CI_Model
 			'kondisi' => $this->input->post('kondisi'),
 			'spare_part' => $this->input->post('spare_part'),
 			'keterangan' => $this->input->post('keterangan'),
-			'status_produksi' => '1',
-			'nama_produksi' => $nama_produksi,
+			'status_produksi' => '0',
+			'nama_produksi' => '',
 			'status_spv' => '0',
 			'is_audit' => 0,
 			'source_uuid' => null
@@ -197,6 +197,27 @@ class Kebersihanmesin_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant    = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		];
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('status_produksi', '0')
+			->update('kebersihan_mesin', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -275,24 +296,111 @@ class Kebersihanmesin_model extends CI_Model
 	}
 
 
-	public function get_data_by_plant()
+
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
+		$this->db->from('kebersihan_mesin');
 		$this->db->where('is_audit', 0);
 
-		if ($type_user != 9 && $type_user != 1) {
+		// Pembatasan plant sesuai hak akses
+		if (!in_array($type_user, [9, 1])) {
 			$this->db->where('plant', $plant);
+		}
+
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
 		}
 
 		$this->db->order_by('created_at', 'DESC');
 
-		return $this->db
-			->get('kebersihan_mesin')
-			->result();
+		// Pagination hanya jika limit diberikan
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get()->result();
 	}
 
+
+	public function count_kebersihanmesin_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->from('kebersihan_mesin');
+		$this->db->where('is_audit', 0);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
+		}
+
+		return $this->db->count_all_results();
+	}
+
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($nama_spv)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db->from('kebersihan_mesin');
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$total_data = $this->db->count_all_results();
+
+		if ($total_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update hanya data QC yang siap diverifikasi
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->update('kebersihan_mesin', [
+			'nama_spv'       => $nama_spv,
+			'status_spv'     => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$jumlah_update = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $jumlah_update;
+	}
 
 	public function delete_by_uuid($uuid)
 	{

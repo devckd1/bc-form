@@ -127,7 +127,7 @@ class Loading_model extends CI_Model
 			'loading'        => json_encode($loading, JSON_UNESCAPED_UNICODE),
 			'status_spv'     => '0',
 			'nama_wh'        => $nama_produksi,
-			'status_wh'      => '1'
+			'status_wh'      => '0'
 		];
 
 		$this->db->trans_begin();
@@ -262,6 +262,27 @@ class Loading_model extends CI_Model
 
 		$this->db->update('loading', $data, array('uuid' => $uuid));
 		return ($this->db->affected_rows() > 0) ? true : false;
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = array(
+			'nama_produksi' => $username,
+			'status_wh' => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		);
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_wh', '0');
+
+		$this->db->update('loading', $data);
+
+		return $this->db->affected_rows() > 0;
 	}
 
 	public function rules_diketahui()

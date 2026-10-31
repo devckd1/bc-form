@@ -115,6 +115,29 @@ class Kekuatanmagnet extends MY_Controller
 		$this->render('form/kekuatanmagnet/kekuatanmagnet-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->kekuatanmagnet_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Kekuatan Magnet berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('kekuatanmagnet/verifikasi');
+	}
 
 	public function status($uuid)
 	{

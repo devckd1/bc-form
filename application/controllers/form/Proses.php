@@ -220,6 +220,30 @@ class Proses extends MY_Controller
 		$this->render('form/proses/proses-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk melakukan approve produksi.', 403);
+			return;
+		}
+
+		$update = $this->proses_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Verifikasi Proses berhasil di-approve oleh Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Verifikasi Proses gagal di-approve atau sudah diproses.'
+			);
+		}
+
+		redirect('proses/verifikasi');
+	}
+
 	public function status($uuid)
 	{
 		$rules = $this->proses_model->rules_verifikasi();

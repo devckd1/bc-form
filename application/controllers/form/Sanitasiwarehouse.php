@@ -143,6 +143,30 @@ class Sanitasiwarehouse extends MY_Controller
 		$this->render('form/sanitasiwarehouse/sanitasiwarehouse-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk melakukan approve produksi.', 403);
+			return;
+		}
+
+		$update = $this->sanitasiwarehouse_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Pemeriksaan Sanitasi Warehouse berhasil di-approve oleh Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Sanitasi Warehouse gagal di-approve atau sudah diproses.'
+			);
+		}
+
+		redirect('sanitasiwarehouse/verifikasi');
+	}
+
 	public function status($uuid)
 	{
 		$rules = $this->sanitasiwarehouse_model->rules_verifikasi();

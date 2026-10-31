@@ -111,6 +111,30 @@ class Pengayakan extends MY_Controller
 		$this->render('form/pengayakan/pengayakan-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->pengayakan_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Pengayakan berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('pengayakan/verifikasi');
+	}
+
 	public function status($uuid)
 	{
 		$rules = $this->pengayakan_model->rules_verifikasi();

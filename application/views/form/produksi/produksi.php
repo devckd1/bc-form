@@ -61,7 +61,7 @@
 							<th>Date / Shift</th>
 							<th>Types of Product</th>
 							<th>Production Code</th>
-							<th class="text-center">Supervisor</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Process</th>
 							<th class="text-center">Packing</th>
 							<th class="text-center">Action</th>
@@ -84,13 +84,21 @@
 									<td><?= htmlspecialchars($val->kode_produksi); ?></td>
 
 									<td class="text-center">
-										<?php if ($val->status_spv == 0): ?>
-											<span style="color:#99a3a4;font-weight:bold;">Created</span>
-										<?php elseif ($val->status_spv == 1): ?>
-											<span style="color:#28b463;font-weight:bold;">Verified</span>
-										<?php elseif ($val->status_spv == 2): ?>
-											<span style="color:red;font-weight:bold;">Revision</span>
-										<?php endif; ?>
+										<?php
+										$tipe_user = (int) $this->session->userdata('tipe_user');
+
+										if ($val->status_spv == '1') {
+											echo '<span style="color:#28b463;font-weight:bold;font-size:12px;">Verified</span>';
+										} elseif ($val->status_spv == '2') {
+											echo '<span style="color:red;font-weight:bold;font-size:12px;">Revision</span>';
+										} elseif ($val->status_produksi == '1' && $val->status_spv == '0') {
+											echo '<span style="color:#28b463;font-weight:bold;font-size:12px;">Approved</span>';
+										} elseif ($tipe_user == 3 && $val->status_spv == '0') {
+											echo '<span style="color:#99a3a4;font-weight:bold;font-size:12px;">Created</span>';
+										} elseif ($val->status_produksi == '0') {
+											echo '<span style="color:#f39c12;font-weight:bold;font-size:12px;">Menunggu Verifikasi Produksi</span>';
+										}
+										?>
 									</td>
 
 									<td class="text-center">
@@ -113,12 +121,31 @@
 									</td>
 
 									<td class="text-center">
-										<a href="<?= base_url('produksi/edit/' . $val->uuid); ?>" class="btn btn-warning btn-sm shadow" title="Edit">Edit</a>
+										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+											<a href="<?= base_url('produksi/edit/' . $val->uuid); ?>" class="btn btn-warning btn-sm shadow" title="Edit">Edit</a>
+										<?php endif; ?>
+
 										<a href="<?= base_url('produksi/detail/' . $val->uuid); ?>" class="btn btn-success btn-sm shadow" title="Detail">Detail</a>
-										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-											<a href="<?= base_url('produksi/status/' . $val->uuid); ?>" class="btn btn-info btn-sm shadow" title="Verifikasi">
-												<span class="text">Verifikasi</span>
+
+										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
+											<a href="<?= base_url('produksi/verifikasi_produksi/' . $val->uuid); ?>"
+												class="btn btn-warning btn-sm shadow"
+												title="Setujui Produksi"
+												onclick="return confirm('Apakah Anda yakin ingin menyetujui data ini?')">
+												Setujui
 											</a>
+										<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+											<?php if ($val->status_produksi == '1' && $val->status_spv == '0'): ?>
+												<a href="<?= base_url('produksi/status/' . $val->uuid); ?>" class="btn btn-info btn-sm shadow" title="Verifikasi">
+													<span class="text">Verifikasi</span>
+												</a>
+											<?php elseif ($val->status_produksi == '1' && $val->status_spv == '2'): ?>
+												<a href="<?= base_url('produksi/status/' . $val->uuid); ?>" class="btn btn-info btn-sm shadow" title="Verifikasi Ulang">
+													<span class="text">Verifikasi Ulang</span>
+												</a>
+											<?php endif; ?>
 										<?php endif; ?>
 									</td>
 								</tr>

@@ -101,7 +101,7 @@ class Kebersihankaryawan_model extends CI_Model
 		$catatan = $this->input->post('catatan');
 
 		$status_spv = "0";
-		$status_produksi = "1";
+		$status_produksi = "0";
 
 
 		// ==========================================
@@ -361,6 +361,26 @@ class Kebersihankaryawan_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant    = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		];
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_produksi', '0');
+		$this->db->update('kebersihan_karyawan', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -438,40 +458,147 @@ class Kebersihankaryawan_model extends CI_Model
 		return $data_kebersihan_karyawan;
 	}
 
-	public function get_data_by_plant($limit, $start, $plant, $type_user)
-	{
+	public function get_data_by_plant(
+		$limit,
+		$start,
+		$plant,
+		$type_user,
+		$tanggal = '',
+		$shift = ''
+	) {
 		$this->db->select('
-		uuid,
-		date,
-		nama,
-		bagian,
-		seragam,
-		apron,
-		tangan_kuku,
-		kosmetik,
-		perhiasan,
-		masker,
-		topi_hairnet,
-		sepatu,
-		tindakan,
-		status_spv,
-		modified_at,
-		tgl_update_spv
-	');
+        uuid,
+        date,
+        shift,
+        nama,
+        bagian,
+        seragam,
+        apron,
+        tangan_kuku,
+        kosmetik,
+        perhiasan,
+        masker,
+        topi_hairnet,
+        sepatu,
+        tindakan,
+		status_produksi,
+        status_spv,
+        modified_at,
+        tgl_update_spv
+    ');
 
 		$this->db->from('kebersihan_karyawan');
-
-		// Hanya data QC utama
 		$this->db->where('is_audit', 0);
 
 		if ($type_user != 9 && $type_user != 1) {
 			$this->db->where('plant', $plant);
 		}
 
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
 		$this->db->order_by('created_at', 'DESC');
-		$this->db->limit($limit, $start);
+
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
 
 		return $this->db->get()->result();
+	}
+
+	public function count_kebersihankaryawan_by_plant(
+		$plant,
+		$type_user,
+		$tanggal = '',
+		$shift = ''
+	) {
+		$this->db->from('kebersihan_karyawan');
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db->count_all_results();
+	}
+
+
+	public function verifikasi_massal_spv($tanggal, $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($nama_spv)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db->from('kebersihan_karyawan');
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		$total_data = $this->db->count_all_results();
+
+		if ($total_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update hanya data QC utama yang memenuhi syarat
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->update('kebersihan_karyawan', [
+			'nama_spv' => $nama_spv,
+			'status_spv' => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$jumlah_update = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $jumlah_update;
 	}
 
 	public function delete_by_uuid($uuid)

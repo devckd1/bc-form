@@ -50,7 +50,7 @@
 							<th>Nama Barang</th>
 							<th>Kode Produksi</th>
 							<th>Expired Date</th>
-							<th>Supervisor</th>
+							<th>Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>
@@ -72,27 +72,68 @@
 								<td><?= $expired; ?></td>
 								<td class="text-center">
 									<?php
-									if ($val->status_spv == 0) {
-										echo '<span style="color: #99a3a4; font-weight: bold;">Created</span>';
-									} elseif ($val->status_spv == 1) {
-										echo '<span style="color: #28b463; font-weight: bold;">Verified</span>';
-									} elseif ($val->status_spv == 2) {
-										echo '<span style="color: red; font-weight: bold;">Revision</span>';
+									$tipe_user = (int) $this->session->userdata('tipe_user');
+
+									if ($val->status_spv == '1') {
+										echo '<span style="color:#28a745;font-weight:bold;font-size:12px;">Verified</span>';
+									} elseif ($val->status_spv == '2') {
+										echo '<span style="color:red;font-weight:bold;font-size:12px;">Revision</span>';
+									} elseif ($val->status_produksi == '1' && $val->status_spv == '0') {
+										echo '<span style="color:#28a745;font-weight:bold;font-size:12px;">Approved</span>';
+									} elseif ($tipe_user == 3 && $val->status_spv == '0') {
+										echo '<span style="color:#99a3a4;font-weight:bold;font-size:12px;">Created</span>';
+									} elseif ($val->status_produksi == '0') {
+										echo '<span style="color:#f39c12;font-weight:bold;font-size:12px;">Menunggu Verifikasi Produksi</span>';
 									}
 									?>
 								</td>
 								<td class="text-center">
-									<a href="<?= base_url('pengayakan/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split mb-1">
-										<span class="text">Edit</span>
-									</a>
-									<a href="<?= base_url('pengayakan/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split mb-1">
-										<span class="text">Detail</span>
-									</a>
-									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-										<a href="<?= base_url('pengayakan/status/' . $val->uuid); ?>" class="btn btn-info btn-icon-split">
-											<span class="text">Verifikasi</span>
+									<div class="action-buttons">
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+											<a href="<?= base_url('pengayakan/edit/' . $val->uuid); ?>"
+												class="btn btn-warning btn-icon-split mb-1">
+												<span class="text">Edit</span>
+											</a>
+										<?php endif; ?>
+
+										<a href="<?= base_url('pengayakan/detail/' . $val->uuid); ?>"
+											class="btn btn-success btn-icon-split mb-1">
+											<span class="text">Detail</span>
 										</a>
-									<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
+											<a href="<?= base_url('pengayakan/verifikasi_produksi/' . $val->uuid); ?>"
+												class="btn btn-primary btn-icon-split mb-1"
+												onclick="return confirm('Apakah pemeriksaan ini yakin disetujui?');">
+												<span class="text">Setujui</span>
+											</a>
+										<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+											<?php if (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '0'
+											): ?>
+												<a href="<?= base_url('pengayakan/status/' . $val->uuid); ?>"
+													class="btn btn-info btn-icon-split mb-1">
+													<span class="text">Verifikasi</span>
+												</a>
+
+											<?php elseif (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '2'
+											): ?>
+												<a href="<?= base_url('pengayakan/status/' . $val->uuid); ?>"
+													class="btn btn-warning btn-icon-split mb-1">
+													<span class="text">Verifikasi Ulang</span>
+												</a>
+											<?php endif; ?>
+
+										<?php endif; ?>
+
+									</div>
 									<!-- <a href="<?= base_url('pengayakan/delete/' . $val->uuid); ?>" class="btn btn-danger btn-icon-split mb-1" onclick="return confirm('Yakin ingin menghapus data ini?')">
                                     <span class="text">Delete</span>
                                 </a> -->

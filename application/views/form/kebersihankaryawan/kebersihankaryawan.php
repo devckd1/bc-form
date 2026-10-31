@@ -25,21 +25,69 @@
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
-			<div class="form-group text-right">
-				<a href="<?= base_url('kebersihankaryawan/tambah') ?>" class="btn btn-md btn-primary shadow-sm">
-					<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-				</a>
+			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+
+				<!-- KIRI: Filter dan Verifikasi Massal -->
 				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<a href="<?= base_url('kebersihankaryawan/audit'); ?>"
-						class="btn shadow-sm"
-						style="background-color: #5a3298; color: #fff;">
+					<div class="d-flex align-items-center flex-wrap mb-2">
 
-						<i class="fas fa-clipboard-check mr-1"></i>
-						Mode Audit
+						<input type="date"
+							id="filter_tanggal"
+							class="form-control mr-2 mb-2"
+							style="width: 170px;"
+							value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 
-					</a>
+						<select id="filter_shift"
+							class="form-control mr-2 mb-2"
+							style="width: 140px;">
+							<option value="">Semua Shift</option>
+							<?php foreach (['1', '2', '3'] as $shift): ?>
+								<option value="<?= $shift; ?>"
+									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
+									Shift <?= $shift; ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+
+						<button type="button"
+							id="btnVerifikasiMassal"
+							class="btn btn-primary mb-2">
+							<i class="fas fa-check-double mr-1"></i>
+							Verifikasi Massal
+						</button>
+
+						<a href="<?= base_url('kebersihankaryawan'); ?>"
+							class="btn btn-secondary ml-2 mb-2">
+							<i class="fas fa-sync-alt mr-1"></i>
+							Reset
+						</a>
+					</div>
 				<?php endif; ?>
+
+				<!-- KANAN: Tambah dan Mode Audit -->
+				<div class="text-right mb-2">
+					<a href="<?= base_url('kebersihankaryawan/tambah') ?>"
+						class="btn btn-md btn-primary shadow-sm">
+						<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
+					</a>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+						<a href="<?= base_url('kebersihankaryawan/audit'); ?>"
+							class="btn shadow-sm"
+							style="background-color: #5a3298; color: #fff;">
+							<i class="fas fa-clipboard-check mr-1"></i>
+							Mode Audit
+						</a>
+					<?php endif; ?>
+				</div>
 			</div>
+
+			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<small class="text-muted d-block mb-2">
+					<i class="fas fa-info-circle mr-1"></i>
+					Hanya data yang sudah diverifikasi Produksi yang akan diproses.
+				</small>
+			<?php endif; ?>
 			<hr>
 			<div style="display: flex; gap: 20px;">
 				<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 40%; text-align: left; font-family: Arial, sans-serif; font-size: 14px;">
@@ -101,7 +149,7 @@
 							<th rowspan="2">Bagian</th>
 							<th colspan="8" class="text-center">Kebersihan</th>
 							<th rowspan="2">Tindakan Koreksi</th>
-							<th rowspan="2">Supervisor</th>
+							<th rowspan="2">Status</th>
 							<th rowspan="2" class="text-center">Action</th>
 						</tr>
 						<tr>
@@ -117,7 +165,7 @@
 					</thead>
 					<tbody>
 						<?php
-						$no = 1;
+						$no = (int) ($start ?? 0) + 1;
 						foreach ($kebersihankaryawan as $val) {
 							$datetime = new datetime($val->date);
 							$datetime = $datetime->format('d-m-Y');
@@ -154,27 +202,68 @@
 								<td><?= $val->tindakan; ?></td>
 								<td class="text-center">
 									<?php
-									if ($val->status_spv == 0) {
-										echo '<span style="color: #99a3a4; font-weight: bold;">Created</span>';
-									} elseif ($val->status_spv == 1) {
-										echo '<span style="color: #28b463; font-weight: bold;">Verified</span>';
-									} elseif ($val->status_spv == 2) {
-										echo '<span style="color: red; font-weight: bold;">Revision</span>';
+									$tipe_user = (int) $this->session->userdata('tipe_user');
+
+									if ($val->status_spv == '1') {
+										echo '<span style="color: #28a745; font-weight: bold; font-size: 12px;">Verified</span>';
+									} elseif ($val->status_spv == '2') {
+										echo '<span style="color: red; font-weight: bold; font-size: 12px;">Revision</span>';
+									} elseif ($val->status_produksi == '1' && $val->status_spv == '0') {
+										echo '<span style="color: #28a745; font-weight: bold; font-size: 12px;">Approved</span>';
+									} elseif ($tipe_user == 3 && $val->status_spv == '0') {
+										echo '<span style="color: #99a3a4; font-weight: bold; font-size: 12px;">Created</span>';
+									} elseif ($val->status_produksi == '0') {
+										echo '<span style="color: #f39c12; font-weight: bold; font-size: 12px;">Menunggu Verifikasi Produksi</span>';
 									}
 									?>
 								</td>
 								<td class="text-center">
-									<a href="<?= base_url('kebersihankaryawan/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split">
-										<span class="text">Edit</span>
-									</a>
-									<a href="<?= base_url('kebersihankaryawan/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split">
-										<span class="text">Detail</span>
-									</a>
-									<?php if (in_array($tipe_user, [0, 1, 2, 9 ])): ?>
-										<a href="<?= base_url('kebersihankaryawan/status/' . $val->uuid) ?>" class="btn btn-info btn-icon-split">
-											<span class="text">Verifikasi</span>
+									<div class="action-buttons">
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+											<a href="<?= base_url('kebersihankaryawan/edit/' . $val->uuid); ?>"
+												class="btn btn-warning btn-icon-split mb-1">
+												<span class="text">Edit</span>
+											</a>
+										<?php endif; ?>
+
+										<a href="<?= base_url('kebersihankaryawan/detail/' . $val->uuid); ?>"
+											class="btn btn-success btn-icon-split mb-1">
+											<span class="text">Detail</span>
 										</a>
-									<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
+											<a href="<?= base_url('kebersihankaryawan/verifikasi_produksi/' . $val->uuid); ?>"
+												class="btn btn-primary btn-icon-split mb-1"
+												onclick="return confirm('Apakah pemeriksaan ini yakin disetujui?');">
+												<span class="text">Setujui</span>
+											</a>
+										<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+											<?php if (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '0'
+											): ?>
+												<a href="<?= base_url('kebersihankaryawan/status/' . $val->uuid); ?>"
+													class="btn btn-info btn-icon-split mb-1">
+													<span class="text">Verifikasi</span>
+												</a>
+
+											<?php elseif (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '2'
+											): ?>
+												<a href="<?= base_url('kebersihankaryawan/status/' . $val->uuid); ?>"
+													class="btn btn-warning btn-icon-split mb-1">
+													<span class="text">Verifikasi Ulang</span>
+												</a>
+											<?php endif; ?>
+
+										<?php endif; ?>
+
+									</div>
 
 									<!-- <a href="<?= base_url('kebersihankaryawan/delete/' . $val->uuid); ?>" class="btn btn-danger btn-icon-split" onclick="return confirm('Yakin ingin menghapus data ini?')">
                                         <span class="text">Delete</span>
@@ -229,3 +318,117 @@
 		background-color: #f8f9fc;
 	}
 </style>
+<script>
+	$(document).ready(function() {
+
+		// Filter tanggal dan shift
+		function filterKebersihanKaryawan() {
+			var tanggal = $('#filter_tanggal').val();
+			var shift = $('#filter_shift').val();
+
+			var params = new URLSearchParams();
+
+			if (tanggal) {
+				params.set('tanggal', tanggal);
+			}
+
+			if (shift) {
+				params.set('shift', shift);
+			}
+
+			var query = params.toString();
+
+			window.location.href = "<?= base_url('kebersihankaryawan'); ?>" +
+				(query ? '?' + query : '');
+		}
+
+		$('#filter_tanggal, #filter_shift').on('change', function() {
+			filterKebersihanKaryawan();
+		});
+
+		// Verifikasi massal SPV
+		$('#btnVerifikasiMassal').on('click', function() {
+
+			var tanggal = $('#filter_tanggal').val();
+			var shift = $('#filter_shift').val();
+			var tombol = $(this);
+
+			if (!tanggal) {
+				Swal.fire(
+					'Perhatian',
+					'Pilih tanggal terlebih dahulu.',
+					'warning'
+				);
+				return;
+			}
+
+			Swal.fire({
+				title: 'Verifikasi Massal?',
+				text: 'Data Kebersihan Karyawan yang sudah diverifikasi Produksi pada tanggal dan shift terpilih akan diproses.',
+				icon: 'question',
+				showCancelButton: true,
+				confirmButtonText: 'Ya, Verifikasi',
+				cancelButtonText: 'Batal'
+			}).then(function(result) {
+
+				if (!result.isConfirmed) {
+					return;
+				}
+
+				tombol.prop('disabled', true);
+				tombol.html(
+					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+				);
+
+				$.ajax({
+					url: "<?= base_url('kebersihankaryawan/verifikasi_massal'); ?>",
+					type: 'POST',
+					dataType: 'json',
+					data: {
+						tanggal: tanggal,
+						shift: shift || 'semua'
+					},
+
+					success: function(response) {
+
+						if (response.success) {
+							Swal.fire({
+								title: 'Berhasil',
+								text: response.message +
+									' Jumlah data: ' + response.updated,
+								icon: 'success'
+							}).then(function() {
+								window.location.reload();
+							});
+						} else {
+							Swal.fire(
+								'Informasi',
+								response.message,
+								'info'
+							);
+
+							tombol.prop('disabled', false);
+							tombol.html(
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							);
+						}
+					},
+
+					error: function() {
+						Swal.fire(
+							'Error',
+							'Terjadi kesalahan saat memproses verifikasi massal.',
+							'error'
+						);
+
+						tombol.prop('disabled', false);
+						tombol.html(
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+						);
+					}
+				});
+			});
+		});
+
+	});
+</script>

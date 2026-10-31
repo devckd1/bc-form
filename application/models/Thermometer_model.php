@@ -70,7 +70,7 @@ class Thermometer_model extends CI_Model
 		$standar     = $this->input->post('standar');
 		$hasil       = $this->input->post('hasil');
 
-		$status_produksi = "1";
+		$status_produksi = "0";
 		$status_spv      = "0";
 
 		/*
@@ -246,6 +246,27 @@ class Thermometer_model extends CI_Model
 
 		$this->db->update('thermometer', $data, array('uuid' => $uuid));
 		return ($this->db->affected_rows() > 0) ? true : false;
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		$plant    = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		];
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('status_produksi', '0')
+			->update('thermometer', $data);
+
+		return $this->db->affected_rows() > 0;
 	}
 
 	public function rules_diketahui()

@@ -51,6 +51,7 @@
 							<th class="text-center">Types of Product</th>
 							<th class="text-center">Kode Produksi</th>
 							<th class="text-center">Finish Product</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>
@@ -91,18 +92,60 @@
 									</a>
 								</td>
 								<td class="text-center">
-									<a href="<?= base_url('proses/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split">
-										<span class="text">Edit</span>
-									</a>
+									<?php
+									$tipe_user = (int) $this->session->userdata('tipe_user');
+
+									if ($val->status_spv == '1') {
+										echo '<span style="color:#28b463;font-weight:bold;font-size:12px;">Verified</span>';
+									} elseif ($val->status_spv == '2') {
+										echo '<span style="color:red;font-weight:bold;font-size:12px;">Revision</span>';
+									} elseif ($val->status_produksi == '1' && $val->status_spv == '0') {
+										echo '<span style="color:#28b463;font-weight:bold;font-size:12px;">Approved</span>';
+									} elseif ($tipe_user == 3 && $val->status_spv == '0') {
+										echo '<span style="color:#99a3a4;font-weight:bold;font-size:12px;">Created</span>';
+									} elseif ($val->status_produksi == '0') {
+										echo '<span style="color:#f39c12;font-weight:bold;font-size:12px;">Menunggu Verifikasi Produksi</span>';
+									}
+									?>
+								</td>
+								<td class="text-center">
+									<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+										<a href="<?= base_url('proses/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split">
+											<span class="text">Edit</span>
+										</a>
+									<?php endif; ?>
+
 									<a href="<?= base_url('proses/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split">
 										<span class="text">Detail</span>
 									</a>
-									<a href="<?= base_url('proses/delete/' . $val->uuid); ?>" class="btn btn-danger btn-icon-split" onclick="return confirm('Yakin ingin menghapus data ini?')">
-										<span class="text">Delete</span>
-									</a>
-									<a href="<?= base_url('proses/status/' . $val->uuid); ?>" class="btn btn-info btn-icon-split">
-										<span class="text">Verifikasi</span>
-									</a>
+
+									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+										<a href="<?= base_url('proses/delete/' . $val->uuid); ?>"
+											class="btn btn-danger btn-icon-split"
+											onclick="return confirm('Yakin ingin menghapus data ini?')">
+											<span class="text">Delete</span>
+										</a>
+									<?php endif; ?>
+
+									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
+										<a href="<?= base_url('proses/verifikasi_produksi/' . $val->uuid); ?>"
+											class="btn btn-warning btn-icon-split"
+											onclick="return confirm('Apakah Anda yakin ingin menyetujui data ini?')">
+											<span class="text">Setujui</span>
+										</a>
+									<?php endif; ?>
+
+									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+										<?php if ($val->status_produksi == '1' && $val->status_spv == '0'): ?>
+											<a href="<?= base_url('proses/status/' . $val->uuid); ?>" class="btn btn-info btn-icon-split">
+												<span class="text">Verifikasi</span>
+											</a>
+										<?php elseif ($val->status_produksi == '1' && $val->status_spv == '2'): ?>
+											<a href="<?= base_url('proses/status/' . $val->uuid); ?>" class="btn btn-info btn-icon-split">
+												<span class="text">Verifikasi Ulang</span>
+											</a>
+										<?php endif; ?>
+									<?php endif; ?>
 								</td>
 
 							</tr>

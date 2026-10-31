@@ -31,23 +31,91 @@
 		<div class="card-body">
 
 			<!-- Button Tambah -->
-			<div class="form-group text-right">
-				<a href="<?= base_url('kebersihanruang/tambah') ?>"
-					class="btn btn-md btn-primary shadow-sm">
-					<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-				</a>
+
+			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+
+				<!-- Filter dan Verifikasi Massal -->
 				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<a href="<?= base_url('kebersihanruang/audit'); ?>"
-						class="btn shadow-sm"
-						style="background-color: #5a3298; color: #fff;">
 
-						<i class="fas fa-clipboard-check mr-1"></i>
-						Mode Audit
+					<div class="d-flex align-items-center flex-wrap mb-2">
 
-					</a>
+						<form id="formVerifikasiMassal"
+							action="<?= base_url('kebersihanruang/verifikasi_massal'); ?>"
+							method="post"
+							class="d-flex align-items-center flex-wrap">
+
+							<input type="date"
+								id="filter_tanggal"
+								name="tanggal"
+								class="form-control mr-2 mb-2"
+								style="width: 170px;"
+								value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+								required>
+
+							<button type="submit"
+								id="btnVerifikasiMassal"
+								class="btn btn-primary mb-2">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+
+							</button>
+
+						</form>
+
+						<a href="<?= base_url('kebersihanruang'); ?>"
+							class="btn btn-secondary ml-2 mb-2">
+
+							<i class="fas fa-sync-alt mr-1"></i>
+							Reset
+
+						</a>
+
+					</div>
+
 				<?php endif; ?>
 
+
+				<!-- Tombol Tambah dan Mode Audit -->
+				<div class="text-right mb-2">
+
+					<a href="<?= base_url('kebersihanruang/tambah') ?>"
+						class="btn btn-md btn-primary shadow-sm">
+
+						<i class="fas fa-plus fa-sm text-white-50"></i>
+						Tambah
+
+					</a>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+						<a href="<?= base_url('kebersihanruang/audit'); ?>"
+							class="btn shadow-sm"
+							style="background-color: #5a3298; color: #fff;">
+
+							<i class="fas fa-clipboard-check mr-1"></i>
+							Mode Audit
+
+						</a>
+
+					<?php endif; ?>
+
+				</div>
+
 			</div>
+
+			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+				<small class="text-muted d-block mb-2">
+
+					<i class="fas fa-info-circle mr-1"></i>
+
+					Hanya data yang sudah diverifikasi Produksi
+					pada tanggal terpilih yang akan diproses.
+
+				</small>
+
+			<?php endif; ?>
 
 			<hr>
 
@@ -71,7 +139,7 @@
 					<tbody>
 
 						<?php
-						$no = 1;
+						$no = (int) ($start ?? 0) + 1;
 
 						foreach ($kebersihanruang as $val):
 
@@ -115,44 +183,69 @@
 								</td>
 
 								<td class="text-center">
-
 									<?php
-									if ($val->status_spv == 0) {
+									$tipe_user = (int) $this->session->userdata('tipe_user');
 
-										echo '<span style="color:#99a3a4;font-weight:bold;">
-                        Created
-                        </span>';
-									} elseif ($val->status_spv == 1) {
-
-										echo '<span style="color:#28b463;font-weight:bold;">
-                        Verified
-                        </span>';
-									} elseif ($val->status_spv == 2) {
-
-										echo '<span style="color:red;font-weight:bold;">
-                        Revision
-                        </span>';
+									if ($val->status_spv == '1') {
+										echo '<span style="color:#28a745;font-weight:bold;font-size:12px;">Verified</span>';
+									} elseif ($val->status_spv == '2') {
+										echo '<span style="color:red;font-weight:bold;font-size:12px;">Revision</span>';
+									} elseif ($val->status_produksi == '1' && $val->status_spv == '0') {
+										echo '<span style="color:#28a745;font-weight:bold;font-size:12px;">Approved</span>';
+									} elseif ($tipe_user == 3 && $val->status_spv == '0') {
+										echo '<span style="color:#99a3a4;font-weight:bold;font-size:12px;">Created</span>';
+									} elseif ($val->status_produksi == '0') {
+										echo '<span style="color:#f39c12;font-weight:bold;font-size:12px;">Menunggu Verifikasi Produksi</span>';
 									}
 									?>
-
 								</td>
 								<td class="text-center">
+									<div class="action-buttons">
 
-									<a href="<?= base_url('kebersihanruang/edit/' . $val->uuid); ?>"
-										class="btn btn-warning btn-icon-split mb-1">
-										<span class="text">Edit</span>
-									</a>
+										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+											<a href="<?= base_url('kebersihanruang/edit/' . $val->uuid); ?>"
+												class="btn btn-warning btn-icon-split mb-1">
+												<span class="text">Edit</span>
+											</a>
+										<?php endif; ?>
 
-									<a href="<?= base_url('kebersihanruang/detail/' . $val->uuid); ?>"
-										class="btn btn-success btn-icon-split mb-1">
-										<span class="text">Detail</span>
-									</a>
-									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-										<a href="<?= base_url('kebersihanruang/status/' . $val->uuid) ?>" class="btn btn-info btn-icon-split">
-											<span class="text">Verifikasi</span>
+										<a href="<?= base_url('kebersihanruang/detail/' . $val->uuid); ?>"
+											class="btn btn-success btn-icon-split mb-1">
+											<span class="text">Detail</span>
 										</a>
-									<?php endif; ?>
 
+										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
+											<a href="<?= base_url('kebersihanruang/verifikasi_produksi/' . $val->uuid); ?>"
+												class="btn btn-primary btn-icon-split mb-1"
+												onclick="return confirm('Apakah pemeriksaan ini yakin disetujui?');">
+												<span class="text">Setujui</span>
+											</a>
+										<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+											<?php if (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '0'
+											): ?>
+												<a href="<?= base_url('kebersihanruang/status/' . $val->uuid); ?>"
+													class="btn btn-info btn-icon-split mb-1">
+													<span class="text">Verifikasi</span>
+												</a>
+
+											<?php elseif (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '2'
+											): ?>
+												<a href="<?= base_url('kebersihanruang/status/' . $val->uuid); ?>"
+													class="btn btn-warning btn-icon-split mb-1">
+													<span class="text">Verifikasi Ulang</span>
+												</a>
+											<?php endif; ?>
+
+										<?php endif; ?>
+
+									</div>
 								</td>
 
 							</tr>
@@ -333,6 +426,140 @@
 				tr.addClass('shown');
 				$(this).removeClass('btn-info').addClass('btn-secondary').text('Hide');
 			}
+		});
+
+	});
+</script>
+
+<script>
+	$(document).ready(function() {
+
+		// Filter tanggal otomatis
+		$('#filter_tanggal').on('change', function() {
+
+			var tanggal = $(this).val();
+
+			if (tanggal) {
+				window.location.href =
+					"<?= base_url('kebersihanruang'); ?>?tanggal=" + tanggal;
+			}
+
+		});
+
+
+		// Verifikasi massal
+		$('#formVerifikasiMassal').on('submit', function(e) {
+
+			e.preventDefault();
+
+			var form = $(this);
+			var tombol = $('#btnVerifikasiMassal');
+
+			if (!form.find('[name="tanggal"]').val()) {
+
+				Swal.fire(
+					'Perhatian',
+					'Silakan pilih tanggal terlebih dahulu.',
+					'warning'
+				);
+
+				return;
+			}
+
+			Swal.fire({
+
+				title: 'Verifikasi Massal?',
+
+				text: 'Data Kebersihan Ruang yang sudah diverifikasi Produksi pada tanggal tersebut akan diproses.',
+
+				icon: 'question',
+
+				showCancelButton: true,
+
+				confirmButtonText: 'Ya, Verifikasi',
+
+				cancelButtonText: 'Batal'
+
+			}).then(function(result) {
+
+				if (!result.isConfirmed) {
+					return;
+				}
+
+				tombol.prop('disabled', true);
+
+				tombol.html(
+					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+				);
+
+				$.ajax({
+
+					url: form.attr('action'),
+
+					type: 'POST',
+
+					data: form.serialize(),
+
+					dataType: 'json',
+
+					success: function(response) {
+
+						if (response.success) {
+
+							Swal.fire({
+
+								title: 'Berhasil',
+
+								text: response.message +
+									' Jumlah data: ' +
+									response.updated,
+
+								icon: 'success'
+
+							}).then(function() {
+
+								window.location.reload();
+
+							});
+
+						} else {
+
+							Swal.fire(
+								'Informasi',
+								response.message,
+								'info'
+							);
+
+							tombol.prop('disabled', false);
+
+							tombol.html(
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							);
+
+						}
+
+					},
+
+					error: function(xhr) {
+
+						Swal.fire(
+							'Error',
+							'Terjadi kesalahan saat memproses verifikasi massal.',
+							'error'
+						);
+
+						tombol.prop('disabled', false);
+
+						tombol.html(
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+						);
+
+					}
+
+				});
+
+			});
+
 		});
 
 	});

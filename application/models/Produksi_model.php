@@ -69,8 +69,8 @@ class Produksi_model extends CI_Model
 				'kode_produksi'    => $kode_raw,
 				'premix'           => json_encode($premix),
 				'status_spv'       => '0',
-				'status_produksi'  => '1',
-				'nama_produksi'    => $nama_produksi,
+				'status_produksi'  => '0',
+				'nama_produksi'    => '',
 				'is_audit'         => 0,
 				'source_uuid'      => null,
 			];
@@ -1238,6 +1238,27 @@ class Produksi_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant    = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		];
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('status_produksi', '0')
+			->update('mixing', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -1366,15 +1387,20 @@ class Produksi_model extends CI_Model
 
 	public function get_data_by_plant()
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('mixing', ['plant' => $plant])->result();
+
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get('kondisikerja')->result();
 	}
 
 	public function count_all_by_plant($plant, $keyword = null)
 	{
 		$this->db->from('mixing');
 		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($keyword)) {
 			$this->db->group_start();
@@ -1390,6 +1416,7 @@ class Produksi_model extends CI_Model
 	{
 		$this->db->order_by('created_at', 'DESC');
 		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($keyword)) {
 			$this->db->group_start();

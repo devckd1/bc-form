@@ -24,21 +24,75 @@
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
-			<div class="form-group text-right">
-				<a href="<?= base_url('chiller/tambah') ?>" class="btn btn-md btn-primary shadow-sm">
-					<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-				</a>
+
+			<div class="d-flex justify-content-between align-items-center flex-wrap">
+
+				<!-- KIRI: Filter dan Verifikasi Massal -->
 				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<a href="<?= base_url('chiller/audit'); ?>"
-						class="btn shadow-sm"
-						style="background-color: #5a3298; color: #fff;">
+					<form
+						id="formVerifikasiMassalChiller"
+						action="<?= base_url('chiller/verifikasi_massal'); ?>"
+						method="post"
+						class="d-flex align-items-center flex-wrap mb-2">
 
-						<i class="fas fa-clipboard-check mr-1"></i>
-						Mode Audit
+						<label for="tanggal_massal_chiller" class="mr-2 mb-2 font-weight-bold">
+							Tanggal:
+						</label>
 
-					</a>
+						<input
+							type="date"
+							name="tanggal"
+							id="tanggal_massal_chiller"
+							class="form-control form-control-sm mr-2 mb-2"
+							value="<?= html_escape($filter_tanggal ?? ''); ?>"
+							required
+							style="width: 170px;">
+
+						<button
+							type="submit"
+							id="btnVerifikasiMassalChiller"
+							class="btn btn-primary btn-sm mr-2 mb-2">
+							<i class="fas fa-check-double mr-1"></i>
+							Verifikasi Massal
+						</button>
+
+						<button
+							type="button"
+							id="resetFilterChiller"
+							class="btn btn-secondary btn-sm mb-2">
+							<i class="fas fa-undo mr-1"></i>
+							Reset
+						</button>
+					</form>
 				<?php endif; ?>
+
+				<!-- KANAN: Tambah dan Mode Audit -->
+				<div class="d-flex align-items-center flex-wrap mb-2">
+
+					<a href="<?= base_url('chiller/tambah') ?>"
+						class="btn btn-md btn-primary shadow-sm mr-2">
+						<i class="fas fa-plus fa-sm text-white-50"></i>
+						Tambah
+					</a>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+						<a href="<?= base_url('chiller/audit'); ?>"
+							class="btn shadow-sm"
+							style="background-color: #5a3298; color: #fff;">
+							<i class="fas fa-clipboard-check mr-1"></i>
+							Mode Audit
+						</a>
+					<?php endif; ?>
+
+				</div>
 			</div>
+
+			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<small class="text-muted d-block mb-3">
+					<i class="fas fa-info-circle mr-1"></i>
+					Hanya data yang sudah diverifikasi Produksi yang akan diproses.
+				</small>
+			<?php endif; ?>
 			<hr>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
@@ -51,7 +105,7 @@
 							<th>Chiller 2</th>
 							<th>Chiller 3</th>
 							<th>Chiller 4</th>
-							<th>Supervisor</th>
+							<th>Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>
@@ -72,27 +126,68 @@
 								<td><?= $val->chiller_4; ?></td>
 								<td class="text-center">
 									<?php
-									if ($val->status_spv == 0) {
-										echo '<span style="color: #99a3a4; font-weight: bold;">Created</span>';
-									} elseif ($val->status_spv == 1) {
-										echo '<span style="color: #28b463; font-weight: bold;">Verified</span>';
-									} elseif ($val->status_spv == 2) {
-										echo '<span style="color: red; font-weight: bold;">Revision</span>';
+									$tipe_user = (int) $this->session->userdata('tipe_user');
+
+									if ($val->status_spv == '1') {
+										echo '<span style="color: #28a745; font-weight: bold; font-size: 12px;">Verified</span>';
+									} elseif ($val->status_spv == '2') {
+										echo '<span style="color: red; font-weight: bold; font-size: 12px;">Revision</span>';
+									} elseif ($val->status_produksi == '1' && $val->status_spv == '0') {
+										echo '<span style="color: #28a745; font-weight: bold; font-size: 12px;">Approved</span>';
+									} elseif ($tipe_user == 3 && $val->status_spv == '0') {
+										echo '<span style="color: #99a3a4; font-weight: bold; font-size: 12px;">Created</span>';
+									} elseif ($val->status_produksi == '0') {
+										echo '<span style="color: #f39c12; font-weight: bold; font-size: 12px;">Menunggu Verifikasi Produksi</span>';
 									}
 									?>
 								</td>
 								<td class="text-center">
-									<a href="<?= base_url('chiller/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split mb-1">
-										<span class="text">Edit</span>
-									</a>
-									<a href="<?= base_url('chiller/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split mb-1">
-										<span class="text">Detail</span>
-									</a>
-									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-										<a href="<?= base_url('chiller/status/' . $val->uuid) ?>" class="btn btn-info btn-icon-split">
-											<span class="text">Verifikasi</span>
+									<div class="action-buttons">
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+											<a href="<?= base_url('chiller/edit/' . $val->uuid); ?>"
+												class="btn btn-warning btn-icon-split mb-1">
+												<span class="text">Edit</span>
+											</a>
+										<?php endif; ?>
+
+										<a href="<?= base_url('chiller/detail/' . $val->uuid); ?>"
+											class="btn btn-success btn-icon-split mb-1">
+											<span class="text">Detail</span>
 										</a>
-									<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
+											<a href="<?= base_url('chiller/verifikasi_produksi/' . $val->uuid); ?>"
+												class="btn btn-primary btn-icon-split mb-1"
+												onclick="return confirm('Apakah pemeriksaan ini yakin disetujui?');">
+												<span class="text">Setujui</span>
+											</a>
+										<?php endif; ?>
+
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+											<?php if (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '0'
+											): ?>
+												<a href="<?= base_url('chiller/status/' . $val->uuid); ?>"
+													class="btn btn-info btn-icon-split mb-1">
+													<span class="text">Verifikasi</span>
+												</a>
+
+											<?php elseif (
+												$val->status_produksi == '1' &&
+												$val->status_spv == '2'
+											): ?>
+												<a href="<?= base_url('chiller/status/' . $val->uuid); ?>"
+													class="btn btn-warning btn-icon-split mb-1">
+													<span class="text">Verifikasi Ulang</span>
+												</a>
+											<?php endif; ?>
+
+										<?php endif; ?>
+
+									</div>
 									<!-- <a href="<?= base_url('chiller/delete/' . $val->uuid); ?>" class="btn btn-danger btn-icon-split mb-1" onclick="return confirm('Yakin ingin menghapus data ini?')">
                                         <span class="text">Delete</span>
                                     </a> -->
@@ -133,3 +228,118 @@
 		background-color: #f8f9fc;
 	}
 </style>
+
+<script>
+	$(document).ready(function() {
+
+		const baseUrlChiller = "<?= base_url('chiller'); ?>";
+
+		// Filter tanggal menggunakan GET
+		function terapkanFilterChiller() {
+			const tanggal = $('#tanggal_massal_chiller').val();
+
+			const params = new URLSearchParams();
+
+			if (tanggal) {
+				params.set('tanggal', tanggal);
+			}
+
+			const query = params.toString();
+
+			window.location.href = baseUrlChiller + (query ? '?' + query : '');
+		}
+
+		// Tanggal berubah, filter langsung diterapkan
+		$('#tanggal_massal_chiller').on('change', function() {
+			terapkanFilterChiller();
+		});
+
+		// Reset filter
+		$('#resetFilterChiller').on('click', function() {
+			window.location.href = baseUrlChiller;
+		});
+
+		// Verifikasi massal tetap menggunakan POST
+		$('#formVerifikasiMassalChiller').on('submit', function(e) {
+			e.preventDefault();
+
+			const form = $(this);
+			const tanggal = $('#tanggal_massal_chiller').val();
+			const button = $('#btnVerifikasiMassalChiller');
+
+			if (!tanggal) {
+				Swal.fire({
+					icon: 'warning',
+					title: 'Perhatian',
+					text: 'Silakan pilih tanggal terlebih dahulu.'
+				});
+				return;
+			}
+
+			Swal.fire({
+				title: 'Verifikasi Massal?',
+				text: 'Data Chiller yang memenuhi syarat pada tanggal tersebut akan diverifikasi.',
+				icon: 'question',
+				showCancelButton: true,
+				confirmButtonColor: '#3085d6',
+				cancelButtonColor: '#6c757d',
+				confirmButtonText: 'Ya, Verifikasi',
+				cancelButtonText: 'Batal'
+			}).then((result) => {
+
+				if (!result.isConfirmed) {
+					return;
+				}
+
+				button.prop('disabled', true);
+				button.html(
+					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+				);
+
+				$.ajax({
+					url: form.attr('action'),
+					type: 'POST',
+					data: form.serialize(),
+					dataType: 'json',
+
+					success: function(response) {
+
+						if (response.success) {
+							Swal.fire({
+								icon: 'success',
+								title: 'Berhasil',
+								text: response.message || 'Verifikasi massal berhasil diproses.',
+								confirmButtonText: 'OK'
+							}).then(() => {
+								location.reload();
+							});
+
+						} else {
+							Swal.fire({
+								icon: 'warning',
+								title: 'Informasi',
+								text: response.message || 'Tidak ada data yang dapat diverifikasi.'
+							});
+						}
+					},
+
+					error: function() {
+						Swal.fire({
+							icon: 'error',
+							title: 'Gagal',
+							text: 'Terjadi kesalahan saat memproses verifikasi massal.'
+						});
+					},
+
+					complete: function() {
+						button.prop('disabled', false);
+						button.html(
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+						);
+					}
+				});
+			});
+		});
+
+	});
+</script>

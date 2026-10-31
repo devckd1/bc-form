@@ -147,6 +147,30 @@ class Loading extends MY_Controller
 		$this->render('form/loading/loading-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk melakukan approve produksi.', 403);
+			return;
+		}
+
+		$update = $this->loading_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Pemeriksaan Loading Produk berhasil di-approve oleh Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Loading Produk gagal di-approve atau sudah diproses.'
+			);
+		}
+
+		redirect('loading/verifikasi');
+	}
+
 	public function status($uuid)
 	{
 		$rules = $this->loading_model->rules_verifikasi();

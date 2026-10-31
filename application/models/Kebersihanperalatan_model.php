@@ -42,7 +42,7 @@ class Kebersihanperalatan_model extends CI_Model
 		$catatan = $this->input->post('catatan');
 
 		$status_spv = "0";
-		$status_produksi = "1";
+		$status_produksi = "0";
 
 		$nama_alat = $this->input->post('peralatan');
 		$kondisi = $this->input->post('kondisi');
@@ -249,6 +249,26 @@ class Kebersihanperalatan_model extends CI_Model
 		return $this->db->error()['code'] == 0;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$nama_produksi = $this->session->userdata('username');
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('status_produksi', 0)
+			->update('kebersihan_peralatan', [
+				'nama_produksi' => $nama_produksi,
+				'status_produksi' => 1,
+				'tgl_update_produksi' => date('Y-m-d H:i:s')
+			]);
+
+		return $this->db->error()['code'] == 0
+			&& $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -329,27 +349,131 @@ class Kebersihanperalatan_model extends CI_Model
 		return $data_kebersihan_peralatan;
 	}
 
-	public function get_data_by_plant()
-	{
+	public function get_data_by_plant(
+		$limit = null,
+		$start = 0,
+		$tanggal = '',
+		$shift = ''
+	) {
 		$plant = $this->session->userdata('plant');
 		$type_user = (int) $this->session->userdata('tipe_user');
 
 		$this->db->select(
-			'uuid, date, shift, status_spv, modified_at, tgl_update_spv'
+			'uuid, date, shift, status_produksi, status_spv, modified_at, tgl_update_spv'
 		);
 
 		$this->db->from('kebersihan_peralatan');
 
-		// MENU UTAMA = HANYA DATA QC
+		// Menu utama hanya menampilkan data QC
 		$this->db->where('is_audit', 0);
 
 		if (!in_array($type_user, [1, 9])) {
 			$this->db->where('plant', $plant);
 		}
 
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
 		$this->db->order_by('created_at', 'DESC');
 
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
 		return $this->db->get()->result();
+	}
+
+	public function count_kebersihanperalatan_by_plant($tanggal = '', $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+
+		$this->db->from('kebersihan_peralatan');
+		$this->db->where('is_audit', 0);
+
+		if (!in_array($type_user, [1, 9])) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db->count_all_results();
+	}
+
+	public function verifikasi_massal_spv($tanggal, $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($nama_spv)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db->from('kebersihan_peralatan');
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if (!in_array($type_user, [1, 9])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$total_data = $this->db->count_all_results();
+
+		if ($total_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update hanya data QC utama yang memenuhi syarat
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if (!in_array($type_user, [1, 9])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->update('kebersihan_peralatan', [
+			'nama_spv' => $nama_spv,
+			'status_spv' => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$jumlah_update = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $jumlah_update;
 	}
 
 	public function count_all_data()

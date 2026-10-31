@@ -45,7 +45,7 @@ class Sanitasi_model extends CI_Model
 		$waktu = $this->input->post('waktu');
 		$catatan = $this->input->post('catatan');
 
-		$status_produksi = '1';
+		$status_produksi = '0';
 		$status_spv = '0';
 
 		$sub_area = $this->input->post('sub_area') ?? [];
@@ -304,6 +304,26 @@ class Sanitasi_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant    = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		];
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_produksi', '0');
+		$this->db->update('sanitasi', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -383,10 +403,16 @@ class Sanitasi_model extends CI_Model
 
 	public function get_data_by_plant()
 	{
+		$this->db->where('is_audit', 0);
 		$this->db->order_by('created_at', 'DESC');
+
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('sanitasi', ['plant' => $plant])->result();
+
+		return $this->db->get_where('sanitasi', [
+			'plant' => $plant
+		])->result();
 	}
+
 
 	public function delete_by_uuid($uuid)
 	{

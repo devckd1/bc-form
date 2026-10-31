@@ -84,7 +84,7 @@ class Chiller_model extends CI_Model
 			'chiller_4'         => $chiller_4,
 			'catatan'           => $catatan,
 			'nama_produksi'     => $nama_produksi,
-			'status_produksi'   => '1',
+			'status_produksi'   => '0',
 			'catatan_produksi'  => '',
 			'nama_spv'          => '',
 			'status_spv'        => '0',
@@ -215,6 +215,106 @@ class Chiller_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant    = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		];
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_produksi', '0');
+		$this->db->update('chiller', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
+
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$tipe_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal)) {
+			return [
+				'success' => false,
+				'message' => 'Tanggal wajib dipilih.'
+			];
+		}
+
+		// Filter data QC berdasarkan tanggal dan plant
+		$filter_data = function () use ($tanggal, $plant, $tipe_user) {
+			$this->db
+				->where('DATE(date)', $tanggal)
+				->where('is_audit', 0);
+
+			if ($tipe_user != 1 && $tipe_user != 9) {
+				$this->db->where('plant', $plant);
+			}
+		};
+
+		// Hitung seluruh data pada tanggal tersebut
+		$filter_data();
+		$total = $this->db->count_all_results('chiller');
+
+		// Hitung data yang siap diverifikasi SPV
+		$filter_data();
+		$this->db
+			->where('status_produksi', '1')
+			->where_in('status_spv', ['0', '2']);
+
+		$siap_verifikasi = $this->db->count_all_results('chiller');
+
+		if ($siap_verifikasi == 0) {
+			return [
+				'success' => true,
+				'total' => $total,
+				'updated' => 0,
+				'message' => 'Tidak ada data yang siap diverifikasi SPV.'
+			];
+		}
+
+		$data = [
+			'nama_spv' => $nama_spv,
+			'status_spv' => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		];
+
+		$this->db->trans_begin();
+
+		$filter_data();
+		$this->db
+			->where('status_produksi', '1')
+			->where_in('status_spv', ['0', '2']);
+
+		$this->db->update('chiller', $data);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+
+			return [
+				'success' => false,
+				'message' => 'Verifikasi massal gagal disimpan.'
+			];
+		}
+
+		$this->db->trans_commit();
+
+		return [
+			'success' => true,
+			'total' => $total,
+			'updated' => $siap_verifikasi,
+			'message' => 'Verifikasi massal berhasil diproses.'
+		];
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -307,7 +407,8 @@ class Chiller_model extends CI_Model
 	// 	return $this->db->get_where('chiller', ['plant' => $plant])->result();
 	// }
 
-	public function get_chiller_by_plant($limit, $start)
+
+	public function get_chiller_by_plant($limit, $start, $tanggal = '')
 	{
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
@@ -321,23 +422,46 @@ class Chiller_model extends CI_Model
         chiller_3,
         chiller_4,
         status_spv,
+        status_produksi,
         modified_at,
         tgl_update_spv
     ');
 
 		$this->db->from('chiller');
 
-		// Hanya data utama
 		$this->db->where('is_audit', 0);
 
 		if (!in_array($type_user, [9, 1])) {
 			$this->db->where('plant', $plant);
 		}
 
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
 		$this->db->order_by('created_at', 'DESC');
 		$this->db->limit($limit, $start);
 
 		return $this->db->get()->result();
+	}
+
+	public function count_chiller_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->from('chiller');
+		$this->db->where('is_audit', 0);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		return $this->db->count_all_results();
 	}
 
 	public function delete_by_uuid($uuid)

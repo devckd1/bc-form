@@ -64,7 +64,7 @@ class Sanitasiwarehouse_model extends CI_Model
 			'area'        => $area,
 			'detail'      => json_encode($detail),
 			'nama_wh'     => $nama_produksi,
-			'status_wh'   => '1',
+			'status_wh'   => '0',
 			'status_spv'  => '0'
 		];
 
@@ -174,6 +174,27 @@ class Sanitasiwarehouse_model extends CI_Model
 
 		$this->db->update('sanitasi_wh', $data, array('uuid' => $uuid));
 		return ($this->db->affected_rows() > 0) ? true : false;
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = array(
+			'nama_produksi' => $username,
+			'status_wh' => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		);
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_wh', '0');
+
+		$this->db->update('sanitasi_wh', $data);
+
+		return $this->db->affected_rows() > 0;
 	}
 
 	public function rules_diketahui()

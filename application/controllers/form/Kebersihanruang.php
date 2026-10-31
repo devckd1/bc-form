@@ -29,14 +29,49 @@ class Kebersihanruang extends MY_Controller
 		}
 	}
 
+
 	public function index()
 	{
-		$data = array(
-			'kebersihanruang' => $this->kebersihanruang_model->get_data_by_plant()
+		$this->load->library('pagination');
+
+		$tanggal = trim(
+			$this->input->get('tanggal', TRUE) ?? ''
 		);
 
+		$config['base_url'] = base_url('kebersihanruang/index');
+
+		$config['total_rows'] =
+			$this->kebersihanruang_model
+			->count_kebersihanruang_by_plant($tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'kebersihanruang' =>
+			$this->kebersihanruang_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$tanggal
+			),
+
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal
+		];
+
 		$this->active_nav = 'kebersihanruang';
-		$this->render('form/kebersihanruang/kebersihanruang', $data);
+
+		$this->render(
+			'form/kebersihanruang/kebersihanruang',
+			$data
+		);
 	}
 
 	public function detail($uuid)
@@ -307,6 +342,87 @@ class Kebersihanruang extends MY_Controller
 
 		$this->active_nav = 'verifikasi-kebersihanruang';
 		$this->render('form/kebersihanruang/kebersihanruang-status', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->kebersihanruang_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Kebersihan Ruang Produksi berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('kebersihanruang/verifikasi');
+	}
+
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		$tanggal_obj = DateTime::createFromFormat(
+			'Y-m-d',
+			$tanggal
+		);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated =
+			$this->kebersihanruang_model
+			->verifikasi_massal_spv($tanggal);
+
+		if ($updated === false) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' =>
+				'Verifikasi massal Kebersihan Ruang berhasil.'
+			];
+		} else {
+
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' =>
+				'Tidak ada data Kebersihan Ruang yang memenuhi syarat verifikasi pada tanggal tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function audit()
@@ -1154,5 +1270,4 @@ class Kebersihanruang extends MY_Controller
 		$filename = "Kebersihan Ruang_{$formatted_date2}.pdf";
 		$pdf->Output($filename, 'I');
 	}
-
 }

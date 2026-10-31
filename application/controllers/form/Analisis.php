@@ -175,6 +175,29 @@ class Analisis extends MY_Controller
 		$this->render('form/analisis/analisis-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk melakukan approve produksi.', 403);
+			return;
+		}
+
+		$update = $this->analisis_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Permohonan Analisis Sampel Laboratorium berhasil di-approve oleh Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Permohonan Analisis Sampel Laboratorium gagal di-approve atau sudah diproses.'
+			);
+		}
+
+		redirect('analisis/verifikasi');
+	}
 
 	public function status($uuid)
 	{

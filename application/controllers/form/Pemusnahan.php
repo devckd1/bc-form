@@ -24,9 +24,56 @@ class Pemusnahan extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'pemusnahan' => $this->pemusnahan_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$limit = 10;
+		$start = (int) ($this->input->get('per_page', TRUE) ?? 0);
+
+		// Validasi format tanggal
+		if (!empty($tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$tanggal = '';
+			}
+		}
+
+		$config['base_url'] = base_url('pemusnahan');
+		$config['total_rows'] = $this->pemusnahan_model->count_data_by_plant($tanggal);
+		$config['per_page'] = $limit;
+		$config['page_query_string'] = TRUE;
+		$config['query_string_segment'] = 'per_page';
+		$config['reuse_query_string'] = TRUE;
+
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+		$config['cur_tag_open'] = '<li class="page-item active"><span class="page-link">';
+		$config['cur_tag_close'] = '</span></li>';
+		$config['attributes'] = ['class' => 'page-link'];
+
+		$this->pagination->initialize($config);
+
+		$data = [
+			'pemusnahan' => $this->pemusnahan_model->get_data_by_plant(
+				$limit,
+				$start,
+				$tanggal
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'tanggal' => $tanggal
+		];
 
 		$this->active_nav = 'pemusnahan';
 		$this->render('form/pemusnahan/pemusnahan', $data);
@@ -138,6 +185,53 @@ class Pemusnahan extends MY_Controller
 
 		$this->active_nav = 'verifikasi-pemusnahan';
 		$this->render('form/pemusnahan/pemusnahan-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
+			return;
+		}
+
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+			show_error('Anda tidak memiliki akses untuk melakukan verifikasi.', 403);
+			return;
+		}
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+
+		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (!$date || $date->format('Y-m-d') !== $tanggal) {
+			$this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+			return;
+		}
+
+		$jumlah = $this->pemusnahan_model->verifikasi_massal_spv($tanggal);
+
+		if ($jumlah > 0) {
+			$response = [
+				'status' => true,
+				'message' => $jumlah . ' data Pemusnahan berhasil diverifikasi.'
+			];
+		} else {
+			$response = [
+				'status' => false,
+				'message' => 'Tidak ada data yang memenuhi syarat untuk diverifikasi.'
+			];
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

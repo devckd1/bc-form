@@ -166,8 +166,32 @@ class Thermometer extends MY_Controller
 			'thermometer' => $this->thermometer_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-thermometer';
-		$this->render('form/thermometer/thermometer-verifikasi', $data);
+		$this->active_nav = 'thermometer';
+		$this->render('form/thermometer/thermometer', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->thermometer_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Peneraan Thermometer berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('thermometer');
 	}
 
 	public function status($uuid)

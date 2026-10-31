@@ -65,8 +65,8 @@ class Kekuatanmagnet_model extends CI_Model
 			'nilai' => $this->input->post('nilai'),
 			'keterangan' => $this->input->post('keterangan'),
 			'catatan' => $this->input->post('catatan'),
-			'status_produksi' => '1',
-			'nama_produksi' => $nama_produksi,
+			'status_produksi' => '0',
+			'nama_produksi' => '',
 			'status_spv' => '0'
 		];
 
@@ -292,6 +292,27 @@ class Kekuatanmagnet_model extends CI_Model
 			->where('plant', $plant)
 			->get($this->table)
 			->row() !== null;
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		$plant    = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		];
+
+		$this->db
+			->where('uuid', $uuid)
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('status_produksi', '0')
+			->update($this->table, $data);
+
+		return $this->db->affected_rows() > 0;
 	}
 
 	/*

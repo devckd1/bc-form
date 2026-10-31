@@ -83,8 +83,8 @@ class Disposisi_model extends CI_Model
 			'uraian_disposisi' => $this->input->post('uraian_disposisi'),
 			'catatan'          => $this->input->post('catatan'),
 			'cc'               => $this->input->post('cc'),
-			'status_produksi'  => '1',
-			'nama_produksi'    => $nama_produksi,
+			'status_produksi'  => '0',
+			'nama_produksi'    => '',
 			'status_spv'       => '0'
 		);
 
@@ -228,6 +228,26 @@ class Disposisi_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = array(
+			'nama_produksi' => $username,
+			'status_produksi' => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		);
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_produksi', '0');
+		$this->db->update('disposisi', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -305,23 +325,110 @@ class Disposisi_model extends CI_Model
 		return $data_disposisi;
 	}
 
-
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
-		$this->db->where('is_audit', 0);
-
-		$this->db->order_by('created_at', 'DESC');
-
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get('disposisi')->result();
+		$this->db->from('disposisi');
+		$this->db->where('is_audit', 0);
+
+		// Pembatasan plant
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
 		}
 
-		$this->db->where('plant', $plant);
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
+		}
 
-		return $this->db->get('disposisi')->result();
+		$this->db->order_by('created_at', 'DESC');
+
+		// Pagination hanya jika limit diberikan
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get()->result();
+	}
+
+
+	public function count_disposisi_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->from('disposisi');
+		$this->db->where('is_audit', 0);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
+		}
+
+		return $this->db->count_all_results();
+	}
+
+
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($nama_spv)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db->from('disposisi');
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$total_data = $this->db->count_all_results();
+
+		if ($total_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update hanya data QC yang siap diverifikasi
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->update('disposisi', [
+			'nama_spv'      => $nama_spv,
+			'status_spv'    => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$jumlah_update = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $jumlah_update;
 	}
 
 	public function get_audit_by_plant()

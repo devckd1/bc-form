@@ -17,14 +17,48 @@ class Kebersihanmesin extends MY_Controller
 		}
 	}
 
+
 	public function index()
 	{
-		$data = array(
-			'kebersihanmesin' => $this->kebersihanmesin_model->get_data_by_plant()
+		$this->load->library('pagination');
+
+		$tanggal = trim(
+			$this->input->get('tanggal', TRUE) ?? ''
 		);
 
+		$config['base_url'] = base_url('kebersihanmesin/index');
+		$config['total_rows'] =
+			$this->kebersihanmesin_model
+			->count_kebersihanmesin_by_plant($tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'kebersihanmesin' =>
+			$this->kebersihanmesin_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$tanggal
+			),
+
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal
+		];
+
 		$this->active_nav = 'kebersihanmesin';
-		$this->render('form/kebersihanmesin/kebersihanmesin', $data);
+
+		$this->render(
+			'form/kebersihanmesin/kebersihanmesin',
+			$data
+		);
 	}
 
 	public function detail($uuid)
@@ -108,6 +142,88 @@ class Kebersihanmesin extends MY_Controller
 
 		$this->active_nav = 'verifikasi-kebersihanmesin';
 		$this->render('form/kebersihanmesin/kebersihanmesin-verifikasi', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->kebersihanmesin_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Kebersihan Mesin berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('kebersihanmesin/verifikasi');
+	}
+
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat(
+			'Y-m-d',
+			$tanggal
+		);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated =
+			$this->kebersihanmesin_model
+			->verifikasi_massal_spv($tanggal);
+
+		if ($updated === false) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' =>
+				'Verifikasi massal Kebersihan Mesin berhasil.'
+			];
+		} else {
+
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' =>
+				'Tidak ada data Kebersihan Mesin yang memenuhi syarat verifikasi pada tanggal tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

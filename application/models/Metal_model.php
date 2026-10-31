@@ -145,10 +145,10 @@ class Metal_model extends CI_Model
 
 			'keterangan'            => $this->input->post('keterangan'),
 			'catatan_metal'         => $this->input->post('catatan_metal'),
-			'status_produksi'       => '1',
+			'status_produksi'       => '0',
 			'status_spv'            => '0',
 			'status_produksi_false' => '1',
-			'nama_produksi_metal'   => $nama_produksi,
+			'nama_produksi_metal'   => '',
 			'nama_produksi_false'   => $nama_produksi,
 			'status_spv_false'      => '0'
 		];
@@ -454,6 +454,27 @@ class Metal_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = array(
+			'nama_produksi' => $username,
+			'status_produksi' => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		);
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_produksi', '0');
+
+		$this->db->update('metal', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -532,7 +553,7 @@ class Metal_model extends CI_Model
 		return $data_metal;
 	}
 
-	public function get_data_by_plant($limit, $start)
+	public function get_data_by_plant($limit = 10, $start = 0, $tanggal = '')
 	{
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
@@ -540,6 +561,7 @@ class Metal_model extends CI_Model
 		$this->db->select('
         uuid,
         date_metal,
+        shift,
         time,
         nama_produk,
         kode_produksi,
@@ -552,25 +574,74 @@ class Metal_model extends CI_Model
         fe_b,
         nonfe_b,
         sus_b,
+		status_produksi,
         status_spv,
         modified_at,
         tgl_update_spv_metal
     ');
 
 		$this->db->from('metal');
-
-		// Halaman utama hanya menampilkan data QC
 		$this->db->where('is_audit', 0);
 
-		// Pertahankan hak akses plant sebelumnya
 		if (!in_array($type_user, [9, 1])) {
 			$this->db->where('plant', $plant);
 		}
 
+		if (!empty($tanggal)) {
+			$this->db->where('date_metal', $tanggal);
+		}
+
 		$this->db->order_by('created_at', 'DESC');
-		$this->db->limit($limit, $start);
+		$this->db->limit((int) $limit, (int) $start);
 
 		return $this->db->get()->result();
+	}
+
+	public function count_data_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->from('metal');
+		$this->db->where('is_audit', 0);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('date_metal', $tanggal);
+		}
+
+		return $this->db->count_all_results();
+	}
+
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal)) {
+			return 0;
+		}
+
+		$this->db->where('is_audit', 0);
+		$this->db->where('date_metal', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->update('metal', [
+			'nama_spv_metal'       => $nama_spv,
+			'status_spv'           => '1',
+			'tgl_update_spv_metal' => date('Y-m-d H:i:s')
+		]);
+
+		return $this->db->affected_rows();
 	}
 
 	public function delete_by_uuid($uuid)

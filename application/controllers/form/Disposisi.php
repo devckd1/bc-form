@@ -25,9 +25,31 @@ class Disposisi extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'disposisi' => $this->disposisi_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+
+		$config['base_url'] = base_url('disposisi/index');
+		$config['total_rows'] = $this->disposisi_model->count_disposisi_by_plant($tanggal);
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'disposisi' => $this->disposisi_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$tanggal
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal
+		];
 
 		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi', $data);
@@ -136,6 +158,76 @@ class Disposisi extends MY_Controller
 
 		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi-verifikasi', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		// Hanya user Produksi (tipe_user 3)
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk melakukan approve produksi.', 403);
+			return;
+		}
+
+		$update = $this->disposisi_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Disposisi berhasil di-approve oleh Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Disposisi gagal di-approve atau sudah diproses.'
+			);
+		}
+
+		redirect('disposisi/verifikasi');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->disposisi_model->verifikasi_massal_spv($tanggal);
+
+		if ($updated === false) {
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Disposisi berhasil.'
+			];
+		} else {
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data Disposisi yang memenuhi syarat verifikasi pada tanggal tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

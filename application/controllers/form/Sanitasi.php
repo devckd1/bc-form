@@ -165,6 +165,30 @@ class Sanitasi extends MY_Controller
 		$this->render('form/sanitasi/sanitasi-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->sanitasi_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success',
+				'Data Sanitasi berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('sanitasi');
+	}
+
 	public function status($uuid)
 	{
 		$rules = $this->sanitasi_model->rules_verifikasi();

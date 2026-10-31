@@ -220,6 +220,30 @@ class Sensori extends MY_Controller
 		$this->render('form/sensori/sensori-verifikasi', $data);
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk melakukan approve produksi.', 403);
+			return;
+		}
+
+		$update = $this->sensori_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Pemeriksaan Laporan Sensori Finish Good berhasil di-approve oleh Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Laporan Sensori Finish Good gagal di-approve atau sudah diproses.'
+			);
+		}
+
+		redirect('sensori/verifikasi');
+	}
+
 	public function status($uuid)
 	{
 		$rules = $this->sensori_model->rules_verifikasi();

@@ -29,30 +29,42 @@ class Kebersihankaryawan extends MY_Controller
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
-		if ($type_user != 9 && $type_user != 1) {
-			$this->db->where('plant', $plant);
-		}
-
-		$config['total_rows'] = $this->db->count_all_results('kebersihan_karyawan');
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->get('shift', TRUE) ?? '');
 
 		$config['base_url'] = base_url('kebersihankaryawan/index');
-		$config['per_page'] = 100;
+		$config['total_rows'] = $this->kebersihankaryawan_model
+			->count_kebersihankaryawan_by_plant(
+				$plant,
+				$type_user,
+				$tanggal,
+				$shift
+			);
+
+		$config['per_page'] = 10;
 		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
 
 		$this->pagination->initialize($config);
 
-		$start = $this->uri->segment(3) ?? 0;
+		$start = (int) $this->uri->segment(3, 0);
 
-		$data = array(
-			'kebersihankaryawan' => $this->kebersihankaryawan_model->get_data_by_plant(
-				$config['per_page'],
-				$start,
-				$plant,
-				$type_user
-			),
+		$data = [
+			'kebersihankaryawan' => $this->kebersihankaryawan_model
+				->get_data_by_plant(
+					$config['per_page'],
+					$start,
+					$plant,
+					$type_user,
+					$tanggal,
+					$shift
+				),
 			'pagination' => $this->pagination->create_links(),
-			'start' => $start
-		);
+			'start' => $start,
+			'filter_tanggal' => $tanggal,
+			'filter_shift' => $shift
+		];
 
 		$this->active_nav = 'kebersihankaryawan';
 		$this->render('form/kebersihankaryawan/kebersihankaryawan', $data);
@@ -203,6 +215,76 @@ class Kebersihankaryawan extends MY_Controller
 
 		$this->active_nav = 'verifikasi-kebersihankaryawan';
 		$this->render('form/kebersihankaryawan/kebersihankaryawan-verifikasi', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->kebersihankaryawan_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success',
+				'Data Kebersihan Karyawan berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('kebersihankaryawan');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->kebersihankaryawan_model
+			->verifikasi_massal_spv($tanggal, $shift);
+
+		if ($updated === false) {
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Kebersihan Karyawan gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Kebersihan Karyawan berhasil.'
+			];
+		} else {
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

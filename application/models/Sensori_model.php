@@ -81,8 +81,8 @@ class Sensori_model extends CI_Model
 			'catatan' => $catatan,
 			'produk' => json_encode($produk),
 			'status_spv' => '0',
-			'nama_produksi' => $nama_produksi,
-			'status_produksi' => '1'
+			'nama_produksi' => '',
+			'status_produksi' => '0'
 		];
 
 		$this->db->trans_begin();
@@ -205,6 +205,27 @@ class Sensori_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_produksi($uuid)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		$data = array(
+			'nama_produksi' => $username,
+			'status_produksi' => '1',
+			'tgl_update_produksi' => date('Y-m-d H:i:s')
+		);
+
+		$this->db->where('uuid', $uuid);
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_produksi', '0');
+
+		$this->db->update('sensori_fg', $data);
+
+		return $this->db->affected_rows() > 0;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -298,7 +319,7 @@ class Sensori_model extends CI_Model
 		$plant = $this->session->userdata('plant');
 
 		return $this->db
-			->select('uuid, date, nama_produk, produk, tindakan, status_spv')
+			->select('uuid, date, nama_produk, produk, tindakan, status_produksi, status_spv')
 			->from('sensori_fg')
 			->where('plant', $plant)
 			->where('is_audit', 0)

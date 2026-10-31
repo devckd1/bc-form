@@ -27,31 +27,54 @@ class Metal extends MY_Controller
 	{
 		$this->load->library('pagination');
 
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$limit = 10;
+		$start = (int) ($this->input->get('per_page', TRUE) ?? 0);
 
-		if (!in_array($type_user, [0, 1])) {
-			$this->db->where('plant', $plant);
+		// Validasi format tanggal jika filter diisi
+		if (!empty($tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$tanggal = '';
+			}
 		}
 
-		$config['total_rows'] = $this->db->count_all_results('metal');
+		$config['base_url'] = base_url('metal');
+		$config['total_rows'] = $this->metal_model->count_data_by_plant($tanggal);
+		$config['per_page'] = $limit;
+		$config['page_query_string'] = TRUE;
+		$config['query_string_segment'] = 'per_page';
+		$config['reuse_query_string'] = TRUE;
 
-		$config['base_url'] = base_url('metal/index');
-		$config['per_page'] = 100;
-		$config['uri_segment'] = 3;
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+		$config['cur_tag_open'] = '<li class="page-item active"><span class="page-link">';
+		$config['cur_tag_close'] = '</span></li>';
+		$config['attributes'] = ['class' => 'page-link'];
 
 		$this->pagination->initialize($config);
 
-		$start = $this->uri->segment(3) ?? 0;
-
-		$data = array(
+		$data = [
 			'metal' => $this->metal_model->get_data_by_plant(
-				$config['per_page'],
-				$start
+				$limit,
+				$start,
+				$tanggal
 			),
 			'pagination' => $this->pagination->create_links(),
-			'start' => $start
-		);
+			'start' => $start,
+			'tanggal' => $tanggal
+		];
 
 		$this->active_nav = 'metal';
 		$this->render('form/metal/metal', $data);
@@ -260,6 +283,76 @@ class Metal extends MY_Controller
 
 		$this->active_nav = 'verifikasi-metal';
 		$this->render('form/metal/metal-verifikasi', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk melakukan approve produksi.', 403);
+			return;
+		}
+
+		$update = $this->metal_model->verifikasi_produksi($uuid);
+
+		if ($update) {
+			$this->session->set_flashdata(
+				'success_msg',
+				'Data Metal Detector berhasil di-approve oleh Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Metal Detector gagal di-approve atau sudah diproses.'
+			);
+		}
+
+		redirect('metal/verifikasi');
+	}
+
+	public function verifikasi_massal()
+	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
+			return;
+		}
+
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		// Hanya role yang berwenang melakukan verifikasi SPV
+		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+			show_error('Anda tidak memiliki akses untuk melakukan verifikasi.', 403);
+			return;
+		}
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+
+		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (!$date || $date->format('Y-m-d') !== $tanggal) {
+			$this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+			return;
+		}
+
+		$jumlah = $this->metal_model->verifikasi_massal_spv($tanggal);
+
+		$response = $jumlah > 0
+			? [
+				'status' => true,
+				'message' => $jumlah . ' data Metal Detector berhasil diverifikasi.'
+			]
+			: [
+				'status' => false,
+				'message' => 'Tidak ada data yang memenuhi syarat untuk diverifikasi.'
+			];
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

@@ -27,32 +27,27 @@ class Chiller extends MY_Controller
 	{
 		$this->load->library('pagination');
 
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-
-		$this->db->where('is_audit', 0);
-
-		if (!in_array($type_user, [9, 1])) {
-			$this->db->where('plant', $plant);
-		}
-
-		$config['total_rows'] = $this->db->count_all_results('chiller');
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
 
 		$config['base_url'] = base_url('chiller/index');
+		$config['total_rows'] = $this->chiller_model->count_chiller_by_plant($tanggal);
 		$config['per_page'] = 100;
 		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
 
 		$this->pagination->initialize($config);
 
-		$start = $this->uri->segment(3) ?? 0;
+		$start = (int) ($this->uri->segment(3) ?? 0);
 
 		$data = [
 			'chiller' => $this->chiller_model->get_chiller_by_plant(
 				$config['per_page'],
-				$start
+				$start,
+				$tanggal
 			),
 			'pagination' => $this->pagination->create_links(),
-			'start' => $start
+			'start' => $start,
+			'filter_tanggal' => $tanggal
 		];
 
 		$this->active_nav = 'chiller';
@@ -165,6 +160,47 @@ class Chiller extends MY_Controller
 
 		$this->active_nav = 'verifikasi-chiller';
 		$this->render('form/chiller/chiller-verifikasi', $data);
+	}
+
+	public function verifikasi_produksi($uuid)
+	{
+		if ((int) $this->session->userdata('tipe_user') !== 3) {
+			show_error('Anda tidak memiliki akses untuk verifikasi Produksi.', 403);
+			return;
+		}
+
+		$hasil = $this->chiller_model->verifikasi_produksi($uuid);
+
+		if ($hasil) {
+			$this->session->set_flashdata(
+				'success',
+				'Data Chiller berhasil di-approve Produksi.'
+			);
+		} else {
+			$this->session->set_flashdata(
+				'error',
+				'Data gagal diverifikasi atau sudah diverifikasi sebelumnya.'
+			);
+		}
+
+		redirect('chiller');
+	}
+
+
+	public function verifikasi_massal()
+	{
+		if ($this->input->method() !== 'post') {
+			show_404();
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', TRUE);
+
+		$result = $this->chiller_model->verifikasi_massal_spv($tanggal);
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($result));
 	}
 
 	public function status($uuid)
