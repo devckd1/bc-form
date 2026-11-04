@@ -96,7 +96,7 @@
 							<th>Kode Produksi</th>
 							<th>Best Before</th>
 							<th>Analisa Masalah</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

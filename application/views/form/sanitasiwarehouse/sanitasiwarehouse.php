@@ -93,7 +93,7 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 							<th>Tanggal</th>
 							<th>Area</th>
 							<th>Hasil Pemeriksaan</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

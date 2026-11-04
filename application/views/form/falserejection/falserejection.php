@@ -104,7 +104,7 @@
 
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
 
-					<thead>
+					<thead class="text-center">
 						<tr>
 							<th width="20px" class="text-center">No</th>
 							<th>Tanggal Produksi</th>
@@ -112,7 +112,7 @@
 							<th>Nama Produk</th>
 							<th>Kode Produksi</th>
 							<th>Jenis Kontaminan</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th>Action</th>
 						</tr>
 					</thead>

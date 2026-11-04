@@ -133,7 +133,7 @@ $format_tanggal = function ($tanggal) {
 ?>
 
 <div class="container-fluid">
-
+<?php if (empty($is_popup)): ?>
 	<!-- Judul halaman -->
 	<div class="d-sm-flex align-items-center justify-content-between mb-3">
 		<h1 class="h3 mb-2 text-gray-800">
@@ -161,7 +161,7 @@ $format_tanggal = function ($tanggal) {
 			</li>
 		</ol>
 	</nav>
-
+<?php endif; ?>
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
 			<i class="fas fa-info-circle mr-1"></i>

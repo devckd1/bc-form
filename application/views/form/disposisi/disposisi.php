@@ -91,7 +91,7 @@
 			<div class="table-responsive">
 				<form action="<?= base_url('disposisi/cetak') ?>" method="post" id="form_cetak_pdf">
 					<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-						<thead>
+						<thead class="text-center">
 							<tr>
 								<th width="30px" class="text-center">
 									<i class="fas fa-print fa-lg"></i>
@@ -102,7 +102,7 @@
 								<th>Kepada</th>
 								<th>Disposisi</th>
 								<th>Dasar Disposisi</th>
-								<th>Status</th>
+								<th class="text-center">Status</th>
 								<th class="text-center">Action</th>
 							</tr>
 						</thead>

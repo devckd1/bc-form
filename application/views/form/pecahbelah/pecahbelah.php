@@ -119,7 +119,7 @@
                             <th rowspan="2" class="text-center">Action</th> -->
 							<th>No</th>
 							<th>Tanggal / Shift</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th>Action</th>
 						</tr>
 						<!-- <tr>

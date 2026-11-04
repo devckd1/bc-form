@@ -27,74 +27,74 @@
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-    <!-- KIRI: Filter dan Verifikasi Massal -->
-    <?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-        <div class="d-flex align-items-center flex-wrap mb-2">
+				<!-- KIRI: Filter dan Verifikasi Massal -->
+				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+					<div class="d-flex align-items-center flex-wrap mb-2">
 
-            <input type="date"
-                id="filter_tanggal"
-                class="form-control mr-2 mb-2"
-                style="width: 170px;"
-                value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+						<input type="date"
+							id="filter_tanggal"
+							class="form-control mr-2 mb-2"
+							style="width: 170px;"
+							value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 
-            <select id="filter_shift"
-                class="form-control mr-2 mb-2"
-                style="width: 140px;">
-                <option value="">Semua Shift</option>
-                <?php foreach (['1', '2', '3'] as $shift): ?>
-                    <option value="<?= $shift; ?>"
-                        <?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
-                        Shift <?= $shift; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+						<select id="filter_shift"
+							class="form-control mr-2 mb-2"
+							style="width: 140px;">
+							<option value="">Semua Shift</option>
+							<?php foreach (['1', '2', '3'] as $shift): ?>
+								<option value="<?= $shift; ?>"
+									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
+									Shift <?= $shift; ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
 
-            <button type="button"
-                id="btnVerifikasiMassal"
-                class="btn btn-primary mb-2">
-                <i class="fas fa-check-double mr-1"></i>
-                Verifikasi Massal
-            </button>
+						<button type="button"
+							id="btnVerifikasiMassal"
+							class="btn btn-primary mb-2">
+							<i class="fas fa-check-double mr-1"></i>
+							Verifikasi Massal
+						</button>
 
-            <a href="<?= base_url('kebersihankaryawan'); ?>"
-                class="btn btn-secondary ml-2 mb-2">
-                <i class="fas fa-sync-alt mr-1"></i>
-                Reset
-            </a>
-        </div>
-    <?php endif; ?>
+						<a href="<?= base_url('kebersihankaryawan'); ?>"
+							class="btn btn-secondary ml-2 mb-2">
+							<i class="fas fa-sync-alt mr-1"></i>
+							Reset
+						</a>
+					</div>
+				<?php endif; ?>
 
-    <!-- KANAN: Tambah dan Mode Audit -->
-    <div class="text-right mb-2 ml-auto">
+				<!-- KANAN: Tambah dan Mode Audit -->
+				<div class="text-right mb-2 ml-auto">
 
-        <?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
-            <a href="<?= base_url('kebersihankaryawan/tambah') ?>"
-                class="btn btn-md btn-primary shadow-sm">
-                <i class="fas fa-plus fa-sm text-white-50"></i>
-                Tambah
-            </a>
-        <?php endif; ?>
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('kebersihankaryawan/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
-        <?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-            <a href="<?= base_url('kebersihankaryawan/audit'); ?>"
-                class="btn shadow-sm"
-                style="background-color: #5a3298; color: #fff;">
-                <i class="fas fa-clipboard-check mr-1"></i>
-                Mode Audit
-            </a>
-        <?php endif; ?>
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+						<a href="<?= base_url('kebersihankaryawan/audit'); ?>"
+							class="btn shadow-sm"
+							style="background-color: #5a3298; color: #fff;">
+							<i class="fas fa-clipboard-check mr-1"></i>
+							Mode Audit
+						</a>
+					<?php endif; ?>
 
-    </div>
-</div>
+				</div>
+			</div>
 
-<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-    <small class="text-muted d-block mb-2">
-        <i class="fas fa-info-circle mr-1"></i>
-        Hanya data yang sudah diverifikasi Produksi yang akan diproses.
-    </small>
-<?php endif; ?>
+			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<small class="text-muted d-block mb-2">
+					<i class="fas fa-info-circle mr-1"></i>
+					Hanya data yang sudah diverifikasi Produksi yang akan diproses.
+				</small>
+			<?php endif; ?>
 
-<hr>
+			<hr>
 			<div style="display: flex; gap: 20px;">
 				<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 40%; text-align: left; font-family: Arial, sans-serif; font-size: 14px;">
 					<thead style="background-color: #f2f2f2;">
@@ -147,7 +147,7 @@
 			<br>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-					<thead>
+					<thead class="text-center">
 						<tr>
 							<th width="20px" class="text-center" rowspan="2">No</th>
 							<th rowspan="2">Tanggal</th>
@@ -155,7 +155,7 @@
 							<th rowspan="2">Bagian</th>
 							<th colspan="8" class="text-center">Kebersihan</th>
 							<th rowspan="2">Tindakan Koreksi</th>
-							<th rowspan="2">Status</th>
+							<th rowspan="2" class="text-center">Status</th>
 							<th rowspan="2" class="text-center">Action</th>
 						</tr>
 						<tr>

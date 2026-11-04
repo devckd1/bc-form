@@ -109,7 +109,7 @@
 							<th>Area</th>
 							<th>Titik Sampling</th>
 							<th>Hasil Pemeriksaan</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

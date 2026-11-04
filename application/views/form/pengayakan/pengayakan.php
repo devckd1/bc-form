@@ -108,7 +108,7 @@
 							<th>Nama Barang</th>
 							<th>Kode Produksi</th>
 							<th>Expired Date</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

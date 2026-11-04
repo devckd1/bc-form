@@ -121,7 +121,7 @@
 							<th colspan="2" class="text-center">
 								Pengenceran
 							</th>
-							<th rowspan="2">Supervisor</th>
+							<th rowspan="2" class="text-center">Supervisor</th>
 							<th rowspan="2" class="text-center">Action</th>
 						</tr>
 						<tr>

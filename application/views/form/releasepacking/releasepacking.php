@@ -97,7 +97,7 @@
 							<th>Kode Produksi</th>
 							<th>Best Before</th>
 							<th>Jumlah</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>
@@ -127,9 +127,11 @@
 									?>
 								</td>
 								<td class="text-center">
+									<?php if (in_array($tipe_user, [0, 1, 2, 4, 9], true)): ?>
 									<a href="<?= base_url('releasepacking/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split">
 										<span class="text">Edit</span>
 									</a>
+									<?php endif; ?>
 									<a href="<?= base_url('releasepacking/detail/' . $val->uuid); ?>"
 										data-url="<?= base_url('releasepacking/detail/' . $val->uuid . '?popup=1'); ?>"
 										class="btn btn-success btn-icon-split btn-detail-releasepacking">

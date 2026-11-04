@@ -93,7 +93,7 @@
 							<th>Tanggal</th>
 							<th>Nama Alat</th>
 							<th>Nilai Pengukuran</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>
@@ -283,7 +283,49 @@
 		flex-direction: column;
 	}
 </style>
+<script>
+	// MODAL DETAIL KEKUATAN MAGNET AJAX
+	var cacheDetailKekuatanMagnet = {};
 
+	$(document).on('click', '.btn-detail-kekuatanmagnet', function(e) {
+		e.preventDefault();
+
+		var url = $(this).data('url');
+
+		$('#modalDetailKekuatanMagnet').modal('show');
+
+		if (cacheDetailKekuatanMagnet[url]) {
+			$('#contentDetailKekuatanMagnet').html(
+				cacheDetailKekuatanMagnet[url]
+			);
+			return;
+		}
+
+		$('#contentDetailKekuatanMagnet').html(`
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat data...</p>
+        </div>
+    `);
+
+		$.ajax({
+			url: url,
+			type: 'GET',
+			dataType: 'html',
+			success: function(response) {
+				cacheDetailKekuatanMagnet[url] = response;
+				$('#contentDetailKekuatanMagnet').html(response);
+			},
+			error: function() {
+				$('#contentDetailKekuatanMagnet').html(`
+                <div class="alert alert-danger text-center">
+                    Gagal memuat detail Kekuatan Magnet.
+                </div>
+            `);
+			}
+		});
+	});
+</script>
 <?php if ($boleh_verifikasi): ?>
 	<script>
 		$(document).ready(function() {
@@ -384,50 +426,6 @@
 				$('#pageLoading').css('display', 'flex');
 			});
 
-		});
-
-		// MODAL DETAIL KEKUATAN MAGNET AJAX
-		var cacheDetailKekuatanMagnet = {};
-
-		$(document).on('click', '.btn-detail-kekuatanmagnet', function(e) {
-			e.preventDefault();
-
-			var url = $(this).data('url');
-
-			$('#modalDetailKekuatanMagnet').modal('show');
-
-			if (cacheDetailKekuatanMagnet[url]) {
-				$('#contentDetailKekuatanMagnet').html(
-					cacheDetailKekuatanMagnet[url]
-				);
-				return;
-			}
-
-			$('#contentDetailKekuatanMagnet').html(`
-        <div class="text-center py-4">
-            <i class="fas fa-spinner fa-spin fa-2x"></i>
-            <p class="mt-2">Memuat data...</p>
-        </div>
-    `);
-
-			$.ajax({
-				url: url,
-				type: 'GET',
-				dataType: 'html',
-
-				success: function(response) {
-					cacheDetailKekuatanMagnet[url] = response;
-					$('#contentDetailKekuatanMagnet').html(response);
-				},
-
-				error: function() {
-					$('#contentDetailKekuatanMagnet').html(`
-                <div class="alert alert-danger text-center">
-                    Gagal memuat detail Kekuatan Magnet.
-                </div>
-            `);
-				}
-			});
 		});
 	</script>
 <?php endif; ?>

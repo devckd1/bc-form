@@ -84,7 +84,7 @@
                             <th rowspan="2">Nama Supplier</th>
                             <th rowspan="2">Nama Barang</th>
                             <th colspan="5" class="text-center">Kondisi Mobil</th>
-                            <th rowspan="2">Supervisor</th>
+                            <th rowspan="2" class="text-center">Supervisor</th>
                             <th rowspan="2" class="text-center">Action</th>
                         </tr>
                         <tr>

@@ -31,57 +31,57 @@ $filter_shift = $filter_shift ?? '';
 
 			<!-- Filter dan Tombol Aksi -->
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+				<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
+					<!-- KIRI: Filter Tanggal, Shift, dan Verifikasi Massal -->
+					<div class="d-flex align-items-center flex-wrap mb-2">
 
-				<!-- KIRI: Filter Tanggal, Shift, dan Verifikasi Massal -->
-				<div class="d-flex align-items-center flex-wrap mb-2">
+						<form
+							id="formFilter"
+							method="get"
+							action="<?= base_url('pemeriksaanchemical'); ?>"
+							class="form-inline mr-2 mb-2">
 
-					<form
-						id="formFilter"
-						method="get"
-						action="<?= base_url('pemeriksaanchemical'); ?>"
-						class="form-inline mr-2 mb-2">
+							<label for="filterTanggal" class="mr-2 font-weight-bold">
+								Tanggal:
+							</label>
 
-						<label for="filterTanggal" class="mr-2 font-weight-bold">
-							Tanggal:
-						</label>
+							<input
+								type="date"
+								name="tanggal"
+								id="filterTanggal"
+								class="form-control mr-2 mb-2"
+								style="width: 170px;"
+								value="<?= html_escape($filter_tanggal); ?>">
 
-						<input
-							type="date"
-							name="tanggal"
-							id="filterTanggal"
-							class="form-control mr-2 mb-2"
-							style="width: 170px;"
-							value="<?= html_escape($filter_tanggal); ?>">
+							<select
+								name="shift"
+								id="filterShift"
+								class="form-control mr-2 mb-2"
+								style="width: 140px;">
 
-						<select
-							name="shift"
-							id="filterShift"
-							class="form-control mr-2 mb-2"
-							style="width: 140px;">
+								<option value="">Semua Shift</option>
+								<option value="1" <?= $filter_shift == '1' ? 'selected' : ''; ?>>
+									Shift 1
+								</option>
+								<option value="2" <?= $filter_shift == '2' ? 'selected' : ''; ?>>
+									Shift 2
+								</option>
+								<option value="3" <?= $filter_shift == '3' ? 'selected' : ''; ?>>
+									Shift 3
+								</option>
 
-							<option value="">Semua Shift</option>
-							<option value="1" <?= $filter_shift == '1' ? 'selected' : ''; ?>>
-								Shift 1
-							</option>
-							<option value="2" <?= $filter_shift == '2' ? 'selected' : ''; ?>>
-								Shift 2
-							</option>
-							<option value="3" <?= $filter_shift == '3' ? 'selected' : ''; ?>>
-								Shift 3
-							</option>
+							</select>
 
-						</select>
+							<a
+								href="<?= base_url('pemeriksaanchemical'); ?>"
+								class="btn btn-secondary ml-2 mb-2">
+								<i class="fas fa-sync-alt mr-1"></i>
+								Reset
+							</a>
 
-						<a
-							href="<?= base_url('pemeriksaanchemical'); ?>"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
-						</a>
+						</form>
 
-					</form>
 
-					<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
 						<button
 							type="button"
 							class="btn btn-primary mb-2"
@@ -91,27 +91,29 @@ $filter_shift = $filter_shift ?? '';
 						</button>
 					<?php endif; ?>
 
-				</div>
+					</div>
 
-				<!-- KANAN: Tambah dan Mode Audit -->
-				<div class="text-right mb-2 ml-auto">
+					<!-- KANAN: Tambah dan Mode Audit -->
+					<div class="text-right mb-2 ml-auto">
 
-					<a href="<?= base_url('pemeriksaanchemical/tambah'); ?>"
-						class="btn btn-md btn-primary shadow-sm">
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-					</a>
+						<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+							<a href="<?= base_url('pemeriksaanchemical/tambah'); ?>"
+								class="btn btn-md btn-primary shadow-sm">
+								<i class="fas fa-plus fa-sm text-white-50"></i>
+								Tambah
+							</a>
+						<?php endif; ?>
 
-					<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
-						<a href="<?= base_url('pemeriksaanchemical/audit'); ?>"
-							class="btn shadow-sm"
-							style="background-color: #5a3298; color: #fff;">
-							<i class="fas fa-clipboard-check mr-1"></i>
-							Mode Audit
-						</a>
-					<?php endif; ?>
+						<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
+							<a href="<?= base_url('pemeriksaanchemical/audit'); ?>"
+								class="btn shadow-sm"
+								style="background-color: #5a3298; color: #fff;">
+								<i class="fas fa-clipboard-check mr-1"></i>
+								Mode Audit
+							</a>
+						<?php endif; ?>
 
-				</div>
+					</div>
 			</div>
 
 			<hr>
@@ -181,10 +183,12 @@ $filter_shift = $filter_shift ?? '';
 
 									<td class="text-center">
 
+									<?php if (in_array($tipe_user, [0, 1, 2, 4, 9], true)): ?>
 										<a href="<?= base_url('pemeriksaanchemical/edit/' . $val->uuid); ?>"
 											class="btn btn-warning btn-sm mb-1">
 											Edit
 										</a>
+										<?php endif; ?>
 
 										<a href="<?= base_url('pemeriksaanchemical/detail/' . $val->uuid); ?>"
 											data-url="<?= base_url('pemeriksaanchemical/detail/' . $val->uuid . '?popup=1'); ?>"

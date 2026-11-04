@@ -103,7 +103,7 @@ function tampilkan_analisis($kode)
 
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-					<thead>
+					<thead class="text-center">
 						<tr>
 							<th width="20px" class="text-center">No</th>
 							<th>Tanggal</th>
@@ -112,7 +112,7 @@ function tampilkan_analisis($kode)
 							<th>Nama Produk</th>
 							<th>Kode Produksi / Best Before</th>
 							<th>Permintaan Analisis</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th>LAB</th>
 							<th class="text-center">Action</th>
 						</tr>

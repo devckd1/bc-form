@@ -61,7 +61,7 @@ if (!function_exists('icon_check_chemical')) {
 ?>
 
 <div class="container-fluid">
-
+<?php if (empty($is_popup)): ?>
 	<div class="d-sm-flex align-items-center justify-content-between mb-3">
 		<h1 class="h3 mb-2 text-gray-800 font-weight-bold">
 			Detail Pemeriksaan Chemical dari Supplier
@@ -87,7 +87,7 @@ if (!function_exists('icon_check_chemical')) {
 			</li>
 		</ol>
 	</nav>
-
+<?php endif; ?>
 	<?php if ($isAudit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
 			<i class="fas fa-info-circle mr-1"></i>

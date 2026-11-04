@@ -22,7 +22,7 @@ $status_spv = $retain->status_spv ?? null;
 ?>
 
 <div class="container-fluid">
-
+<?php if (empty($is_popup)): ?>
 	<div class="d-sm-flex align-items-center justify-content-between mb-3">
 		<h1 class="h3 mb-2 text-gray-800">
 			Detail Retain Sample Report
@@ -48,7 +48,7 @@ $status_spv = $retain->status_spv ?? null;
 			</li>
 		</ol>
 	</nav>
-
+<?php endif; ?>
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
 			<i class="fas fa-info-circle mr-1"></i>

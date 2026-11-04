@@ -109,7 +109,7 @@
 							<th width="20px" class="text-center">No</th>
 							<th>Tanggal</th>
 							<th>Hasil Pemeriksaan</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

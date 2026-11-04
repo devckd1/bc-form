@@ -121,7 +121,7 @@
 							<th>Bukti</th>
 							<th>Produk</th>
 							<th>Kode Produksi</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

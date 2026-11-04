@@ -14,7 +14,7 @@ $status_spv = (string) ($falserejection->status_spv_false ?? '0');
 ?>
 
 <div class="container-fluid">
-
+<?php if (empty($is_popup)): ?>
 	<div class="d-sm-flex align-items-center justify-content-between mb-4">
 		<h1 class="h3 mb-2 text-gray-800">
 			Detail Audit False Rejection
@@ -40,7 +40,7 @@ $status_spv = (string) ($falserejection->status_spv_false ?? '0');
 		<i class="fas fa-info-circle mr-1"></i>
 		Detail ini merupakan snapshot Audit. Data QC utama tidak diubah melalui halaman ini.
 	</div>
-
+<?php endif; ?>
 	<div class="card shadow mb-4 card-audit">
 		<div class="card-body">
 			<div class="table-responsive">

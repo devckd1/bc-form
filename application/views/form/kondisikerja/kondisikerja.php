@@ -156,7 +156,7 @@
 							<th>Problem</th>
 							<th>Tindakan Koreksi</th>
 							<th>Verifikasi</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

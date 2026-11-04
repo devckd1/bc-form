@@ -119,7 +119,7 @@
 							<th>Nama Produk</th>
 							<th style="text-align: center;">Sensori Produk</th>
 							<th>Tindakan Koreksi</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

@@ -1,4 +1,5 @@
 <div class="container-fluid">
+	<?php if (empty($is_popup)): ?>
     <!-- Page Heading -->
     <h1 class="h3 mb-3 text-gray-800 font-weight-bold text-center">Detail Pemeriksaan Proses Pengemasan</h1>
 
@@ -12,7 +13,7 @@
             </li>
         </ol>
     </nav>
-
+<?php endif; ?>
     <!-- Detail Table -->
     <div class="card shadow mb-4">
         <div class="card-body">

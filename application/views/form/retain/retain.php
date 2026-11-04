@@ -123,7 +123,7 @@
 								<th>Sample Type</th>
 								<!-- <th>Nama Produk</th>
                             <th>Kode Produksi / Best Before</th> -->
-								<th>Status</th>
+								<th class="text-center">Status</th>
 								<th class="text-center">Action</th>
 							</tr>
 						</thead>

@@ -79,27 +79,27 @@ class Kekuatanmagnet extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $kekuatanmagnet = $this->kekuatanmagnet_model->get_by_uuid($uuid);
+	{
+		$kekuatanmagnet = $this->kekuatanmagnet_model->get_by_uuid($uuid);
 
-    if (!$kekuatanmagnet) {
-        show_404();
-        return;
-    }
+		if (!$kekuatanmagnet) {
+			show_404();
+			return;
+		}
 
-    $data = array(
-        'kekuatanmagnet' => $kekuatanmagnet,
-        'is_popup' => $this->input->get('popup') == '1'
-    );
+		$data = array(
+			'kekuatanmagnet' => $kekuatanmagnet,
+			'is_popup' => $this->input->get('popup') == '1'
+		);
 
-    $this->active_nav = 'kekuatanmagnet';
+		$this->active_nav = 'kekuatanmagnet';
 
-    if ($data['is_popup']) {
-        $this->load->view('form/kekuatanmagnet/kekuatanmagnet-detail', $data);
-    } else {
-        $this->render('form/kekuatanmagnet/kekuatanmagnet-detail', $data);
-    }
-}
+		if ($data['is_popup']) {
+			$this->load->view('form/kekuatanmagnet/kekuatanmagnet-detail', $data);
+		} else {
+			$this->render('form/kekuatanmagnet/kekuatanmagnet-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{

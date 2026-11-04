@@ -32,34 +32,34 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 
 				<!-- KIRI: Filter Tanggal dan Verifikasi Massal -->
 				<div class="d-flex align-items-center flex-wrap mb-2">
-
-					<form
-						id="formFilterTanggal"
-						method="get"
-						action="<?= base_url('penerimaankemasan') ?>"
-						class="form-inline mr-2 mb-2">
-
-						<label for="filterTanggal" class="mr-2 font-weight-bold">
-							Tanggal:
-						</label>
-
-						<input
-							type="date"
-							name="tanggal"
-							id="filterTanggal"
-							class="form-control mr-2 mb-2"
-							style="width: 170px;"
-							value="<?= html_escape($filter_tanggal) ?>">
-
-						<a
-							href="<?= base_url('penerimaankemasan') ?>"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
-						</a>
-					</form>
-
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+						<form
+							id="formFilterTanggal"
+							method="get"
+							action="<?= base_url('penerimaankemasan') ?>"
+							class="form-inline mr-2 mb-2">
+
+							<label for="filterTanggal" class="mr-2 font-weight-bold">
+								Tanggal:
+							</label>
+
+							<input
+								type="date"
+								name="tanggal"
+								id="filterTanggal"
+								class="form-control mr-2 mb-2"
+								style="width: 170px;"
+								value="<?= html_escape($filter_tanggal) ?>">
+
+							<a
+								href="<?= base_url('penerimaankemasan') ?>"
+								class="btn btn-secondary ml-2 mb-2">
+								<i class="fas fa-sync-alt mr-1"></i>
+								Reset
+							</a>
+						</form>
+
+
 						<button
 							type="button"
 							id="btnVerifikasiMassal"
@@ -73,13 +73,13 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 
 				<!-- KANAN: Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
-
-					<a href="<?= base_url('penerimaankemasan/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-					</a>
-
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('penerimaankemasan/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<a href="<?= base_url('penerimaankemasan/audit'); ?>"
 							class="btn shadow-sm"
@@ -137,10 +137,12 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 									</td>
 
 									<td class="text-center">
+										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9], true)): ?>
 										<a href="<?= base_url('penerimaankemasan/edit/' . $val->uuid); ?>"
 											class="btn btn-warning btn-icon-split">
 											<span class="text">Edit</span>
 										</a>
+										<?php endif; ?>
 
 										<a href="<?= base_url('penerimaankemasan/detail/' . $val->uuid); ?>"
 											data-url="<?= base_url('penerimaankemasan/detail/' . $val->uuid . '?popup=1'); ?>"

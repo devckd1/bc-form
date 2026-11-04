@@ -108,14 +108,14 @@
 					id="form_cetak_pdf">
 
 					<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-						<thead>
+						<thead class="text-center">
 							<tr>
 								<th width="30px" class="text-center">
 									<input type="checkbox" id="select_all">
 								</th>
 								<th>No</th>
 								<th>Tanggal / Shift</th>
-								<th>Supervisor</th>
+								<th class="text-center">Supervisor</th>
 								<th>Action</th>
 							</tr>
 						</thead>

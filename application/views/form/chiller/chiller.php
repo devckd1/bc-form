@@ -97,7 +97,7 @@
 			<hr>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-					<thead>
+					<thead class="text-center">
 						<tr>
 							<th width="20px" class="text-center">No</th>
 							<th>Tanggal</th>
@@ -106,7 +106,7 @@
 							<th>Chiller 2</th>
 							<th>Chiller 3</th>
 							<th>Chiller 4</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

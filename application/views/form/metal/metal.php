@@ -98,7 +98,7 @@
 							<th>Fe</th>
 							<th>Non Fe</th>
 							<th>SUS 304</th>
-							<th>Status</th>
+							<th class="text-center">Status</th>
 							<th style="text-align:center;">Action</th>
 						</tr>
 					</thead>

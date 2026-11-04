@@ -120,13 +120,13 @@
 					width="100%"
 					cellspacing="0">
 
-					<thead>
+					<thead class="text-center">
 						<tr>
 							<th width="20px" class="text-center">No</th>
 							<th>Tanggal / Shift</th>
 							<th>Lokasi</th>
 							<th class="text-center">Hasil Pemeriksaan</th>
-							<th>Supervisor</th>
+							<th class="text-center">Supervisor</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

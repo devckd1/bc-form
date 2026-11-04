@@ -41,7 +41,7 @@
 							<th>Ketidaksesuaian</th>
 							<th>Jumlah</th>
 							<th>Penyebab / Kategori Bahaya</th>
-							<th>Supervisor</th>
+							<th class="text-center">Supervisor</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>

@@ -116,7 +116,7 @@ $filter_shift = $filter_shift ?? '';
 								<th>Start - Finish Loading</th>
 								<th>Tujuan</th>
 								<th style="text-align: center;">LOADING</th>
-								<th>Status</th>
+								<th class="text-center">Status</th>
 								<th class="text-center">Action</th>
 							</tr>
 						</thead>

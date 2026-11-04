@@ -17,7 +17,7 @@ $breadcrumbTitle = $isAudit
 ?>
 
 <div class="container-fluid">
-
+<?php if (empty($is_popup)): ?>
 	<h1 class="h3 mb-4 text-gray-800">
 		<?= html_escape($pageTitle); ?>
 
@@ -36,7 +36,7 @@ $breadcrumbTitle = $isAudit
 			</li>
 		</ol>
 	</nav>
-
+<?php endif; ?>
 	<!-- Informasi Audit -->
 	<?php if ($isAudit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">

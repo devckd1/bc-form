@@ -135,7 +135,7 @@
 
 			<div class="table-responsive">
 				<table class="table table-bordered table-striped" width="100%" cellspacing="0">
-					<thead>
+					<thead class="text-center">
 						<tr>
 							<th width="20px" class="text-center">No</th>
 							<th>Date / Shift</th>

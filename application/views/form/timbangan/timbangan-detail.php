@@ -21,35 +21,35 @@ if (!is_array($result)) {
 ?>
 
 <div class="container-fluid">
+	<?php if (empty($is_popup)): ?>
+		<!-- Page Heading -->
+		<div class="d-sm-flex align-items-center justify-content-between mb-4">
+			<h1 class="h3 mb-2 text-gray-800 font-weight-bold">
+				<?= $judul; ?>
 
-	<!-- Page Heading -->
-	<div class="d-sm-flex align-items-center justify-content-between mb-4">
-		<h1 class="h3 mb-2 text-gray-800 font-weight-bold">
-			<?= $judul; ?>
+				<?php if ($is_audit): ?>
+					<span class="badge-mode-audit">
+						<i class="fas fa-clipboard-check mr-1"></i>
+						MODE AUDIT
+					</span>
+				<?php endif; ?>
+			</h1>
+		</div>
 
-			<?php if ($is_audit): ?>
-				<span class="badge-mode-audit">
-					<i class="fas fa-clipboard-check mr-1"></i>
-					MODE AUDIT
-				</span>
-			<?php endif; ?>
-		</h1>
-	</div>
-
-	<!-- Breadcrumb -->
-	<nav aria-label="breadcrumb">
-		<ol class="breadcrumb">
-			<li class="breadcrumb-item">
-				<a href="<?= base_url($back_url); ?>">
-					<i class="fas fa-arrow-left mr-1"></i>
-					<?= $is_audit
-						? 'Daftar Audit Verifikasi Timbangan \ Detail'
-						: 'Daftar Pemeriksaan Timbangan'; ?>
-				</a>
-			</li>
-		</ol>
-	</nav>
-
+		<!-- Breadcrumb -->
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item">
+					<a href="<?= base_url($back_url); ?>">
+						<i class="fas fa-arrow-left mr-1"></i>
+						<?= $is_audit
+							? 'Daftar Audit Verifikasi Timbangan \ Detail'
+							: 'Daftar Pemeriksaan Timbangan'; ?>
+					</a>
+				</li>
+			</ol>
+		</nav>
+	<?php endif; ?>
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
 			<i class="fas fa-info-circle mr-1"></i>
@@ -61,12 +61,14 @@ if (!is_array($result)) {
 
 	<!-- Card Detail -->
 	<div class="card shadow mb-4">
-		<div class="card-header py-3 <?= $is_audit ? 'header-audit' : ''; ?>">
-			<h6 class="m-0 font-weight-bold <?= $is_audit ? 'text-white' : 'text-primary'; ?>">
-				<i class="fas fa-weight mr-1"></i>
-				PEMERIKSAAN TIMBANGAN
-			</h6>
-		</div>
+		<?php if (empty($is_popup)): ?>
+			<div class="card-header py-3 <?= $is_audit ? 'header-audit' : ''; ?>">
+				<h6 class="m-0 font-weight-bold <?= $is_audit ? 'text-white' : 'text-primary'; ?>">
+					<i class="fas fa-weight mr-1"></i>
+					PEMERIKSAAN TIMBANGAN
+				</h6>
+			</div>
+		<?php endif; ?>
 
 		<div class="card-body">
 			<div class="table-responsive">

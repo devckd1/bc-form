@@ -87,7 +87,7 @@
 							<th>Kode Produksi</th>
 							<th>Jumlah Temuan</th>
 							<th>Bukti Temuan</th>
-							<th>Supervisor</th>
+							<th class="text-center">Supervisor</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>
