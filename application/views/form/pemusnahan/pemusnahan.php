@@ -23,86 +23,66 @@
 	<?php
 	$tipe_user = $this->session->userdata('tipe_user');
 	$boleh_verifikasi = in_array($tipe_user, [0, 1, 2, 9]);
+	$tanggal = $tanggal ?? '';
 	?>
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
 
-			<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<div class="mb-2">
+				<!-- KIRI: Filter dan Verifikasi Massal -->
+				<?php if ($boleh_verifikasi): ?>
+					<div class="d-flex align-items-center flex-wrap mb-2">
 
-					<a href="<?= base_url('pemusnahan/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-						<i class="fas fa-plus fa-sm"></i>
-						Tambah
-					</a>
+						<input
+							type="date"
+							id="filterTanggal"
+							class="form-control mr-2 mb-2"
+							style="width: 170px;"
+							value="<?= html_escape($tanggal); ?>">
+
+						<button
+							type="button"
+							id="btnVerifikasiMassal"
+							class="btn btn-primary mb-2">
+							<i class="fas fa-check-double mr-1"></i>
+							Verifikasi Massal
+						</button>
+
+						<a href="<?= base_url('pemusnahan'); ?>"
+							class="btn btn-secondary ml-2 mb-2">
+							<i class="fas fa-sync-alt mr-1"></i>
+							Reset
+						</a>
+
+					</div>
+				<?php endif; ?>
+
+				<!-- KANAN: Tambah dan Mode Audit -->
+				<div class="text-right mb-2 ml-auto">
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('pemusnahan/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if ($boleh_verifikasi): ?>
 						<a href="<?= base_url('pemusnahan/audit') ?>"
 							class="btn shadow-sm"
-							style="background-color:#5a3298;color:#fff;">
+							style="background-color: #5a3298; color: #fff;">
 							<i class="fas fa-clipboard-check mr-1"></i>
 							Mode Audit
 						</a>
 					<?php endif; ?>
 
 				</div>
-
-				<form method="get"
-					action="<?= base_url('pemusnahan') ?>"
-					class="form-inline mb-2">
-
-					<label for="filterTanggal" class="mr-2 font-weight-bold">
-						Filter Tanggal
-					</label>
-
-					<input
-						type="date"
-						name="tanggal"
-						id="filterTanggal"
-						class="form-control mr-2"
-						value="<?= html_escape($tanggal ?? '') ?>">
-
-					<button type="submit" class="btn btn-info mr-2">
-						<i class="fas fa-search"></i>
-						Filter
-					</button>
-
-					<a href="<?= base_url('pemusnahan') ?>"
-						class="btn btn-secondary">
-						Reset
-					</a>
-
-				</form>
-
 			</div>
 
-			<?php if ($boleh_verifikasi): ?>
-
-				<div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center">
-
-					<div class="mb-2 mb-md-0">
-						<strong>Verifikasi SPV Massal</strong>
-
-						<div class="small text-muted">
-							Verifikasi semua data Pemusnahan pada tanggal terpilih
-							yang belum diverifikasi atau berstatus revisi.
-						</div>
-					</div>
-
-					<button
-						type="button"
-						id="btnVerifikasiMassal"
-						class="btn btn-success"
-						<?= empty($tanggal) ? 'disabled' : '' ?>>
-						<i class="fas fa-check-double"></i>
-						Verifikasi Semua
-					</button>
-
-				</div>
-
-			<?php endif; ?>
+			<hr>
 
 			<div class="table-responsive">
 
@@ -116,7 +96,7 @@
 							<th>Kode Produksi</th>
 							<th>Best Before</th>
 							<th>Analisa Masalah</th>
-							<th>Supervisor</th>
+							<th>Status</th>
 							<th class="text-center">Action</th>
 						</tr>
 					</thead>
@@ -166,46 +146,43 @@
 									<td class="text-center">
 
 										<?php if ($val->status_spv == 0): ?>
-
 											<span style="color:#99a3a4;font-weight:bold;">
 												Created
 											</span>
 
 										<?php elseif ($val->status_spv == 1): ?>
-
 											<span style="color:#28b463;font-weight:bold;">
 												Verified
 											</span>
 
 										<?php elseif ($val->status_spv == 2): ?>
-
 											<span style="color:red;font-weight:bold;">
 												Revision
 											</span>
-
 										<?php endif; ?>
 
 									</td>
 
 									<td class="text-center">
 
-										<a href="<?= base_url('pemusnahan/edit/' . $val->uuid); ?>"
-											class="btn btn-warning btn-sm">
-											Edit
-										</a>
+										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+											<a href="<?= base_url('pemusnahan/edit/' . $val->uuid); ?>"
+												class="btn btn-warning btn-sm">
+												Edit
+											</a>
+										<?php endif; ?>
 
 										<a href="<?= base_url('pemusnahan/detail/' . $val->uuid); ?>"
-											class="btn btn-success btn-sm">
+											data-url="<?= base_url('pemusnahan/detail/' . $val->uuid . '?popup=1'); ?>"
+											class="btn btn-success btn-sm btn-detail-pemusnahan">
 											Detail
 										</a>
 
 										<?php if ($boleh_verifikasi): ?>
-
 											<a href="<?= base_url('pemusnahan/status/' . $val->uuid); ?>"
 												class="btn btn-info btn-sm">
 												Verifikasi
 											</a>
-
 										<?php endif; ?>
 
 									</td>
@@ -248,8 +225,7 @@
 							Pilih Tanggal:
 						</label>
 
-						<input
-							type="date"
+						<input type="date"
 							id="tanggalCetak"
 							name="tanggal"
 							class="form-control mr-2"
@@ -270,7 +246,25 @@
 	</div>
 
 </div>
+<div class="modal fade" id="modalDetailPemusnahan" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Pemusnahan</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
 
+			<div class="modal-body" id="contentDetailPemusnahan">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat detail...</p>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
 <style>
 	#dataTable th {
 		background-color: #f8f9fc;
@@ -281,12 +275,74 @@
 		vertical-align: middle;
 	}
 </style>
+<script>
+	$(document).ready(function() {
 
+		let cacheDetailPemusnahan = {};
+
+		$(document).on('click', '.btn-detail-pemusnahan', function(e) {
+			e.preventDefault();
+
+			let url = $(this).data('url');
+			let content = $('#contentDetailPemusnahan');
+
+			$('#modalDetailPemusnahan').modal('show');
+
+			if (cacheDetailPemusnahan[url]) {
+				content.html(cacheDetailPemusnahan[url]);
+				return;
+			}
+
+			content.html(`
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat detail...</p>
+                </div>
+            `);
+
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'html',
+
+				success: function(response) {
+					cacheDetailPemusnahan[url] = response;
+					content.html(response);
+				},
+
+				error: function() {
+					content.html(`
+                        <div class="alert alert-danger text-center">
+                            Gagal memuat detail pemusnahan.
+                        </div>
+                    `);
+				}
+			});
+		});
+
+	});
+</script>
 <?php if ($boleh_verifikasi): ?>
 
 	<script>
 		$(document).ready(function() {
 
+			const baseUrl = "<?= base_url('pemusnahan'); ?>";
+
+			// Filter tanggal otomatis
+			$('#filterTanggal').on('change', function() {
+
+				const tanggal = $(this).val();
+
+				if (tanggal) {
+					window.location.href = baseUrl + '?tanggal=' + encodeURIComponent(tanggal);
+				} else {
+					window.location.href = baseUrl;
+				}
+
+			});
+
+			// Verifikasi massal
 			$('#btnVerifikasiMassal').on('click', function() {
 
 				const tanggal = $('#filterTanggal').val();
@@ -303,9 +359,12 @@
 
 				Swal.fire({
 					title: 'Verifikasi semua data?',
-					text: 'Semua data Pemusnahan yang memenuhi syarat pada tanggal ' + tanggal + ' akan diverifikasi.',
+					text: 'Semua data Pemusnahan yang memenuhi syarat pada tanggal ' +
+						tanggal + ' akan diverifikasi.',
 					icon: 'question',
 					showCancelButton: true,
+					confirmButtonColor: '#4e73df',
+					cancelButtonColor: '#858796',
 					confirmButtonText: 'Ya, verifikasi',
 					cancelButtonText: 'Batal'
 				}).then((result) => {
@@ -323,24 +382,35 @@
 						},
 
 						beforeSend: function() {
+
 							$('#btnVerifikasiMassal')
 								.prop('disabled', true)
 								.html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
+
 						},
 
 						success: function(response) {
 
-							Swal.fire({
-								icon: response.status ? 'success' : 'info',
-								title: response.status ? 'Berhasil' : 'Informasi',
-								text: response.message
-							}).then(() => {
+							if (response.status) {
 
-								if (response.status) {
-									window.location.reload();
-								}
+								Swal.fire({
+									icon: 'success',
+									title: 'Berhasil',
+									text: response.message
+								}).then(() => {
+									window.location.href = baseUrl +
+										'?tanggal=' + encodeURIComponent(tanggal);
+								});
 
-							});
+							} else {
+
+								Swal.fire({
+									icon: 'info',
+									title: 'Informasi',
+									text: response.message
+								});
+
+							}
 
 						},
 
@@ -359,7 +429,7 @@
 
 							$('#btnVerifikasiMassal')
 								.prop('disabled', false)
-								.html('<i class="fas fa-check-double"></i> Verifikasi Semua');
+								.html('<i class="fas fa-check-double"></i> Verifikasi');
 
 						}
 					});

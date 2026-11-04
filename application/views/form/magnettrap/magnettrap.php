@@ -31,7 +31,7 @@
 				</div>
 				<div class="mt-2">Memuat data...</div>
 			</div>
-			<div class="d-flex justify-content-between align-items-center flex-wrap">
+			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
 				<!-- KIRI: Filter dan Verifikasi Massal -->
 				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
@@ -41,70 +41,67 @@
 						method="post"
 						class="d-flex align-items-center flex-wrap mb-2">
 
-						<div class="d-flex align-items-center mr-2 mb-1">
-							<i class="fas fa-calendar-alt text-muted mr-2"></i>
-							<input
-								type="date"
-								name="tanggal"
-								id="tanggal_massal"
-								class="form-control form-control-sm"
-								style="width: 145px;"
-								value="<?= html_escape($filter_tanggal ?? ''); ?>"
-								required>
-						</div>
+						<input
+							type="date"
+							name="tanggal"
+							id="tanggal_massal"
+							class="form-control mr-2 mb-2"
+							style="width: 170px;"
+							value="<?= html_escape($filter_tanggal ?? ''); ?>"
+							required>
 
-						<div class="mr-2 mb-1">
-							<select
-								name="shift"
-								id="shift_massal"
-								class="form-control form-control-sm"
-								style="width: 125px;">
-								<option value="">Pilih Shift</option>
-								<option value="semua" <?= ($filter_shift ?? '') === 'semua' ? 'selected' : ''; ?>>
-									Semua Shift
-								</option>
-								<option value="1" <?= ($filter_shift ?? '') === '1' ? 'selected' : ''; ?>>
-									Shift 1
-								</option>
-								<option value="2" <?= ($filter_shift ?? '') === '2' ? 'selected' : ''; ?>>
-									Shift 2
-								</option>
-								<option value="3" <?= ($filter_shift ?? '') === '3' ? 'selected' : ''; ?>>
-									Shift 3
-								</option>
-							</select>
-						</div>
+						<select
+							name="shift"
+							id="shift_massal"
+							class="form-control mr-2 mb-2"
+							style="width: 140px;">
+							<option value="">Pilih Shift</option>
+							<option value="semua" <?= ($filter_shift ?? '') === 'semua' ? 'selected' : ''; ?>>
+								Semua Shift
+							</option>
+							<option value="1" <?= ($filter_shift ?? '') === '1' ? 'selected' : ''; ?>>
+								Shift 1
+							</option>
+							<option value="2" <?= ($filter_shift ?? '') === '2' ? 'selected' : ''; ?>>
+								Shift 2
+							</option>
+							<option value="3" <?= ($filter_shift ?? '') === '3' ? 'selected' : ''; ?>>
+								Shift 3
+							</option>
+						</select>
 
-						<button type="submit"
-							class="btn btn-primary btn-sm mr-2 mb-1">
+						<button
+							type="submit"
+							class="btn btn-primary mb-2">
 							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi
+							Verifikasi Massal
 						</button>
 
 						<button
 							type="button"
 							id="resetFilterMagnetTrap"
-							class="btn btn-outline-secondary btn-sm mb-1">
-							<i class="fas fa-undo mr-1"></i>
+							class="btn btn-secondary ml-2 mb-2">
+							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</button>
 
 					</form>
 				<?php endif; ?>
 
-				<!-- KANAN: Tombol Utama -->
-				<div class="d-flex align-items-center flex-wrap mb-2 ml-auto">
+				<!-- KANAN: Tambah dan Mode Audit -->
+				<div class="text-right mb-2 ml-auto">
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
 						<a href="<?= base_url('magnettrap/tambah') ?>"
 							class="btn btn-md btn-primary shadow-sm">
-							<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
 						</a>
 					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<a href="<?= base_url('magnettrap/audit'); ?>"
-							class="btn shadow-sm ml-2"
+							class="btn shadow-sm"
 							style="background-color: #5a3298; color: #fff;">
 							<i class="fas fa-clipboard-check mr-1"></i>
 							Mode Audit
@@ -112,16 +109,15 @@
 					<?php endif; ?>
 
 				</div>
-
 			</div>
 
 			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-				<small class="text-muted">
+				<small class="text-muted d-block mb-2">
 					<i class="fas fa-info-circle mr-1"></i>
-					Hanya data yang sudah diverifikasi Produksi/Engineering
-					yang akan diproses.
+					Hanya data yang sudah diverifikasi Produksi/Engineering yang akan diproses.
 				</small>
 			<?php endif; ?>
+
 			<hr>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
@@ -200,7 +196,7 @@
 									?>
 								</td>
 								<td class="text-center">
-									<div class="action-buttons">
+									<div class="">
 
 										<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
 											<a href="<?= base_url('magnettrap/edit/' . $val->uuid); ?>"

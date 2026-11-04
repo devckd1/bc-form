@@ -36,22 +36,64 @@ class Suhu extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'suhu' => $this->suhu_model->get_suhu_by_plant()
+		$this->load->library('pagination');
+
+		$tanggal = trim(
+			$this->input->get('tanggal', TRUE) ?? ''
 		);
 
+		$config['base_url'] = base_url('suhu/index');
+
+		$config['total_rows'] =
+			$this->suhu_model->count_suhu_by_plant($tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'suhu' => $this->suhu_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$tanggal
+			),
+
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal
+		];
+
 		$this->active_nav = 'suhu';
+
 		$this->render('form/suhu/suhu', $data);
 	}
 
 	public function detail($uuid)
 	{
+		$suhu = $this->suhu_model->get_by_uuid($uuid);
+
+		if (!$suhu) {
+			show_404();
+			return;
+		}
+
 		$data = array(
-			'suhu' => $this->suhu_model->get_by_uuid($uuid),
+			'suhu' => $suhu,
+			'is_popup' => $this->input->get('popup') == '1'
 		);
 
 		$this->active_nav = 'suhu';
-		$this->render('form/suhu/suhu-detail', $data);
+
+		if ($data['is_popup']) {
+			$this->load->view('form/suhu/suhu-detail', $data);
+		} else {
+			$this->render('form/suhu/suhu-detail', $data);
+		}
 	}
 
 	public function detail_audit($uuid)
@@ -378,6 +420,60 @@ class Suhu extends MY_Controller
 		}
 
 		redirect('suhu');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat(
+			'Y-m-d',
+			$tanggal
+		);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->suhu_model
+			->verifikasi_massal_spv($tanggal);
+
+		if ($updated === false) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Suhu gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Suhu Ruang berhasil.'
+			];
+		} else {
+
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data Suhu yang memenuhi syarat verifikasi pada tanggal tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function copy_to_audit($uuid)

@@ -25,31 +25,68 @@ class Retain extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'retain' => $this->retain_model->get_data_by_plant()
+		$this->load->library('pagination');
+
+		$tanggal = trim(
+			$this->input->get('tanggal', TRUE) ?? ''
 		);
 
+		$config['base_url'] = base_url('retain/index');
+
+		$config['total_rows'] =
+			$this->retain_model->count_retain_by_plant($tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'retain' => $this->retain_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$tanggal
+			),
+
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal
+		];
+
 		$this->active_nav = 'retain';
+
 		$this->render('form/retain/retain', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$retain = $this->retain_model->get_qc_by_uuid($uuid);
+{
+    $retain = $this->retain_model->get_qc_by_uuid($uuid);
 
-		if (!$retain) {
-			show_404();
-			return;
-		}
+    if (!$retain) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'retain' => $retain,
-			'mode' => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'retain';
-		$this->render('form/retain/retain-detail', $data);
-	}
+    $data = [
+        'retain'    => $retain,
+        'mode'      => 'qc',
+        'is_popup'  => $is_popup
+    ];
+
+    $this->active_nav = 'retain';
+
+    if ($is_popup) {
+        $this->load->view('form/retain/retain-detail', $data);
+    } else {
+        $this->render('form/retain/retain-detail', $data);
+    }
+}
 
 	public function tambah()
 	{
@@ -139,6 +176,60 @@ class Retain extends MY_Controller
 
 		$this->active_nav = 'verifikasi-retain';
 		$this->render('form/retain/retain-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat(
+			'Y-m-d',
+			$tanggal
+		);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->retain_model
+			->verifikasi_massal_spv($tanggal);
+
+		if ($updated === false) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Retain gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Retain berhasil.'
+			];
+		} else {
+
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data Retain yang memenuhi syarat verifikasi pada tanggal tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

@@ -71,14 +71,27 @@ class Kondisikerja extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'kondisikerja' => $this->kondisikerja_model->get_by_uuid($uuid),
-		);
+{
+    $kondisikerja = $this->kondisikerja_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'kondisikerja';
-		$this->render('form/kondisikerja/kondisikerja-detail', $data);
-	}
+    if (!$kondisikerja) {
+        show_404();
+        return;
+    }
+
+    $data = array(
+        'kondisikerja' => $kondisikerja,
+        'is_popup' => $this->input->get('popup') == '1'
+    );
+
+    $this->active_nav = 'kondisikerja';
+
+    if ($data['is_popup']) {
+        $this->load->view('form/kondisikerja/kondisikerja-detail', $data);
+    } else {
+        $this->render('form/kondisikerja/kondisikerja-detail', $data);
+    }
+}
 
 	public function tambah()
 	{

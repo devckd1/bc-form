@@ -102,6 +102,7 @@ $route['pengayakan/cetak-audit'] = 'form/pengayakan/cetak_audit';
 $route['pengayakan/edit-audit/(:any)'] = 'form/pengayakan/edit_audit/$1';
 $route['pengayakan/detail-audit/(:any)'] = 'form/pengayakan/detail_audit/$1';
 $route['pengayakan/verifikasi_produksi/(:any)'] = 'form/pengayakan/verifikasi_produksi/$1';
+$route['pengayakan/verifikasi_massal']['POST'] = 'form/pengayakan/verifikasi_massal';
 
 $route['produksi'] = 'form/produksi';
 $route['produksi/tambah'] = 'form/produksi/tambah';
@@ -138,6 +139,7 @@ $route['produksi/drying-audit/(:any)'] = 'form/produksi/drying_audit/$1';
 $route['produksi/packing-audit/(:any)'] = 'form/produksi/packing_audit/$1';
 $route['produksi/halus-audit/(:any)'] = 'form/produksi/halus_audit/$1';
 $route['produksi/verifikasi_produksi/(:any)'] = 'form/produksi/verifikasi_produksi/$1';
+$route['produksi/verifikasi_massal']['POST'] = 'form/produksi/verifikasi_massal';
 
 $route['proses'] = 'form/proses';
 $route['proses/tambah'] = 'form/proses/tambah';
@@ -157,6 +159,7 @@ $route['proses/edit-audit/(:any)'] = 'form/proses/edit_audit/$1';
 $route['proses/detail-audit/(:any)'] = 'form/proses/detail_audit/$1';
 $route['proses/audit/packing/(:any)'] = 'form/proses/audit_packing/$1';
 $route['proses/verifikasi_produksi/(:any)'] = 'form/proses/verifikasi_produksi/$1';
+$route['proses/verifikasi_massal']['POST'] = 'form/proses/verifikasi_massal';
 
 $route['metal'] = 'form/metal';
 $route['metal/tambah'] = 'form/metal/tambah';
@@ -194,6 +197,7 @@ $route['falserejection/audit'] = 'form/falserejection/audit';
 $route['falserejection/cetak-audit'] = 'form/falserejection/cetak_audit';
 $route['falserejection/detail-audit/(:any)'] = 'form/falserejection/detail_audit/$1';
 $route['falserejection/edit-audit/(:any)'] = 'form/falserejection/edit_audit/$1';
+$route['falserejection/verifikasi_massal'] = 'form/falserejection/verifikasi_massal';
 
 $route['kontaminasi'] = 'form/kontaminasi';
 $route['kontaminasi/tambah'] = 'form/kontaminasi/tambah';
@@ -231,6 +235,7 @@ $route['kekuatanmagnet/cetak-audit'] = 'form/kekuatanmagnet/cetak_audit';
 $route['kekuatanmagnet/detail-audit/(:any)'] = 'form/kekuatanmagnet/detail_audit/$1';
 $route['kekuatanmagnet/edit-audit/(:any)'] = 'form/kekuatanmagnet/edit_audit/$1';
 $route['kekuatanmagnet/verifikasi_produksi/(:any)'] = 'form/kekuatanmagnet/verifikasi_produksi/$1';
+$route['kekuatanmagnet/verifikasi_massal'] = 'form/kekuatanmagnet/verifikasi_massal';
 
 $route['verifikasimagnet'] = 'form/verifikasimagnet';
 $route['verifikasimagnet/tambah'] = 'form/verifikasimagnet/tambah';
@@ -247,6 +252,7 @@ $route['verifikasimagnet/audit'] = 'form/verifikasimagnet/audit';
 $route['verifikasimagnet/cetak-audit'] = 'form/verifikasimagnet/cetak_audit';
 $route['verifikasimagnet/detail-audit/(:any)'] = 'form/verifikasimagnet/detail_audit/$1';
 $route['verifikasimagnet/edit-audit/(:any)'] = 'form/verifikasimagnet/edit_audit/$1';
+$route['verifikasimagnet/verifikasi_massal'] = 'form/verifikasimagnet/verifikasi_massal';
 
 $route['thermometer'] = 'form/thermometer';
 $route['thermometer/tambah'] = 'form/thermometer/tambah';
@@ -265,6 +271,7 @@ $route['thermometer/cetak-audit'] = 'form/thermometer/cetak_audit';
 $route['thermometer/edit-audit/(:any)'] = 'form/thermometer/edit_audit/$1';
 $route['thermometer/detail-audit/(:any)'] = 'form/thermometer/detail_audit/$1';
 $route['thermometer/verifikasi_produksi/(:any)'] = 'form/thermometer/verifikasi_produksi/$1';
+$route['thermometer/verifikasi_massal']['POST'] = 'form/thermometer/verifikasi_massal';
 
 $route['timbangan'] = 'form/timbangan';
 $route['timbangan/tambah'] = 'form/timbangan/tambah';
@@ -283,6 +290,7 @@ $route['timbangan/cetak-audit'] = 'form/timbangan/cetak_audit';
 $route['timbangan/edit-audit/(:any)'] = 'form/timbangan/edit_audit/$1';
 $route['timbangan/detail-audit/(:any)'] = 'form/timbangan/detail_audit/$1';
 $route['timbangan/verifikasi_produksi/(:any)'] = 'form/timbangan/verifikasi_produksi/$1';
+$route['timbangan/verifikasi_massal'] = 'form/timbangan/verifikasi_massal';
 
 $route['releasepacking'] = 'form/releasepacking';
 $route['releasepacking/tambah'] = 'form/releasepacking/tambah';
@@ -300,6 +308,7 @@ $route['releasepacking/audit'] = 'form/releasepacking/audit';
 $route['releasepacking/cetak-audit'] = 'form/releasepacking/cetak_audit';
 $route['releasepacking/detail-audit/(:any)'] = 'form/releasepacking/detail_audit/$1';
 $route['releasepacking/edit-audit/(:any)'] = 'form/releasepacking/edit_audit/$1';
+$route['releasepacking/verifikasi_massal']['POST'] = 'form/releasepacking/verifikasi_massal';
 
 $route['pengemasan'] = 'form/pengemasan';
 $route['pengemasan/tambah'] = 'form/pengemasan/tambah';
@@ -312,6 +321,7 @@ $route['pengemasan/diketahui'] = 'form/pengemasan/diketahui';
 $route['pengemasan/statusprod/(:any)'] = 'form/pengemasan/statusprod/$1';
 $route['pengemasan/delete/(:any)'] = 'form/pengemasan/delete/$1';
 $route['pengemasan/logs'] = 'form/pengemasan_logs/index';
+$route['pengemasan/verifikasi_massal'] = 'form/pengemasan/verifikasi_massal';
 
 $route['master-chiller']              = 'master_chiller/index';
 $route['master-chiller/tambah']      = 'master_chiller/tambah';
@@ -360,6 +370,7 @@ $route['sanitasi/audit'] = 'form/sanitasi/audit';
 $route['sanitasi/cetak-audit'] = 'form/sanitasi/cetak_audit';
 $route['sanitasi/copy-to-audit/(:any)'] = 'form/sanitasi/copy_to_audit/$1';
 $route['sanitasi/verifikasi_produksi/(:any)'] = 'form/sanitasi/verifikasi_produksi/$1';
+$route['sanitasi/verifikasi_massal']['POST'] = 'form/sanitasi/verifikasi_massal';
 
 $route['ketidaksesuaian'] = 'form/ketidaksesuaian';
 $route['ketidaksesuaian/tambah'] = 'form/ketidaksesuaian/tambah';
@@ -425,6 +436,7 @@ $route['retain/copy-to-audit/(:any)'] = 'form/retain/copy_to_audit/$1';
 $route['retain/audit'] = 'form/retain/audit';
 $route['retain/edit-audit/(:any)'] = 'form/retain/edit_audit/$1';
 $route['retain/detail-audit/(:any)'] = 'form/retain/detail_audit/$1';
+$route['retain/verifikasi_massal']['POST'] = 'form/retain/verifikasi_massal';
 
 $route['kebersihankaryawan'] = 'form/kebersihankaryawan';
 $route['kebersihankaryawan/tambah'] = 'form/kebersihankaryawan/tambah';
@@ -478,6 +490,7 @@ $route['penerimaankemasan/audit'] = 'form/penerimaankemasan/audit';
 $route['penerimaankemasan/cetak-audit'] = 'form/penerimaankemasan/cetak_audit';
 $route['penerimaankemasan/detail-audit/(:any)'] = 'form/penerimaankemasan/detail_audit/$1';
 $route['penerimaankemasan/edit-audit/(:any)'] = 'form/penerimaankemasan/edit_audit/$1';
+$route['penerimaankemasan/verifikasi_massal'] = 'form/penerimaankemasan/verifikasi_massal';
 
 $route['pemeriksaanpengiriman'] = 'form/pemeriksaanpengiriman';
 $route['pemeriksaanpengiriman/tambah'] = 'form/pemeriksaanpengiriman/tambah';
@@ -488,6 +501,7 @@ $route['pemeriksaanpengiriman/status/(:any)'] = 'form/pemeriksaanpengiriman/stat
 $route['pemeriksaanpengiriman/cetak'] = 'form/pemeriksaanpengiriman/cetak';
 $route['pemeriksaanpengiriman/delete/(:any)'] = 'form/pemeriksaanpengiriman/delete/$1';
 $route['pemeriksaanpengiriman/logs'] = 'form/pemeriksaanpengiriman_logs/index';
+$route['pemeriksaanpengiriman/verifikasi_massal'] = 'form/pemeriksaanpengiriman/verifikasi_massal';
 
 $route['pembuatanlarutan'] = 'form/pembuatanlarutan';
 $route['pembuatanlarutan/tambah'] = 'form/pembuatanlarutan/tambah';
@@ -498,6 +512,7 @@ $route['pembuatanlarutan/status/(:any)'] = 'form/pembuatanlarutan/status/$1';
 $route['pembuatanlarutan/cetak'] = 'form/pembuatanlarutan/cetak';
 $route['pembuatanlarutan/delete/(:any)'] = 'form/pembuatanlarutan/delete/$1';
 $route['pembuatanlarutan/logs'] = 'form/pembuatanlarutan_logs/index';
+$route['pembuatanlarutan/verifikasi_massal'] = 'form/pembuatanlarutan/verifikasi_massal';
 
 $route['pemeriksaanchemical'] = 'form/pemeriksaanchemical';
 $route['pemeriksaanchemical/tambah'] = 'form/pemeriksaanchemical/tambah';
@@ -513,6 +528,7 @@ $route['pemeriksaanchemical/audit'] = 'form/pemeriksaanchemical/audit';
 $route['pemeriksaanchemical/cetak-audit'] = 'form/pemeriksaanchemical/cetak_audit';
 $route['pemeriksaanchemical/detail-audit/(:any)'] = 'form/pemeriksaanchemical/detail_audit/$1';
 $route['pemeriksaanchemical/edit-audit/(:any)'] = 'form/pemeriksaanchemical/edit_audit/$1';
+$route['pemeriksaanchemical/verifikasi_massal'] = 'form/pemeriksaanchemical/verifikasi_massal';
 
 $route['seasoning'] = 'form/seasoning';
 $route['seasoning/tambah'] = 'form/seasoning/tambah';
@@ -569,6 +585,7 @@ $route['sanitasiwarehouse/cetak-audit'] = 'form/sanitasiwarehouse/cetak_audit';
 $route['sanitasiwarehouse/detail-audit/(:any)'] = 'form/sanitasiwarehouse/detail_audit/$1';
 $route['sanitasiwarehouse/edit-audit/(:any)'] = 'form/sanitasiwarehouse/edit_audit/$1';
 $route['sanitasiwarehouse/verifikasi_produksi/(:any)'] = 'form/sanitasiwarehouse/verifikasi_produksi/$1';
+$route['sanitasiwarehouse/verifikasi_massal'] = 'form/sanitasiwarehouse/verifikasi_massal';
 
 $route['loading'] = 'form/loading';
 $route['loading/tambah'] = 'form/loading/tambah';
@@ -586,6 +603,7 @@ $route['loading/audit'] = 'form/loading/audit';
 $route['loading/detail-audit/(:any)'] = 'form/loading/detail_audit/$1';
 $route['loading/edit-audit/(:any)'] = 'form/loading/edit_audit/$1';
 $route['loading/verifikasi_produksi/(:any)'] = 'form/loading/verifikasi_produksi/$1';
+$route['loading/verifikasi_massal'] = 'form/loading/verifikasi_massal';
 
 $route['disposisi'] = 'form/disposisi';
 $route['disposisi/tambah'] = 'form/disposisi/tambah';
@@ -660,6 +678,7 @@ $route['sensori/cetak-audit'] = 'form/sensori/cetak_audit';
 $route['sensori/edit-audit/(:any)'] = 'form/sensori/edit_audit/$1';
 $route['sensori/detail-audit/(:any)'] = 'form/sensori/detail_audit/$1';
 $route['sensori/verifikasi_produksi/(:any)'] = 'form/sensori/verifikasi_produksi/$1';
+$route['sensori/verifikasi_massal']['POST'] = 'form/sensori/verifikasi_massal';
 
 $route['reagen'] = 'form/reagen';
 $route['reagen/tambah'] = 'form/reagen/tambah';
@@ -693,6 +712,7 @@ $route['residu/audit'] = 'form/residu/audit';
 $route['residu/cetak-audit'] = 'form/residu/cetak_audit';
 $route['residu/edit-audit/(:any)'] = 'form/residu/edit_audit/$1';
 $route['residu/detail-audit/(:any)'] = 'form/residu/detail_audit/$1';
+$route['residu/verifikasi_massal'] = 'form/residu/verifikasi_massal';
 
 $route['larutan'] = 'form/larutan';
 $route['larutan/tambah'] = 'form/larutan/tambah';
@@ -710,6 +730,7 @@ $route['larutan/audit'] = 'form/larutan/audit';
 $route['larutan/cetak-audit'] = 'form/larutan/cetak_audit';
 $route['larutan/edit-audit/(:any)'] = 'form/larutan/edit_audit/$1';
 $route['larutan/detail-audit/(:any)'] = 'form/larutan/detail_audit/$1';
+$route['larutan/verifikasi_massal'] = 'form/larutan/verifikasi_massal';
 
 $route['analisis'] = 'form/analisis';
 $route['analisis/tambah'] = 'form/analisis/tambah';
@@ -733,6 +754,7 @@ $route['analisis/edit-audit/(:any)'] = 'form/analisis/edit_audit/$1';
 $route['analisis/detail-audit/(:any)'] = 'form/analisis/detail_audit/$1';
 $route['analisis/analis-audit/(:any)'] = 'form/analisis/analis_audit/$1';
 $route['analisis/ajax-detail-audit/(:any)'] = 'form/analisis/ajax_detail_audit/$1';
+$route['analisis/verifikasi_massal'] = 'form/analisis/verifikasi_massal';
 
 $route['inventaris'] = 'form/inventaris';
 $route['inventaris/tambah'] = 'form/inventaris/tambah';
@@ -748,6 +770,7 @@ $route['inventaris/copy-to-audit/(:any)'] = 'form/inventaris/copy_to_audit/$1';
 $route['inventaris/audit'] = 'form/inventaris/audit';
 $route['inventaris/edit-audit/(:any)'] = 'form/inventaris/edit_audit/$1';
 $route['inventaris/detail-audit/(:any)'] = 'form/inventaris/detail_audit/$1';
+$route['inventaris/verifikasi_massal'] = 'form/inventaris/verifikasi_massal';
 
 $route['pecahbelah'] = 'form/pecahbelah';
 $route['pecahbelah/tambah'] = 'form/pecahbelah/tambah';
@@ -795,6 +818,7 @@ $route['suhu/audit'] = 'form/suhu/audit';
 $route['suhu/cetak_audit'] = 'form/suhu/cetak_audit';
 $route['suhu/copy-to-audit/(:any)'] = 'form/suhu/copy_to_audit/$1';
 $route['suhu/verifikasi_produksi/(:any)'] = 'form/suhu/verifikasi_produksi/$1';
+$route['suhu/verifikasi_massal']['POST'] ='form/suhu/verifikasi_massal';
 
 $route['gosong'] = 'form/gosong';
 $route['gosong/tambah'] = 'form/gosong/tambah';

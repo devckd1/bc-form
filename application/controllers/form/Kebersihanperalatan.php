@@ -63,12 +63,31 @@ class Kebersihanperalatan extends MY_Controller
 
 	public function detail($uuid)
 	{
+		$kebersihanperalatan = $this->kebersihanperalatan_model->get_by_uuid($uuid);
+
+		if (!$kebersihanperalatan) {
+			show_404();
+			return;
+		}
+
 		$data = array(
-			'kebersihanperalatan' => $this->kebersihanperalatan_model->get_by_uuid($uuid),
+			'kebersihanperalatan' => $kebersihanperalatan,
+			'is_popup' => $this->input->get('popup') == '1'
 		);
 
 		$this->active_nav = 'kebersihanperalatan';
-		$this->render('form/kebersihanperalatan/kebersihanperalatan-detail', $data);
+
+		if ($data['is_popup']) {
+			$this->load->view(
+				'form/kebersihanperalatan/kebersihanperalatan-detail',
+				$data
+			);
+		} else {
+			$this->render(
+				'form/kebersihanperalatan/kebersihanperalatan-detail',
+				$data
+			);
+		}
 	}
 
 	public function tambah()

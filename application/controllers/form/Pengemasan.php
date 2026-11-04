@@ -1,43 +1,107 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Pengemasan extends MY_Controller {
+class Pengemasan extends MY_Controller
+{
 
 	public function __construct()
 	{
 		parent::__construct();
 
 		$this->load->library('form_validation');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('pengemasan_model');
-		if(!$this->auth_model->current_user()){
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
 
 	public function index()
 	{
-		$data = array(
-			'pengemasan' => $this->pengemasan_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
 
-		$this->active_nav = 'pengemasan'; 
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$limit = 10;
+		$start = (int) ($this->input->get('per_page', TRUE) ?? 0);
+
+		if (!empty($tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$tanggal = '';
+			}
+		}
+
+		$config['base_url'] = base_url('pengemasan');
+		$config['total_rows'] = $this->pengemasan_model->count_data_by_plant($tanggal);
+		$config['per_page'] = $limit;
+		$config['page_query_string'] = TRUE;
+		$config['query_string_segment'] = 'per_page';
+		$config['reuse_query_string'] = TRUE;
+
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+		$config['cur_tag_open'] = '<li class="page-item active"><span class="page-link">';
+		$config['cur_tag_close'] = '</span></li>';
+		$config['attributes'] = ['class' => 'page-link'];
+
+		$this->pagination->initialize($config);
+
+		$data = [
+			'pengemasan' => $this->pengemasan_model->get_data_by_plant(
+				$limit,
+				$start,
+				$tanggal
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'tanggal' => $tanggal
+		];
+
+		$this->active_nav = 'pengemasan';
 		$this->render('form/pengemasan/pengemasan', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'pengemasan' => $this->pengemasan_model->get_by_uuid($uuid),
-		);
+{
+	$pengemasan = $this->pengemasan_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'pengemasan'; 
+	if (!$pengemasan) {
+		show_404();
+		return;
+	}
+
+	$is_popup = $this->input->get('popup') == '1';
+
+	$data = [
+		'pengemasan' => $pengemasan,
+		'is_popup' => $is_popup
+	];
+
+	$this->active_nav = 'pengemasan';
+
+	if ($is_popup) {
+		$this->load->view('form/pengemasan/pengemasan-detail', $data);
+	} else {
 		$this->render('form/pengemasan/pengemasan-detail', $data);
 	}
+}
 
 	public function tambah()
 	{
@@ -49,13 +113,13 @@ class Pengemasan extends MY_Controller {
 			if ($insert) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Proses Pengemasan berhasil di simpan');
 				redirect('pengemasan');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Proses Pengemasan gagal di simpan');
 				redirect('pengemasan');
 			}
 		}
 
-		$this->active_nav = 'pengemasan'; 
+		$this->active_nav = 'pengemasan';
 		$this->render('form/pengemasan/pengemasan-tambah');
 	}
 
@@ -65,12 +129,12 @@ class Pengemasan extends MY_Controller {
 		$this->form_validation->set_rules($rules);
 
 		if ($this->form_validation->run() == TRUE) {
-			
+
 			$update = $this->pengemasan_model->update($uuid);
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Proses Pengemasan berhasil di Update');
 				redirect('pengemasan');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Proses Pengemasan gagal di Update');
 				redirect('pengemasan');
 			}
@@ -80,7 +144,7 @@ class Pengemasan extends MY_Controller {
 			'pengemasan' => $this->pengemasan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'pengemasan'; 
+		$this->active_nav = 'pengemasan';
 		$this->render('form/pengemasan/pengemasan-edit', $data);
 	}
 
@@ -101,17 +165,57 @@ class Pengemasan extends MY_Controller {
 
 		redirect('pengemasan');
 	}
-	
+
 	public function verifikasi()
 	{
 		$data = array(
 			'pengemasan' => $this->pengemasan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pengemasan'; 
+		$this->active_nav = 'verifikasi-pengemasan';
 		$this->render('form/pengemasan/pengemasan-verifikasi', $data);
 	}
 
+	public function verifikasi_massal()
+	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
+			return;
+		}
+
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+			show_error('Anda tidak memiliki akses untuk melakukan verifikasi.', 403);
+			return;
+		}
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (!$date || $date->format('Y-m-d') !== $tanggal) {
+			$response = [
+				'status' => false,
+				'message' => 'Tanggal tidak valid.'
+			];
+		} else {
+			$jumlah = $this->pengemasan_model->verifikasi_massal_spv($tanggal);
+
+			$response = $jumlah > 0
+				? [
+					'status' => true,
+					'message' => $jumlah . ' data Pengemasan berhasil diverifikasi.'
+				]
+				: [
+					'status' => false,
+					'message' => 'Tidak ada data yang memenuhi syarat untuk diverifikasi.'
+				];
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
+	}
 
 	public function status($uuid)
 	{
@@ -124,7 +228,7 @@ class Pengemasan extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Proses Pengemasan berhasil di Update');
 				redirect('pengemasan/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Proses Pengemasan gagal di Update');
 				redirect('pengemasan/verifikasi');
 			}
@@ -134,7 +238,7 @@ class Pengemasan extends MY_Controller {
 			'pengemasan' => $this->pengemasan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pengemasan'; 
+		$this->active_nav = 'verifikasi-pengemasan';
 		$this->render('form/pengemasan/pengemasan-status', $data);
 	}
 
@@ -157,7 +261,7 @@ class Pengemasan extends MY_Controller {
 	// 	$this->form_validation->set_rules($rules);
 
 	// 	if ($this->form_validation->run() == TRUE) {
-			
+
 	// 		$update = $this->pengemasan_model->diketahui_update($uuid);
 	// 		if ($update) {
 	// 			$this->session->set_flashdata('success_msg', 'Status Pemeriksaan Proses Pengemasan berhasil di Update');
@@ -179,7 +283,7 @@ class Pengemasan extends MY_Controller {
 
 	public function cetak()
 	{
-		$tanggal = $this->input->post('tanggal');  
+		$tanggal = $this->input->post('tanggal');
 
 		log_message('debug', 'Tanggal yang dipilih: ' . print_r($tanggal, true));
 
@@ -189,20 +293,20 @@ class Pengemasan extends MY_Controller {
 
 		$plant = $this->session->userdata('plant');
 
-		$pengemasan_data = $this->pengemasan_model->get_by_date($tanggal, $plant); 
-		$pengemasan_data_verif = $this->pengemasan_model->get_last_verif_by_date($tanggal, $plant); 
+		$pengemasan_data = $this->pengemasan_model->get_by_date($tanggal, $plant);
+		$pengemasan_data_verif = $this->pengemasan_model->get_last_verif_by_date($tanggal, $plant);
 
 		if (!$pengemasan_data || !$pengemasan_data_verif) {
 			show_error('Data tidak ditemukan, Pilih tanggal yang ingin dicetak', 404);
 		}
 
 		$data['pengemasan'] = $pengemasan_data_verif;
-		
+
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
-		$pdf->setPrintHeader(false); 
-		$pdf->SetMargins(17, 16, 15); 
+		$pdf->setPrintHeader(false);
+		$pdf->SetMargins(17, 16, 15);
 		$pdf->AddPage('L', 'LEGAL');
 		$pdf->SetFont('times', 'B', 13);
 
@@ -271,7 +375,7 @@ class Pengemasan extends MY_Controller {
 			$pdf->SetFont('times', '', 10);
 			$pdf->Cell(14, 8, $formatted_time, 1, 0, 'C');
 			$pdf->Cell(32, 8, $pengemasan->nama_produk, 1, 0, 'C');
-			$pdf->Cell(50, 8, $pengemasan->kode_produksi. " / ". $formatted_bb, 1, 0, 'C');
+			$pdf->Cell(50, 8, $pengemasan->kode_produksi . " / " . $formatted_bb, 1, 0, 'C');
 			$pdf->Cell(20, 8, $pengemasan->kadar_air, 1, 0, 'C');
 			$pdf->Cell(20, 8, $pengemasan->kondisi_produk, 1, 0, 'C');
 			$pdf->Cell(24, 8, $pengemasan->kondisi_seal, 1, 0, 'C');
@@ -300,7 +404,7 @@ class Pengemasan extends MY_Controller {
 		$pdf->SetX(20);
 		$pdf->Cell(60, 3, 'Range per Pack (5000 gr): 5068-5118 gr', 0, 1, 'L');
 
-		$y_verifikasi = $pdf->GetY() - 26; 
+		$y_verifikasi = $pdf->GetY() - 26;
 		$pdf->SetFont('times', '', 8);
 		$pdf->SetTextColor(0, 0, 0);
 
@@ -318,7 +422,7 @@ class Pengemasan extends MY_Controller {
 		}
 
 		if ($status_verifikasi) {
-	// Dibuat oleh (QC)
+			// Dibuat oleh (QC)
 			$pdf->SetXY(90, $y_verifikasi + 5);
 			$pdf->Cell(35, 5, 'Dibuat Oleh,', 0, 0, 'C');
 			$pdf->SetXY(90, $y_verifikasi + 10);
@@ -346,7 +450,7 @@ class Pengemasan extends MY_Controller {
 			}
 
 
-	// Disetujui oleh (SPV)
+			// Disetujui oleh (SPV)
 			$update_tanggal = (new DateTime($data['pengemasan']->tgl_update_spv))->format('d-m-Y | H:i');
 			$qr_text = "Diverifikasi secara digital oleh,\n" . $data['pengemasan']->nama_lengkap_spv . "\nSPV QC Bread Crumb\n" . $update_tanggal;
 			$pdf->SetXY(200, $y_verifikasi + 5);
@@ -354,7 +458,6 @@ class Pengemasan extends MY_Controller {
 			$pdf->write2DBarcode($qr_text, 'QRCODE,L', 227, $y_verifikasi + 10, 15, 15, null, 'N');
 			$pdf->SetXY(200, $y_verifikasi + 24);
 			$pdf->Cell(70, 5, 'Supervisor QC', 0, 0, 'C');
-
 		} else {
 			$pdf->SetTextColor(255, 0, 0);
 			$pdf->SetFont('times', '', 8);
@@ -366,7 +469,5 @@ class Pengemasan extends MY_Controller {
 		$pdf->setPrintFooter(false);
 		$filename = "Data Release Packing_{$formatted_date2}.pdf";
 		$pdf->Output($filename, 'I');
-
 	}
 }
-

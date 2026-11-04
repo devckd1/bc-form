@@ -25,20 +25,55 @@
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
-			<div class="form-group text-right">
-				<a href="<?= base_url('verifikasimagnet/tambah') ?>" class="btn btn-md btn-primary shadow-sm">
-					<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-				</a>
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<a href="<?= base_url('verifikasimagnet/audit'); ?>"
-						class="btn shadow-sm"
-						style="background-color: #5a3298; color: #fff;">
+			<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
 
-						<i class="fas fa-clipboard-check mr-1"></i>
-						Mode Audit
+				<form method="get"
+					action="<?= base_url('verifikasimagnet'); ?>"
+					class="form-inline mb-2">
 
+					<label class="mr-2 font-weight-bold">Filter Tanggal:</label>
+
+					<input type="date"
+						name="tanggal"
+						class="form-control mr-2 mb-2"
+						value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+
+					<button type="submit" class="btn btn-primary btn-sm mr-2 mb-2">
+						<i class="fas fa-filter"></i> Filter
+					</button>
+
+					<a href="<?= base_url('verifikasimagnet'); ?>"
+						class="btn btn-secondary btn-sm mr-2 mb-2">
+						<i class="fas fa-sync"></i> Reset
 					</a>
-				<?php endif; ?>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+						<button type="button"
+							class="btn btn-success btn-sm mb-2"
+							id="btnVerifikasiMassal">
+							<i class="fas fa-check-double"></i>
+							Verifikasi Massal
+						</button>
+					<?php endif; ?>
+
+				</form>
+
+				<div class="mb-2">
+					<a href="<?= base_url('verifikasimagnet/tambah'); ?>"
+						class="btn btn-md btn-primary shadow-sm">
+						<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
+					</a>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+						<a href="<?= base_url('verifikasimagnet/audit'); ?>"
+							class="btn shadow-sm"
+							style="background-color: #5a3298; color: #fff;">
+							<i class="fas fa-clipboard-check mr-1"></i>
+							Mode Audit
+						</a>
+					<?php endif; ?>
+				</div>
+
 			</div>
 			<hr>
 			<div class="table-responsive">
@@ -58,7 +93,7 @@
 					</thead>
 					<tbody>
 						<?php
-						$no = 1;
+						$no = (int) ($start ?? 0) + 1;
 						foreach ($verifikasimagnet as $val) {
 							$datetime = new datetime($val->date);
 							$datetime = $datetime->format('d-m-Y');
@@ -138,3 +173,87 @@
 		background-color: #f8f9fc;
 	}
 </style>
+<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+	<script>
+		$(document).ready(function() {
+
+			$('#btnVerifikasiMassal').on('click', function() {
+
+				let tanggal = $('input[name="tanggal"]').val();
+
+				if (!tanggal) {
+					Swal.fire({
+						icon: 'warning',
+						title: 'Pilih Tanggal',
+						text: 'Silakan pilih tanggal terlebih dahulu.'
+					});
+					return;
+				}
+
+				Swal.fire({
+					title: 'Verifikasi Massal?',
+					text: 'Semua data Verifikasi Magnet berstatus Created dan Revision pada tanggal ' + tanggal + ' akan diverifikasi.',
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonColor: '#28a745',
+					cancelButtonColor: '#6c757d',
+					confirmButtonText: 'Ya, Verifikasi',
+					cancelButtonText: 'Batal'
+				}).then((result) => {
+
+					if (result.isConfirmed) {
+
+						$.ajax({
+							url: "<?= base_url('verifikasimagnet/verifikasi_massal'); ?>",
+							type: "POST",
+							dataType: "json",
+							data: {
+								tanggal: tanggal
+							},
+							beforeSend: function() {
+								Swal.fire({
+									title: 'Memproses...',
+									text: 'Sedang melakukan verifikasi data.',
+									allowOutsideClick: false,
+									didOpen: () => {
+										Swal.showLoading();
+									}
+								});
+							},
+							success: function(response) {
+
+								if (response.status) {
+									Swal.fire({
+										icon: 'success',
+										title: 'Berhasil',
+										text: response.message
+									}).then(() => {
+										window.location.href =
+											"<?= base_url('verifikasimagnet'); ?>?tanggal=" + tanggal;
+									});
+								} else {
+									Swal.fire({
+										icon: 'info',
+										title: 'Informasi',
+										text: response.message
+									});
+								}
+							},
+							error: function() {
+								Swal.fire({
+									icon: 'error',
+									title: 'Gagal',
+									text: 'Terjadi kesalahan saat memproses verifikasi massal.'
+								});
+							}
+						});
+
+					}
+
+				});
+
+			});
+
+		});
+	</script>
+<?php endif; ?>

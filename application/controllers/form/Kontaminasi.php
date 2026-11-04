@@ -78,22 +78,30 @@ class Kontaminasi extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$kontaminasi = $this->kontaminasi_model->get_qc_by_uuid($uuid);
+{
+    $kontaminasi = $this->kontaminasi_model->get_qc_by_uuid($uuid);
 
-		if (!$kontaminasi) {
-			show_404();
-			return;
-		}
+    if (!$kontaminasi) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'kontaminasi' => $kontaminasi,
-			'mode' => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'kontaminasi';
-		$this->render('form/kontaminasi/kontaminasi-detail', $data);
-	}
+    $data = [
+        'kontaminasi' => $kontaminasi,
+        'mode' => 'qc',
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'kontaminasi';
+
+    if ($is_popup) {
+        $this->load->view('form/kontaminasi/kontaminasi-detail', $data);
+    } else {
+        $this->render('form/kontaminasi/kontaminasi-detail', $data);
+    }
+}
 
 	public function file_check($str)
 	{

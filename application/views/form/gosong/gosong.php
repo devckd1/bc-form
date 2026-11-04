@@ -65,11 +65,13 @@
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
-				<div class="text-right mb-2">
-					<a href="<?= base_url('gosong/tambah'); ?>"
-						class="btn btn-md btn-primary shadow-sm">
-						<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-					</a>
+				<div class="text-right mb-2 ml-auto">
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('gosong/tambah'); ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<a href="<?= base_url('gosong/audit'); ?>"
@@ -139,9 +141,11 @@
 										</a>
 									<?php endif; ?>
 
-									<a href="<?= base_url('gosong/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split mb-1">
-										<span class="text">Detail</span>
-									</a>
+									<a href="<?= base_url('gosong/detail/' . $val->uuid); ?>"
+    data-url="<?= base_url('gosong/detail/' . $val->uuid . '?popup=1'); ?>"
+    class="btn btn-success btn-icon-split mb-1 btn-detail-gosong">
+    <span class="text">Detail</span>
+</a>
 
 									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 										<a href="<?= base_url('gosong/delete/' . $val->uuid); ?>"
@@ -207,12 +211,78 @@
 	</div>
 </div>
 </div>
+<div class="modal fade" id="modalDetailGosong" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Laporan Gosong</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="contentDetailGosong">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat detail...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 <script>
 	var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
 	tooltipTriggerList.forEach(function(tooltipTriggerEl) {
 		new bootstrap.Tooltip(tooltipTriggerEl)
 	})
+</script>
+<script>
+    $(document).ready(function() {
+
+        let cacheDetailGosong = {};
+
+        $(document).on('click', '.btn-detail-gosong', function(e) {
+            e.preventDefault();
+
+            let url = $(this).data('url');
+            let content = $('#contentDetailGosong');
+
+            $('#modalDetailGosong').modal('show');
+
+            if (cacheDetailGosong[url]) {
+                content.html(cacheDetailGosong[url]);
+                return;
+            }
+
+            content.html(`
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat detail...</p>
+                </div>
+            `);
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'html',
+
+                success: function(response) {
+                    cacheDetailGosong[url] = response;
+                    content.html(response);
+                },
+
+                error: function() {
+                    content.html(`
+                        <div class="alert alert-danger text-center">
+                            Gagal memuat detail laporan Gosong.
+                        </div>
+                    `);
+                }
+            });
+        });
+
+    });
 </script>
 <script>
 	document.getElementById('select_all').addEventListener('change', function() {

@@ -25,23 +25,83 @@ class Larutan extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'larutan' => $this->larutan_model->get_data_by_plant()
-		);
+		$tanggal = $this->input->get('tanggal', TRUE);
+		$tanggal = trim((string) ($tanggal ?? ''));
+
+		$limit = 10;
+		$start = (int) $this->input->get('per_page', TRUE);
+
+		$this->load->library('pagination');
+
+		$config['base_url'] = base_url('larutan');
+		$config['total_rows'] = $this->larutan_model->count_data_by_plant($tanggal);
+		$config['per_page'] = $limit;
+		$config['page_query_string'] = TRUE;
+		$config['query_string_segment'] = 'per_page';
+		$config['reuse_query_string'] = TRUE;
+
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+		$config['cur_tag_open'] = '<li class="page-item active"><span class="page-link">';
+		$config['cur_tag_close'] = '</span></li>';
+
+		$config['attributes'] = ['class' => 'page-link'];
+
+		$this->pagination->initialize($config);
+
+		$data = [
+			'larutan' => $this->larutan_model->get_data_by_plant(
+				$limit,
+				$start,
+				$tanggal
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'tanggal' => $tanggal
+		];
 
 		$this->active_nav = 'larutan';
 		$this->render('form/larutan/larutan', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'larutan' => $this->larutan_model->get_by_uuid($uuid),
-		);
+{
+    $larutan = $this->larutan_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'larutan';
-		$this->render('form/larutan/larutan-detail', $data);
-	}
+    if (!$larutan) {
+        show_404();
+        return;
+    }
+
+    $data = array(
+        'larutan' => $larutan,
+        'is_popup' => $this->input->get('popup') == '1'
+    );
+
+    $this->active_nav = 'larutan';
+
+    if ($data['is_popup']) {
+        $this->load->view(
+            'form/larutan/larutan-detail',
+            $data
+        );
+    } else {
+        $this->render(
+            'form/larutan/larutan-detail',
+            $data
+        );
+    }
+}
 
 	public function tambah()
 	{
@@ -115,6 +175,39 @@ class Larutan extends MY_Controller
 
 		$this->active_nav = 'verifikasi-larutan';
 		$this->render('form/larutan/larutan-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', TRUE);
+		$tanggal = trim($tanggal);
+
+		if (empty($tanggal)) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Tanggal harus dipilih.'
+			]);
+			return;
+		}
+
+		$jumlah = $this->larutan_model->verifikasi_massal_spv($tanggal);
+
+		if ($jumlah > 0) {
+			echo json_encode([
+				'status' => true,
+				'message' => $jumlah . ' data berhasil diverifikasi.'
+			]);
+		} else {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Tidak ada data yang memenuhi syarat untuk diverifikasi.'
+			]);
+		}
 	}
 
 	public function status($uuid)

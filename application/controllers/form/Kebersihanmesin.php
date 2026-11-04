@@ -62,14 +62,33 @@ class Kebersihanmesin extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'kebersihanmesin' => $this->kebersihanmesin_model->get_by_uuid($uuid),
-		);
+{
+    $kebersihanmesin = $this->kebersihanmesin_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'kebersihanmesin';
-		$this->render('form/kebersihanmesin/kebersihanmesin-detail', $data);
-	}
+    if (!$kebersihanmesin) {
+        show_404();
+        return;
+    }
+
+    $data = array(
+        'kebersihanmesin' => $kebersihanmesin,
+        'is_popup' => $this->input->get('popup') == '1'
+    );
+
+    $this->active_nav = 'kebersihanmesin';
+
+    if ($data['is_popup']) {
+        $this->load->view(
+            'form/kebersihanmesin/kebersihanmesin-detail',
+            $data
+        );
+    } else {
+        $this->render(
+            'form/kebersihanmesin/kebersihanmesin-detail',
+            $data
+        );
+    }
+}
 
 	public function tambah()
 	{

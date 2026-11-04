@@ -27,10 +27,17 @@ class Produksi extends MY_Controller
 		$this->load->helper('url');
 
 		$plant = $this->session->userdata('plant');
-		$keyword = $this->input->get('keyword');
+		$keyword = trim($this->input->get('keyword', TRUE) ?? '');
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->get('shift', TRUE) ?? '');
 
-		// Hitung total data
-		$total_rows = $this->produksi_model->count_all_by_plant($plant, $keyword);
+		// Hitung total data dengan seluruh filter
+		$total_rows = $this->produksi_model->count_all_by_plant(
+			$plant,
+			$keyword,
+			$tanggal,
+			$shift
+		);
 
 		// Konfigurasi pagination
 		$config['base_url'] = base_url('produksi');
@@ -39,7 +46,7 @@ class Produksi extends MY_Controller
 		$config['page_query_string'] = TRUE;
 		$config['reuse_query_string'] = TRUE;
 
-		// Styling bootstrap
+		// Styling Bootstrap
 		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
 		$config['full_tag_close'] = '</ul>';
 		$config['attributes'] = ['class' => 'page-link'];
@@ -54,13 +61,22 @@ class Produksi extends MY_Controller
 
 		$this->pagination->initialize($config);
 
-		$page = $this->input->get('per_page');
-		$start = ($page) ? $page : 0;
+		$page = (int) $this->input->get('per_page');
+		$start = max(0, $page);
 
 		$data = [
-			'produksi' => $this->produksi_model->get_data_by_plant_paginated($plant, $config['per_page'], $start, $keyword),
+			'produksi' => $this->produksi_model->get_data_by_plant_paginated(
+				$plant,
+				$config['per_page'],
+				$start,
+				$keyword,
+				$tanggal,
+				$shift
+			),
 			'pagination' => $this->pagination->create_links(),
-			'keyword' => $keyword
+			'keyword' => $keyword,
+			'filter_tanggal' => $tanggal,
+			'filter_shift' => $shift
 		];
 
 		$this->active_nav = 'produksi';
@@ -68,14 +84,29 @@ class Produksi extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'produksi' => $this->produksi_model->get_by_uuid($uuid),
-		);
+{
+    $produksi = $this->produksi_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'produksi';
-		$this->render('form/produksi/produksi-detail', $data);
-	}
+    if (!$produksi) {
+        show_404();
+        return;
+    }
+
+    $is_popup = $this->input->get('popup') == '1';
+
+    $data = array(
+        'produksi' => $produksi,
+        'is_popup' => $is_popup
+    );
+
+    $this->active_nav = 'produksi';
+
+    if ($is_popup) {
+        $this->load->view('form/produksi/produksi-detail', $data);
+    } else {
+        $this->render('form/produksi/produksi-detail', $data);
+    }
+}
 
 	public function tambah()
 	{
@@ -571,6 +602,52 @@ class Produksi extends MY_Controller
 		}
 
 		redirect('produksi/verifikasi');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->produksi_model
+			->verifikasi_massal_spv($tanggal, $shift);
+
+		if ($updated === false) {
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Produksi gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Produksi berhasil.'
+			];
+		} else {
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

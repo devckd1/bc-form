@@ -65,12 +65,15 @@
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
-				<div class="text-right mb-2">
-					<a href="<?= base_url('kondisikerja/tambah'); ?>"
-						class="btn btn-md btn-primary shadow-sm">
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-					</a>
+				<div class="text-right mb-2 ml-auto">
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('kondisikerja/tambah'); ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<a href="<?= base_url('kondisikerja/audit'); ?>"
@@ -80,6 +83,7 @@
 							Mode Audit
 						</a>
 					<?php endif; ?>
+
 				</div>
 			</div>
 
@@ -89,6 +93,7 @@
 					Hanya data yang sudah diverifikasi Produksi yang akan diproses.
 				</small>
 			<?php endif; ?>
+
 			<hr>
 			<div style="display: flex; gap: 20px;">
 				<table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 50%; text-align: left; font-family: Times, sans-serif; font-size: 14px;">
@@ -218,7 +223,8 @@
 											<?php endif; ?>
 
 											<a href="<?= base_url('kondisikerja/detail/' . $val->uuid); ?>"
-												class="btn btn-success btn-icon-split mb-1">
+												class="btn btn-success btn-icon-split mb-1 btn-detail-kondisikerja"
+												data-url="<?= base_url('kondisikerja/detail/' . $val->uuid . '?popup=1'); ?>">
 												<span class="text">Detail</span>
 											</a>
 
@@ -320,7 +326,28 @@
 	</div>
 </div>
 </div>
+<div class="modal fade" id="modalDetailKondisiKerja" tabindex="-1"
+	role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
 
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Pemeriksaan Kondisi Kerja</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+
+			<div class="modal-body" id="contentDetailKondisiKerja">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat detail...</p>
+				</div>
+			</div>
+
+		</div>
+	</div>
+</div>
 <style>
 	th {
 		background-color: #f8f9fc;
@@ -462,6 +489,52 @@
 					}
 				});
 			});
+		});
+
+	});
+
+	// Modal Detail Kondisi Kerja AJAX
+	let cacheDetailKondisiKerja = {};
+
+	$(document).on('click', '.btn-detail-kondisikerja', function(e) {
+
+		e.preventDefault();
+
+		let url = $(this).data('url');
+
+		$('#modalDetailKondisiKerja').modal('show');
+
+		if (cacheDetailKondisiKerja[url]) {
+			$('#contentDetailKondisiKerja').html(
+				cacheDetailKondisiKerja[url]
+			);
+			return;
+		}
+
+		$('#contentDetailKondisiKerja').html(`
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat detail...</p>
+        </div>
+    `);
+
+		$.ajax({
+			url: url,
+			type: 'GET',
+			dataType: 'html',
+
+			success: function(response) {
+				cacheDetailKondisiKerja[url] = response;
+				$('#contentDetailKondisiKerja').html(response);
+			},
+
+			error: function() {
+				$('#contentDetailKondisiKerja').html(`
+                <div class="alert alert-danger">
+                    Gagal memuat detail pemeriksaan Kondisi Kerja.
+                </div>
+            `);
+			}
 		});
 
 	});

@@ -167,6 +167,53 @@ class Releasepacking_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($plant) || empty($username)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db
+			->from('release_packing')
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal)
+			->where_in('status_spv', ['0', '2']);
+
+		$total = $this->db->count_all_results();
+
+		if ($total == 0) {
+			return 0;
+		}
+
+		// Proses verifikasi massal
+		$this->db->trans_begin();
+
+		$this->db
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal)
+			->where_in('status_spv', ['0', '2'])
+			->update('release_packing', [
+				'nama_spv' => $username,
+				'status_spv' => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $total;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -245,11 +292,11 @@ class Releasepacking_model extends CI_Model
 	}
 
 
-	public function get_data_by_plant($limit, $start)
+	public function get_data_by_plant($limit = 10, $start = 0, $tanggal = '')
 	{
 		$plant = $this->session->userdata('plant');
 
-		return $this->db
+		$this->db
 			->select('
             uuid,
             date,
@@ -261,11 +308,33 @@ class Releasepacking_model extends CI_Model
         ')
 			->from('release_packing')
 			->where('plant', $plant)
-			->where('is_audit', 0)
+			->where('is_audit', 0);
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		$this->db
 			->order_by('created_at', 'DESC')
-			->limit($limit, $start)
-			->get()
-			->result();
+			->limit($limit, $start);
+
+		return $this->db->get()->result();
+	}
+
+	public function count_releasepacking_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db
+			->from('release_packing')
+			->where('plant', $plant)
+			->where('is_audit', 0);
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		return $this->db->count_all_results();
 	}
 
 	public function get_data_verifikasi()

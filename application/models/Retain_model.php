@@ -166,6 +166,62 @@ class Retain_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($nama_spv)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db->from('retain');
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$total_data = $this->db->count_all_results();
+
+		if ($total_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update hanya data QC yang belum diverifikasi
+		// atau berstatus Revision
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->update('retain', [
+			'nama_spv'       => $nama_spv,
+			'status_spv'     => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$jumlah_update = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $jumlah_update;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -266,25 +322,57 @@ class Retain_model extends CI_Model
 	}
 
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
+		$plant = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+
 		$this->db->select('a.*, b.plant AS nama_plant');
 		$this->db->from('retain a');
 		$this->db->join('plant b', 'a.plant = b.uuid', 'left');
 
+		// Hanya data QC, bukan data Audit
 		$this->db->where('a.is_audit', 0);
-		$this->db->order_by('a.created_at', 'DESC');
 
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get()->result();
+		// Pembatasan plant
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('a.plant', $plant);
 		}
 
-		$this->db->where('a.plant', $plant);
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('a.date', $tanggal);
+		}
+
+		$this->db->order_by('a.created_at', 'DESC');
+
+		// Pagination jika limit diberikan
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
 
 		return $this->db->get()->result();
+	}
+
+	public function count_retain_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+
+		$this->db->from('retain a');
+		$this->db->where('a.is_audit', 0);
+
+		// Pembatasan plant
+		if (!in_array($type_user, [9, 1])) {
+			$this->db->where('a.plant', $plant);
+		}
+
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('a.date', $tanggal);
+		}
+
+		return $this->db->count_all_results();
 	}
 
 	public function delete_by_uuid($uuid)

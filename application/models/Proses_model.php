@@ -568,6 +568,69 @@ class Proses_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
+	public function verifikasi_massal_spv($tanggal, $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$username = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($username)) {
+			return false;
+		}
+
+		// Hitung data QC yang status SPV-nya masih Created atau Revision.
+		$this->db->from($this->table);
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		$jumlah_data = $this->db->count_all_results();
+
+		if ($jumlah_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update hanya data QC, bukan snapshot Audit.
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->update($this->table, [
+			'nama_spv'   => $username,
+			'status_spv' => '1',
+			'tgl_update' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$updated = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $updated;
+	}
+
 	public function get_all()
 	{
 		$this->db->order_by('created_at', 'DESC');
@@ -728,22 +791,56 @@ class Proses_model extends CI_Model
 		return $this->db->count_all_results('mixing');
 	}
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '', $shift = '')
 	{
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
+		$this->db->from($this->table);
 		$this->db->where('is_audit', 0);
-		$this->db->order_by('created_at', 'DESC');
 
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get($this->table)->result();
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
 		}
 
-		return $this->db
-			->where('plant', $plant)
-			->get($this->table)
-			->result();
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get()->result();
+	}
+
+	public function count_proses_by_plant($tanggal = '', $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->from($this->table);
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db->count_all_results();
 	}
 
 	public function delete_by_uuid($uuid)

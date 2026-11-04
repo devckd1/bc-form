@@ -324,6 +324,62 @@ class Sanitasi_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
+	public function verifikasi_massal_spv($tanggal, $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($plant) || empty($username)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db
+			->from('sanitasi')
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal)
+			->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$total = $this->db->count_all_results();
+
+		if ($total == 0) {
+			return 0;
+		}
+
+		// Proses verifikasi massal
+		$this->db->trans_begin();
+
+		$this->db
+			->where('plant', $plant)
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal)
+			->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->update('sanitasi', [
+			'nama_spv' => $username,
+			'status_spv' => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $total;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -401,18 +457,49 @@ class Sanitasi_model extends CI_Model
 		return $data_sanitasi;
 	}
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = 10, $start = 0, $tanggal = '', $shift = '')
 	{
-		$this->db->where('is_audit', 0);
-		$this->db->order_by('created_at', 'DESC');
-
 		$plant = $this->session->userdata('plant');
 
-		return $this->db->get_where('sanitasi', [
-			'plant' => $plant
-		])->result();
+		$this->db
+			->from('sanitasi')
+			->where('plant', $plant)
+			->where('is_audit', 0);
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db
+			->order_by('created_at', 'DESC')
+			->limit($limit, $start);
+
+		return $this->db->get()->result();
 	}
 
+	public function count_sanitasi_by_plant($tanggal = '', $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db
+			->from('sanitasi')
+			->where('plant', $plant)
+			->where('is_audit', 0);
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db->count_all_results();
+	}
 
 	public function delete_by_uuid($uuid)
 	{

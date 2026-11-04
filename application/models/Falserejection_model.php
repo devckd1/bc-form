@@ -136,6 +136,47 @@ class Falserejection_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		$this->db->trans_begin();
+
+		$this->db->where('is_audit', 0);
+
+		// Pertahankan akses lintas plant untuk tipe user 1 dan 9.
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->where('DATE(date_false_rejection)', $tanggal);
+
+		// False Rejection harus sudah selesai tahap produksi.
+		$this->db->where('status_produksi_false', '1');
+
+		// SPV hanya memproses Created dan Revision.
+		$this->db->where_in('status_spv_false', ['0', '2']);
+
+		$this->db->update('metal', [
+			'nama_spv_false'       => $nama_spv,
+			'status_spv_false'     => '1',
+			'tgl_update_spv_false' => date('Y-m-d H:i:s')
+		]);
+
+		$jumlah = $this->db->affected_rows();
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $jumlah;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -215,23 +256,48 @@ class Falserejection_model extends CI_Model
 		return $data_falserejection;
 	}
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
 		$this->db->where('is_audit', 0);
-		$this->db->order_by('created_at', 'DESC');
-		$this->db->limit(50);
 
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get('metal')->result();
+		// Hak akses asli: tipe 1 dan 9 dapat melihat lintas plant.
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
 		}
 
-		return $this->db
-			->where('plant', $plant)
-			->get('metal')
-			->result();
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date_false_rejection)', $tanggal);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get('metal')->result();
+	}
+
+	public function count_falserejection_by_plant($tanggal = '')
+	{
+		$this->db->from('metal');
+		$this->db->where('is_audit', 0);
+
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date_false_rejection)', $tanggal);
+		}
+
+		return $this->db->count_all_results();
 	}
 
 	public function get_by_date($tanggal, $plant = null)

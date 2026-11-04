@@ -1,4 +1,5 @@
 <div class="container-fluid">
+	<?php if (empty($is_popup)): ?>
     <!-- Page Heading -->
     <h1 class="h3 mb-4 text-gray-800 font-weight-bold text-center">
         Detail Pemeriksaan Pembuatan Larutan
@@ -14,7 +15,7 @@
             </li>
         </ol>
     </nav>
-
+<?php endif; ?>
     <!-- Main Card -->
     <div class="card shadow mb-4">
         <div class="card-body">

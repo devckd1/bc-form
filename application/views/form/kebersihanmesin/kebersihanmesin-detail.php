@@ -25,33 +25,34 @@ $status_spv = [
 ?>
 
 <div class="container-fluid">
+	<?php if (empty($is_popup)): ?>
+		<h1 class="h3 mb-3 text-gray-800 font-weight-bold text-center">
+			<?= html_escape($page_title); ?>
 
-	<h1 class="h3 mb-3 text-gray-800 font-weight-bold text-center">
-		<?= html_escape($page_title); ?>
+			<?php if ($is_audit): ?>
+				<span class="badge-mode-audit">
+					<i class="fas fa-clipboard-check mr-1"></i>
+					MODE AUDIT
+				</span>
+			<?php endif; ?>
+		</h1>
 
-		<?php if ($is_audit): ?>
-			<span class="badge-mode-audit">
-				<i class="fas fa-clipboard-check mr-1"></i>
-				MODE AUDIT
-			</span>
-		<?php endif; ?>
-	</h1>
-
-	<nav aria-label="breadcrumb">
-		<ol class="breadcrumb">
-			<li class="breadcrumb-item">
-				<a href="<?= base_url($back_url); ?>">
-					<i class="fas fa-arrow-left"></i>
-					<?= $is_audit
-						? 'Daftar Audit Kebersihan dan Sanitasi Mesin'
-						: 'Daftar Pemeriksaan'; ?>
-				</a>
-			</li>
-			<li class="breadcrumb-item active" aria-current="page">
-				Detail
-			</li>
-		</ol>
-	</nav>
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item">
+					<a href="<?= base_url($back_url); ?>">
+						<i class="fas fa-arrow-left"></i>
+						<?= $is_audit
+							? 'Daftar Audit Kebersihan dan Sanitasi Mesin'
+							: 'Daftar Pemeriksaan'; ?>
+					</a>
+				</li>
+				<li class="breadcrumb-item active" aria-current="page">
+					Detail
+				</li>
+			</ol>
+		</nav>
+	<?php endif; ?>
 
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">

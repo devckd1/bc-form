@@ -74,9 +74,10 @@
 								<td><?= $row->tahun ?></td>
 								<td class="text-center">
 									<a href="<?= base_url('reagen/detail/' . $row->bulan . '/' . $row->tahun) ?>"
-										class="btn btn-success btn-sm">
-										Detail
-									</a>
+    data-url="<?= base_url('reagen/detail/' . $row->bulan . '/' . $row->tahun . '?popup=1') ?>"
+    class="btn btn-success btn-sm btn-detail-reagen">
+    Detail
+</a>
 
 									<button type="button"
 										class="btn btn-info btn-sm"
@@ -137,7 +138,26 @@
 		</form>
 	</div>
 </div>
+<!-- Modal Detail Reagen -->
+<div class="modal fade" id="modalDetailReagen" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Penggunaan Reagen Klorin</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
 
+            <div class="modal-body" id="contentDetailReagen">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat detail...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
 	$('#verifikasiModal').on('show.bs.modal', function(event) {
 		var button = $(event.relatedTarget);
@@ -153,4 +173,46 @@
 			'<?= base_url("reagen/verifikasi/") ?>' + bulan + '/' + tahun
 		);
 	});
+
+	// Modal Detail Reagen
+var cacheDetailReagen = {};
+
+$(document).on('click', '.btn-detail-reagen', function(e) {
+    e.preventDefault();
+
+    var url = $(this).data('url');
+
+    $('#modalDetailReagen').modal('show');
+
+    if (cacheDetailReagen[url]) {
+        $('#contentDetailReagen').html(cacheDetailReagen[url]);
+        return;
+    }
+
+    $('#contentDetailReagen').html(`
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat detail...</p>
+        </div>
+    `);
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'html',
+
+        success: function(response) {
+            cacheDetailReagen[url] = response;
+            $('#contentDetailReagen').html(response);
+        },
+
+        error: function() {
+            $('#contentDetailReagen').html(`
+                <div class="alert alert-danger text-center">
+                    Gagal memuat detail Reagen.
+                </div>
+            `);
+        }
+    });
+});
 </script>

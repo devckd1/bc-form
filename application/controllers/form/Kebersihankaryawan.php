@@ -72,12 +72,31 @@ class Kebersihankaryawan extends MY_Controller
 
 	public function detail($uuid)
 	{
+		$kebersihankaryawan = $this->kebersihankaryawan_model->get_by_uuid($uuid);
+
+		if (!$kebersihankaryawan) {
+			show_404();
+			return;
+		}
+
 		$data = array(
-			'kebersihankaryawan' => $this->kebersihankaryawan_model->get_by_uuid($uuid),
+			'kebersihankaryawan' => $kebersihankaryawan,
+			'is_popup' => $this->input->get('popup') == '1'
 		);
 
 		$this->active_nav = 'kebersihankaryawan';
-		$this->render('form/kebersihankaryawan/kebersihankaryawan-detail', $data);
+
+		if ($data['is_popup']) {
+			$this->load->view(
+				'form/kebersihankaryawan/kebersihankaryawan-detail',
+				$data
+			);
+		} else {
+			$this->render(
+				'form/kebersihankaryawan/kebersihankaryawan-detail',
+				$data
+			);
+		}
 	}
 
 	public function tambah()

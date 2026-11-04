@@ -24,23 +24,82 @@ class Kekuatanmagnet extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'kekuatanmagnet' => $this->kekuatanmagnet_model->get_data_by_plant(),
-		);
+		$this->load->library('pagination');
+
+		$filter_tanggal = $this->input->get('tanggal', true);
+		$filter_shift = $this->input->get('shift', true);
+
+		$config['base_url'] = base_url('kekuatanmagnet/index');
+		$config['total_rows'] = $this->kekuatanmagnet_model
+			->count_kekuatanmagnet_by_plant($filter_tanggal, $filter_shift);
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['use_page_numbers'] = false;
+		$config['reuse_query_string'] = true;
+
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+		$config['first_link'] = 'First';
+		$config['last_link'] = 'Last';
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+		$config['next_link'] = '&raquo;';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+		$config['prev_link'] = '&laquo;';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+		$config['cur_tag_open'] = '<li class="page-item active"><a class="page-link" href="#">';
+		$config['cur_tag_close'] = '</a></li>';
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+		$config['attributes'] = ['class' => 'page-link'];
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'kekuatanmagnet' => $this->kekuatanmagnet_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$filter_tanggal,
+				$filter_shift
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $filter_tanggal,
+			'filter_shift' => $filter_shift
+		];
 
 		$this->active_nav = 'kekuatanmagnet';
 		$this->render('form/kekuatanmagnet/kekuatanmagnet', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'kekuatanmagnet' => $this->kekuatanmagnet_model->get_by_uuid($uuid),
-		);
+{
+    $kekuatanmagnet = $this->kekuatanmagnet_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'kekuatanmagnet';
-		$this->render('form/kekuatanmagnet/kekuatanmagnet-detail', $data);
-	}
+    if (!$kekuatanmagnet) {
+        show_404();
+        return;
+    }
+
+    $data = array(
+        'kekuatanmagnet' => $kekuatanmagnet,
+        'is_popup' => $this->input->get('popup') == '1'
+    );
+
+    $this->active_nav = 'kekuatanmagnet';
+
+    if ($data['is_popup']) {
+        $this->load->view('form/kekuatanmagnet/kekuatanmagnet-detail', $data);
+    } else {
+        $this->render('form/kekuatanmagnet/kekuatanmagnet-detail', $data);
+    }
+}
 
 	public function tambah()
 	{
@@ -137,6 +196,62 @@ class Kekuatanmagnet extends MY_Controller
 		}
 
 		redirect('kekuatanmagnet/verifikasi');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+			show_error(
+				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
+				403
+			);
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', true);
+
+		if (empty($tanggal)) {
+			$response = [
+				'status' => false,
+				'message' => 'Tanggal harus dipilih.'
+			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+			$shift = $this->input->post('shift', true);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status' => false,
+					'message' => 'Format tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->kekuatanmagnet_model
+					->verifikasi_massal_spv($tanggal, $shift);
+
+				if ($jumlah === false) {
+					$response = [
+						'status' => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					$response = [
+						'status' => false,
+						'message' => 'Tidak ada data Kekuatan Magnet dengan status produksi 1 dan status SPV Created atau Revision pada tanggal tersebut.'
+					];
+				} else {
+					$response = [
+						'status' => true,
+						'message' => $jumlah . ' data Kekuatan Magnet berhasil diverifikasi.'
+					];
+				}
+			}
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

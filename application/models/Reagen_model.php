@@ -331,24 +331,65 @@ class Reagen_model extends CI_Model
 		return $query->result_array();
 	}
 
-	public function get_bulan_tahun_by_plant()
+	public function get_bulan_tahun_by_plant($filter_bulan = '', $limit = null, $start = 0)
 	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
 		$this->db->select('MONTH(date) as bulan, YEAR(date) as tahun');
 		$this->db->from('reagen');
 		$this->db->where('is_audit', 0);
-
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
 
 		if (!in_array($type_user, [9, 1, '9', '1'])) {
 			$this->db->where('plant', $plant);
 		}
 
+		if (!empty($filter_bulan)) {
+			$this->db->where(
+				"DATE_FORMAT(date, '%Y-%m') = " . $this->db->escape($filter_bulan),
+				null,
+				false
+			);
+		}
+
 		$this->db->group_by(['YEAR(date)', 'MONTH(date)']);
-		$this->db->order_by('YEAR(date)', 'ASC');
-		$this->db->order_by('MONTH(date)', 'ASC');
+		$this->db->order_by('YEAR(date)', 'DESC');
+		$this->db->order_by('MONTH(date)', 'DESC');
+
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
 
 		return $this->db->get()->result();
+	}
+
+	public function count_bulan_tahun_by_plant($filter_bulan = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->select(
+			"COUNT(DISTINCT DATE_FORMAT(date, '%Y-%m')) AS total",
+			false
+		);
+		$this->db->from('reagen');
+		$this->db->where('is_audit', 0);
+
+		if (!in_array($type_user, [9, 1, '9', '1'])) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($filter_bulan)) {
+			$this->db->where(
+				"DATE_FORMAT(date, '%Y-%m') = " . $this->db->escape($filter_bulan),
+				null,
+				false
+			);
+		}
+
+		$result = $this->db->get()->row();
+
+		return $result ? (int) $result->total : 0;
 	}
 
 	public function detail_bulan($bulan, $tahun)

@@ -26,26 +26,30 @@ class Releasepacking extends MY_Controller
 	{
 		$this->load->library('pagination');
 
-		$plant = $this->session->userdata('plant');
-
-		$this->db->where('plant', $plant);
-		$config['total_rows'] = $this->db->count_all_results('release_packing');
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
 
 		$config['base_url'] = base_url('releasepacking/index');
-		$config['per_page'] = 100;
-		$config['uri_segment'] = 10;
+		$config['total_rows'] = $this->releasepacking_model
+			->count_releasepacking_by_plant($tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
 
 		$this->pagination->initialize($config);
 
-		$start = $this->uri->segment(3) ?? 0;
+		$start = (int) $this->uri->segment(3, 0);
 
 		$data = [
 			'releasepacking' => $this->releasepacking_model->get_data_by_plant(
 				$config['per_page'],
-				$start
+				$start,
+				$tanggal
 			),
 			'pagination' => $this->pagination->create_links(),
-			'start' => $start
+			'start' => $start,
+			'filter_tanggal' => $tanggal
 		];
 
 		$this->active_nav = 'releasepacking';
@@ -53,15 +57,30 @@ class Releasepacking extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'releasepacking' => $this->releasepacking_model->get_by_uuid($uuid),
-			'mode' => 'qc',
-		);
+{
+	$releasepacking = $this->releasepacking_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'releasepacking';
+	if (!$releasepacking) {
+		show_404();
+		return;
+	}
+
+	$is_popup = $this->input->get('popup') == '1';
+
+	$data = [
+		'releasepacking' => $releasepacking,
+		'mode' => 'qc',
+		'is_popup' => $is_popup
+	];
+
+	$this->active_nav = 'releasepacking';
+
+	if ($is_popup) {
+		$this->load->view('form/releasepacking/releasepacking-detail', $data);
+	} else {
 		$this->render('form/releasepacking/releasepacking-detail', $data);
 	}
+}
 
 	public function tambah()
 	{
@@ -151,6 +170,50 @@ class Releasepacking extends MY_Controller
 		$this->render('form/releasepacking/releasepacking-verifikasi', $data);
 	}
 
+	public function verifikasi_massal()
+	{
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->releasepacking_model
+			->verifikasi_massal_spv($tanggal);
+
+		if ($updated === false) {
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Release Packing gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Release Packing berhasil.'
+			];
+		} else {
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
+	}
 
 	public function status($uuid)
 	{

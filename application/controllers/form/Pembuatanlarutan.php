@@ -1,43 +1,131 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Pembuatanlarutan extends MY_Controller {
+class Pembuatanlarutan extends MY_Controller
+{
 
 	public function __construct()
 	{
 		parent::__construct();
 
 		$this->load->library('form_validation');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('pembuatanlarutan_model');
-		if(!$this->auth_model->current_user()){
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
 
 	public function index()
 	{
-		$data = array(
-			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
 
-		$this->active_nav = 'pembuatanlarutan'; 
-		$this->render('form/pembuatanlarutan/pembuatanlarutan', $data);
+		$filter_tanggal = $this->input->get('tanggal', true);
+
+		// Validasi format tanggal.
+		if (!empty($filter_tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $filter_tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $filter_tanggal) {
+				$filter_tanggal = '';
+			}
+		}
+
+		$config['base_url'] = base_url('pembuatanlarutan/index');
+		$config['total_rows'] = $this->pembuatanlarutan_model
+			->count_pembuatanlarutan_by_plant($filter_tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['use_page_numbers'] = false;
+		$config['reuse_query_string'] = true;
+
+		// Tampilan pagination Bootstrap.
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+
+		$config['first_link'] = 'First';
+		$config['last_link'] = 'Last';
+
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+
+		$config['next_link'] = '&raquo;';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+
+		$config['prev_link'] = '&laquo;';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+
+		$config['cur_tag_open'] = '<li class="page-item active"><a class="page-link" href="#">';
+		$config['cur_tag_close'] = '</a></li>';
+
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+
+		$config['attributes'] = ['class' => 'page-link'];
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$filter_tanggal
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $filter_tanggal
+		];
+
+		$this->active_nav = 'pembuatanlarutan';
+
+		$this->render(
+			'form/pembuatanlarutan/pembuatanlarutan',
+			$data
+		);
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_by_uuid($uuid),
-		);
+{
+    $pembuatanlarutan = $this->pembuatanlarutan_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'pembuatanlarutan'; 
-		$this->render('form/pembuatanlarutan/pembuatanlarutan-detail', $data);
-	}
+    if (!$pembuatanlarutan) {
+        show_404();
+        return;
+    }
+
+    $data = array(
+        'pembuatanlarutan' => $pembuatanlarutan,
+        'is_popup' => $this->input->get('popup') == '1'
+    );
+
+    $this->active_nav = 'pembuatanlarutan';
+
+    if ($data['is_popup']) {
+        $this->load->view(
+            'form/pembuatanlarutan/pembuatanlarutan-detail',
+            $data
+        );
+    } else {
+        $this->render(
+            'form/pembuatanlarutan/pembuatanlarutan-detail',
+            $data
+        );
+    }
+}
 
 	public function tambah()
 	{
@@ -49,13 +137,13 @@ class Pembuatanlarutan extends MY_Controller {
 			if ($insert) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Pembuatan Larutan berhasil di simpan');
 				redirect('pembuatanlarutan');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Pembuatan Larutan gagal di simpan');
 				redirect('pembuatanlarutan');
 			}
 		}
 
-		$this->active_nav = 'pembuatanlarutan'; 
+		$this->active_nav = 'pembuatanlarutan';
 		$this->render('form/pembuatanlarutan/pembuatanlarutan-tambah');
 	}
 
@@ -65,12 +153,12 @@ class Pembuatanlarutan extends MY_Controller {
 		$this->form_validation->set_rules($rules);
 
 		if ($this->form_validation->run() == TRUE) {
-			
+
 			$update = $this->pembuatanlarutan_model->update($uuid);
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Pembuatan Larutan berhasil di Update');
 				redirect('pembuatanlarutan');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Pembuatan Larutan gagal di Update');
 				redirect('pembuatanlarutan');
 			}
@@ -80,7 +168,7 @@ class Pembuatanlarutan extends MY_Controller {
 			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'pembuatanlarutan'; 
+		$this->active_nav = 'pembuatanlarutan';
 		$this->render('form/pembuatanlarutan/pembuatanlarutan-edit', $data);
 	}
 
@@ -101,15 +189,71 @@ class Pembuatanlarutan extends MY_Controller {
 
 		redirect('pembuatanlarutan');
 	}
-	
+
 	public function verifikasi()
 	{
 		$data = array(
 			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pembuatanlarutan'; 
+		$this->active_nav = 'verifikasi-pembuatanlarutan';
 		$this->render('form/pembuatanlarutan/pembuatanlarutan-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		// Hak akses verifikasi massal.
+		if (!in_array((int) $tipe_user, [0, 1, 2, 9], true)) {
+			show_error(
+				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
+				403
+			);
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', true);
+
+		if (empty($tanggal)) {
+			$response = [
+				'status' => false,
+				'message' => 'Tanggal harus dipilih.'
+			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status' => false,
+					'message' => 'Format tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->pembuatanlarutan_model
+					->verifikasi_massal_spv($tanggal);
+
+				if ($jumlah === false) {
+					$response = [
+						'status' => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					$response = [
+						'status' => false,
+						'message' => 'Tidak ada data Pembuatan Larutan dengan status Created atau Revision pada tanggal tersebut.'
+					];
+				} else {
+					$response = [
+						'status' => true,
+						'message' => $jumlah . ' data Pembuatan Larutan berhasil diverifikasi.'
+					];
+				}
+			}
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)
@@ -123,7 +267,7 @@ class Pembuatanlarutan extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Pembuatan Larutan berhasil di Update');
 				redirect('pembuatanlarutan/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Pembuatan Larutan gagal di Update');
 				redirect('pembuatanlarutan/verifikasi');
 			}
@@ -133,13 +277,13 @@ class Pembuatanlarutan extends MY_Controller {
 			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pembuatanlarutan'; 
+		$this->active_nav = 'verifikasi-pembuatanlarutan';
 		$this->render('form/pembuatanlarutan/pembuatanlarutan-status', $data);
 	}
 
 	public function cetak()
 	{
-		$tanggal = $this->input->post('tanggal');  
+		$tanggal = $this->input->post('tanggal');
 
 		log_message('debug', 'Tanggal yang dipilih: ' . print_r($tanggal, true));
 
@@ -149,8 +293,8 @@ class Pembuatanlarutan extends MY_Controller {
 
 		$plant = $this->session->userdata('plant');
 
-		$pembuatanlarutan_data = $this->pembuatanlarutan_model->get_by_date($tanggal, $plant); 
-		$pembuatanlarutan_data_verif = $this->pembuatanlarutan_model->get_last_verif_by_date($tanggal, $plant); 
+		$pembuatanlarutan_data = $this->pembuatanlarutan_model->get_by_date($tanggal, $plant);
+		$pembuatanlarutan_data_verif = $this->pembuatanlarutan_model->get_last_verif_by_date($tanggal, $plant);
 
 		if (!$pembuatanlarutan_data || !$pembuatanlarutan_data_verif) {
 			show_error('Data tidak ditemukan, Pilih tanggal yang ingin dicetak', 404);
@@ -161,7 +305,7 @@ class Pembuatanlarutan extends MY_Controller {
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
-		$pdf->setPrintHeader(false); 
+		$pdf->setPrintHeader(false);
 		$pdf->SetMargins(10, 14, 10);
 		$pdf->AddPage();
 		$pdf->SetFont('times', 'B', 10);
@@ -212,11 +356,11 @@ class Pembuatanlarutan extends MY_Controller {
 			$formatted_date = strftime('%d %B %Y', $date->getTimestamp());
 
 			$exp = $pembuatanlarutan->expired;
-			$exp = new DateTime($exp); 
+			$exp = new DateTime($exp);
 			$exp_date = $exp->format('d-m-Y');
 
 			$time = $pembuatanlarutan->pukul;
-			$time2 = new DateTime($time); 
+			$time2 = new DateTime($time);
 			$created_time = $time2->format('H:i');
 			$pdf->SetFont('times', '', 10);
 
@@ -256,9 +400,9 @@ class Pembuatanlarutan extends MY_Controller {
 			$pdf->SetXY(25, $y_verifikasi + 5);
 			$pdf->Cell(35, 5, 'Dibuat Oleh,', 0, 0, 'C');
 			$pdf->SetXY(25, $y_verifikasi + 10);
-			$pdf->SetFont('times', 'U', 8); 
+			$pdf->SetFont('times', 'U', 8);
 			$pdf->Cell(35, 5, $data['pembuatanlarutan']->nama_lengkap_qc, 0, 1, 'C');
-			$pdf->SetFont('times', '', 8); 
+			$pdf->SetFont('times', '', 8);
 			$pdf->Cell(65, 5, 'QC Inspector', 0, 0, 'C');
 
 			$pdf->SetXY(150, $y_verifikasi + 5);
@@ -269,7 +413,7 @@ class Pembuatanlarutan extends MY_Controller {
 			$pdf->SetXY(150, $y_verifikasi + 24);
 			$pdf->Cell(49, 5, 'Supervisor QC', 0, 0, 'C');
 		} else {
-			$pdf->SetTextColor(255, 0, 0); 
+			$pdf->SetTextColor(255, 0, 0);
 			$pdf->SetFont('times', '', 8);
 			$pdf->SetXY(100, $y_after_keterangan);
 			$pdf->Cell(80, 5, 'Data Belum Diverifikasi', 0, 0, 'C');
@@ -280,7 +424,5 @@ class Pembuatanlarutan extends MY_Controller {
 		$currentDate = date('d-m-Y');
 		$filename = "Pembuatan Larutan_{$currentDate}.pdf";
 		$pdf->Output($filename, 'I');
-
 	}
 }
-

@@ -19,9 +19,37 @@ class Pengayakan extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'pengayakan' => $this->pengayakan_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->get('shift', TRUE) ?? '');
+
+		$config['base_url'] = base_url('pengayakan/index');
+		$config['total_rows'] = $this->pengayakan_model
+			->count_pengayakan_by_plant($tanggal, $shift);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'pengayakan' => $this->pengayakan_model
+				->get_data_by_plant(
+					$config['per_page'],
+					$start,
+					$tanggal,
+					$shift
+				),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal,
+			'filter_shift' => $shift
+		];
 
 		$this->active_nav = 'pengayakan';
 		$this->render('form/pengayakan/pengayakan', $data);
@@ -29,12 +57,25 @@ class Pengayakan extends MY_Controller
 
 	public function detail($uuid)
 	{
+		$pengayakan = $this->pengayakan_model->get_by_uuid($uuid);
+
+		if (!$pengayakan) {
+			show_404();
+			return;
+		}
+
 		$data = array(
-			'pengayakan' => $this->pengayakan_model->get_by_uuid($uuid),
+			'pengayakan' => $pengayakan,
+			'is_popup' => $this->input->get('popup') == '1'
 		);
 
 		$this->active_nav = 'pengayakan';
-		$this->render('form/pengayakan/pengayakan-detail', $data);
+
+		if ($data['is_popup']) {
+			$this->load->view('form/pengayakan/pengayakan-detail', $data);
+		} else {
+			$this->render('form/pengayakan/pengayakan-detail', $data);
+		}
 	}
 
 	public function tambah()
@@ -133,6 +174,52 @@ class Pengayakan extends MY_Controller
 		}
 
 		redirect('pengayakan/verifikasi');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->pengayakan_model
+			->verifikasi_massal_spv($tanggal, $shift);
+
+		if ($updated === false) {
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Pengayakan gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Pengayakan berhasil.'
+			];
+		} else {
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

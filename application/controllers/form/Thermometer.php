@@ -26,31 +26,66 @@ class Thermometer extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'thermometer' => $this->thermometer_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->get('shift', TRUE) ?? '');
+
+		$config['base_url'] = base_url('thermometer/index');
+		$config['total_rows'] = $this->thermometer_model
+			->count_thermometer_by_plant($tanggal, $shift);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'thermometer' => $this->thermometer_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$tanggal,
+				$shift
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal,
+			'filter_shift' => $shift
+		];
 
 		$this->active_nav = 'thermometer';
 		$this->render('form/thermometer/thermometer', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$thermometer = $this->thermometer_model->get_qc_by_uuid($uuid);
+{
+    $thermometer = $this->thermometer_model->get_qc_by_uuid($uuid);
 
-		if (!$thermometer) {
-			show_404();
-			return;
-		}
+    if (!$thermometer) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'thermometer' => $thermometer,
-			'mode' => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'thermometer';
-		$this->render('form/thermometer/thermometer-detail', $data);
-	}
+    $data = [
+        'thermometer' => $thermometer,
+        'mode' => 'qc',
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'thermometer';
+
+    if ($is_popup) {
+        $this->load->view('form/thermometer/thermometer-detail', $data);
+    } else {
+        $this->render('form/thermometer/thermometer-detail', $data);
+    }
+}
 
 	// public function tambah()
 	// {
@@ -217,6 +252,52 @@ class Thermometer extends MY_Controller
 
 		$this->active_nav = 'verifikasi-thermometer';
 		$this->render('form/thermometer/thermometer-status', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->thermometer_model
+			->verifikasi_massal_spv($tanggal, $shift);
+
+		if ($updated === false) {
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Thermometer gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Thermometer berhasil.'
+			];
+		} else {
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function audit()

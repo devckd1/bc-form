@@ -80,22 +80,30 @@ class Pemusnahan extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$pemusnahan = $this->pemusnahan_model->get_qc_by_uuid($uuid);
+{
+    $pemusnahan = $this->pemusnahan_model->get_qc_by_uuid($uuid);
 
-		if (!$pemusnahan) {
-			show_404();
-			return;
-		}
+    if (!$pemusnahan) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'pemusnahan' => $pemusnahan,
-			'mode' => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'pemusnahan';
-		$this->render('form/pemusnahan/pemusnahan-detail', $data);
-	}
+    $data = [
+        'pemusnahan' => $pemusnahan,
+        'mode'       => 'qc',
+        'is_popup'   => $is_popup
+    ];
+
+    $this->active_nav = 'pemusnahan';
+
+    if ($is_popup) {
+        $this->load->view('form/pemusnahan/pemusnahan-detail', $data);
+    } else {
+        $this->render('form/pemusnahan/pemusnahan-detail', $data);
+    }
+}
 
 	public function tambah()
 	{

@@ -81,22 +81,30 @@ class Metal extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$metal = $this->metal_model->get_qc_by_uuid($uuid);
+{
+    $metal = $this->metal_model->get_qc_by_uuid($uuid);
 
-		if (!$metal) {
-			show_404();
-			return;
-		}
+    if (!$metal) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'metal' => $metal,
-			'mode' => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'metal';
-		$this->render('form/metal/metal-detail', $data);
-	}
+    $data = [
+        'metal' => $metal,
+        'mode' => 'qc',
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'metal';
+
+    if ($is_popup) {
+        $this->load->view('form/metal/metal-detail', $data);
+    } else {
+        $this->render('form/metal/metal-detail', $data);
+    }
+}
 
 	// public function tambah()
 	// {

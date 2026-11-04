@@ -1259,6 +1259,64 @@ class Produksi_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
+	public function verifikasi_massal_spv($tanggal, $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$username = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($plant) || empty($username)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db->from('mixing');
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$jumlah_data = $this->db->count_all_results();
+
+		if ($jumlah_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update data utama saja
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->update('mixing', [
+			'nama_spv'   => $username,
+			'status_spv' => '1',
+			'tgl_update' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$updated = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $updated;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -1396,7 +1454,7 @@ class Produksi_model extends CI_Model
 		return $this->db->get('kondisikerja')->result();
 	}
 
-	public function count_all_by_plant($plant, $keyword = null)
+	public function count_all_by_plant($plant, $keyword = null, $tanggal = '', $shift = '')
 	{
 		$this->db->from('mixing');
 		$this->db->where('plant', $plant);
@@ -1409,12 +1467,26 @@ class Produksi_model extends CI_Model
 			$this->db->group_end();
 		}
 
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
 		return $this->db->count_all_results();
 	}
 
-	public function get_data_by_plant_paginated($plant, $limit, $start, $keyword = null)
-	{
-		$this->db->order_by('created_at', 'DESC');
+	public function get_data_by_plant_paginated(
+		$plant,
+		$limit,
+		$start,
+		$keyword = null,
+		$tanggal = '',
+		$shift = ''
+	) {
+		$this->db->from('mixing');
 		$this->db->where('plant', $plant);
 		$this->db->where('is_audit', 0);
 
@@ -1425,8 +1497,18 @@ class Produksi_model extends CI_Model
 			$this->db->group_end();
 		}
 
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
 		$this->db->limit($limit, $start);
-		return $this->db->get('mixing')->result();
+
+		return $this->db->get()->result();
 	}
 
 	public function delete_by_uuid($uuid)

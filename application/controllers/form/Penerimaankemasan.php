@@ -34,15 +34,30 @@ class Penerimaankemasan extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'penerimaankemasan' => $this->penerimaankemasan_model->get_by_uuid($uuid),
-			'mode' => 'qc',
-		);
+{
+    $penerimaankemasan = $this->penerimaankemasan_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'penerimaankemasan';
-		$this->render('form/penerimaankemasan/penerimaankemasan-detail', $data);
-	}
+    if (!$penerimaankemasan) {
+        show_404();
+        return;
+    }
+
+    $is_popup = $this->input->get('popup') == '1';
+
+    $data = [
+        'penerimaankemasan' => $penerimaankemasan,
+        'mode' => 'qc',
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'penerimaankemasan';
+
+    if ($is_popup) {
+        $this->load->view('form/penerimaankemasan/penerimaankemasan-detail', $data);
+    } else {
+        $this->render('form/penerimaankemasan/penerimaankemasan-detail', $data);
+    }
+}
 
 	public function file_check($str)
 	{

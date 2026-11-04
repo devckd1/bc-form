@@ -27,68 +27,74 @@
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<div class="d-flex align-items-center flex-wrap mb-2">
+    <!-- KIRI: Filter dan Verifikasi Massal -->
+    <?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+        <div class="d-flex align-items-center flex-wrap mb-2">
 
-						<input type="date"
-							id="filter_tanggal"
-							class="form-control mr-2 mb-2"
-							style="width: 170px;"
-							value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="date"
+                id="filter_tanggal"
+                class="form-control mr-2 mb-2"
+                style="width: 170px;"
+                value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 
-						<select id="filter_shift"
-							class="form-control mr-2 mb-2"
-							style="width: 140px;">
-							<option value="">Semua Shift</option>
-							<?php foreach (['1', '2', '3'] as $shift): ?>
-								<option value="<?= $shift; ?>"
-									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
-									Shift <?= $shift; ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
+            <select id="filter_shift"
+                class="form-control mr-2 mb-2"
+                style="width: 140px;">
+                <option value="">Semua Shift</option>
+                <?php foreach (['1', '2', '3'] as $shift): ?>
+                    <option value="<?= $shift; ?>"
+                        <?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
+                        Shift <?= $shift; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
 
-						<button type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+            <button type="button"
+                id="btnVerifikasiMassal"
+                class="btn btn-primary mb-2">
+                <i class="fas fa-check-double mr-1"></i>
+                Verifikasi Massal
+            </button>
 
-						<a href="<?= base_url('kebersihankaryawan'); ?>"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
-						</a>
-					</div>
-				<?php endif; ?>
+            <a href="<?= base_url('kebersihankaryawan'); ?>"
+                class="btn btn-secondary ml-2 mb-2">
+                <i class="fas fa-sync-alt mr-1"></i>
+                Reset
+            </a>
+        </div>
+    <?php endif; ?>
 
-				<!-- KANAN: Tambah dan Mode Audit -->
-				<div class="text-right mb-2">
-					<a href="<?= base_url('kebersihankaryawan/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-						<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-					</a>
+    <!-- KANAN: Tambah dan Mode Audit -->
+    <div class="text-right mb-2 ml-auto">
 
-					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-						<a href="<?= base_url('kebersihankaryawan/audit'); ?>"
-							class="btn shadow-sm"
-							style="background-color: #5a3298; color: #fff;">
-							<i class="fas fa-clipboard-check mr-1"></i>
-							Mode Audit
-						</a>
-					<?php endif; ?>
-				</div>
-			</div>
+        <?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+            <a href="<?= base_url('kebersihankaryawan/tambah') ?>"
+                class="btn btn-md btn-primary shadow-sm">
+                <i class="fas fa-plus fa-sm text-white-50"></i>
+                Tambah
+            </a>
+        <?php endif; ?>
 
-			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-				<small class="text-muted d-block mb-2">
-					<i class="fas fa-info-circle mr-1"></i>
-					Hanya data yang sudah diverifikasi Produksi yang akan diproses.
-				</small>
-			<?php endif; ?>
-			<hr>
+        <?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+            <a href="<?= base_url('kebersihankaryawan/audit'); ?>"
+                class="btn shadow-sm"
+                style="background-color: #5a3298; color: #fff;">
+                <i class="fas fa-clipboard-check mr-1"></i>
+                Mode Audit
+            </a>
+        <?php endif; ?>
+
+    </div>
+</div>
+
+<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+    <small class="text-muted d-block mb-2">
+        <i class="fas fa-info-circle mr-1"></i>
+        Hanya data yang sudah diverifikasi Produksi yang akan diproses.
+    </small>
+<?php endif; ?>
+
+<hr>
 			<div style="display: flex; gap: 20px;">
 				<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 40%; text-align: left; font-family: Arial, sans-serif; font-size: 14px;">
 					<thead style="background-color: #f2f2f2;">
@@ -228,7 +234,8 @@
 										<?php endif; ?>
 
 										<a href="<?= base_url('kebersihankaryawan/detail/' . $val->uuid); ?>"
-											class="btn btn-success btn-icon-split mb-1">
+											data-url="<?= base_url('kebersihankaryawan/detail/' . $val->uuid . '?popup=1'); ?>"
+											class="btn btn-success btn-icon-split mb-1 btn-detail-kebersihankaryawan">
 											<span class="text">Detail</span>
 										</a>
 
@@ -312,6 +319,20 @@
 		</div>
 	</div>
 </div>
+</div>
+<div class="modal fade" id="modalDetailKebersihanKaryawan" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Kebersihan Karyawan</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+			<div class="modal-body" id="contentDetailKebersihanKaryawan">
+			</div>
+		</div>
+	</div>
 </div>
 <style>
 	th {
@@ -430,5 +451,47 @@
 			});
 		});
 
+	});
+
+	// Modal Detail AJAX Kebersihan Karyawan
+	var cacheDetailKebersihanKaryawan = {};
+
+	$(document).on('click', '.btn-detail-kebersihankaryawan', function(e) {
+		e.preventDefault();
+
+		var url = $(this).data('url');
+		var modal = $('#modalDetailKebersihanKaryawan');
+		var content = $('#contentDetailKebersihanKaryawan');
+
+		modal.modal('show');
+
+		if (cacheDetailKebersihanKaryawan[url]) {
+			content.html(cacheDetailKebersihanKaryawan[url]);
+			return;
+		}
+
+		content.html(`
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat detail...</p>
+        </div>
+    `);
+
+		$.ajax({
+			url: url,
+			type: 'GET',
+			dataType: 'html',
+			success: function(response) {
+				cacheDetailKebersihanKaryawan[url] = response;
+				content.html(response);
+			},
+			error: function() {
+				content.html(`
+                <div class="alert alert-danger text-center">
+                    Gagal memuat detail Kebersihan Karyawan.
+                </div>
+            `);
+			}
+		});
 	});
 </script>

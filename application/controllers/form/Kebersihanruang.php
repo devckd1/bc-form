@@ -75,14 +75,33 @@ class Kebersihanruang extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'kebersihanruang' => $this->kebersihanruang_model->get_by_uuid($uuid),
-		);
+{
+    $kebersihanruang = $this->kebersihanruang_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'kebersihanruang';
-		$this->render('form/kebersihanruang/kebersihanruang-detail', $data);
-	}
+    if (!$kebersihanruang) {
+        show_404();
+        return;
+    }
+
+    $data = array(
+        'kebersihanruang' => $kebersihanruang,
+        'is_popup' => $this->input->get('popup') == '1'
+    );
+
+    $this->active_nav = 'kebersihanruang';
+
+    if ($data['is_popup']) {
+        $this->load->view(
+            'form/kebersihanruang/kebersihanruang-detail',
+            $data
+        );
+    } else {
+        $this->render(
+            'form/kebersihanruang/kebersihanruang-detail',
+            $data
+        );
+    }
+}
 
 	public function get_bagian_ajax()
 	{

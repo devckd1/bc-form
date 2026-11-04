@@ -24,9 +24,52 @@ class Verifikasimagnet extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'verifikasimagnet' => $this->verifikasimagnet_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$filter_tanggal = $this->input->get('tanggal', true);
+
+		$config['base_url'] = base_url('verifikasimagnet/index');
+		$config['total_rows'] = $this->verifikasimagnet_model
+			->count_verifikasimagnet_by_plant($filter_tanggal);
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['use_page_numbers'] = false;
+		$config['reuse_query_string'] = true;
+
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+		$config['first_link'] = 'First';
+		$config['last_link'] = 'Last';
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+		$config['next_link'] = '&raquo;';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+		$config['prev_link'] = '&laquo;';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+		$config['cur_tag_open'] = '<li class="page-item active"><a class="page-link" href="#">';
+		$config['cur_tag_close'] = '</a></li>';
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+		$config['attributes'] = ['class' => 'page-link'];
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'verifikasimagnet' => $this->verifikasimagnet_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$filter_tanggal
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $filter_tanggal
+		];
 
 		$this->active_nav = 'verifikasimagnet';
 		$this->render('form/verifikasimagnet/verifikasimagnet', $data);
@@ -138,6 +181,53 @@ class Verifikasimagnet extends MY_Controller
 
 		$this->active_nav = 'verifikasi-verifikasimagnet';
 		$this->render('form/verifikasimagnet/verifikasimagnet-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = $this->input->post('tanggal', true);
+
+		if (empty($tanggal)) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Tanggal harus dipilih.'
+			]);
+			return;
+		}
+
+		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (!$date || $date->format('Y-m-d') !== $tanggal) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Format tanggal tidak valid.'
+			]);
+			return;
+		}
+
+		$jumlah = $this->verifikasimagnet_model
+			->verifikasi_massal_spv($tanggal);
+
+		if ($jumlah === false) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Verifikasi massal gagal diproses.'
+			]);
+			return;
+		}
+
+		if ($jumlah == 0) {
+			echo json_encode([
+				'status' => false,
+				'message' => 'Tidak ada data Verifikasi Magnet berstatus Created atau Revision pada tanggal tersebut.'
+			]);
+			return;
+		}
+
+		echo json_encode([
+			'status' => true,
+			'message' => $jumlah . ' data Verifikasi Magnet berhasil diverifikasi.'
+		]);
 	}
 
 	public function status($uuid)

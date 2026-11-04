@@ -18,25 +18,66 @@ class Reagen extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'bulan_tahun' => $this->reagen_model->get_bulan_tahun_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$filter_bulan = $this->input->get('bulan', true);
+
+		if (!empty($filter_bulan)) {
+			if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $filter_bulan)) {
+				$filter_bulan = '';
+			}
+		}
+
+		$config['base_url'] = base_url('reagen/index');
+		$config['total_rows'] = $this->reagen_model
+			->count_bulan_tahun_by_plant($filter_bulan);
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = true;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'bulan_tahun' => $this->reagen_model->get_bulan_tahun_by_plant(
+				$filter_bulan,
+				10,
+				$start
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_bulan' => $filter_bulan
+		];
 
 		$this->active_nav = 'reagen';
 		$this->render('form/reagen/reagen', $data);
 	}
 
 	public function detail($bulan, $tahun)
-	{
-		$data = [
-			'reagen'     => $this->reagen_model->get_by_bulan_tahun($bulan, $tahun),
-			'bulan'      => $bulan,
-			'tahun'      => $tahun
-		];
+{
+    $reagen = $this->reagen_model->get_by_bulan_tahun($bulan, $tahun);
 
-		$this->active_nav = 'reagen';
-		$this->render('form/reagen/reagen-detail', $data);
-	}
+    if (empty($reagen)) {
+        show_404();
+        return;
+    }
+
+    $data = [
+        'reagen'   => $reagen,
+        'bulan'    => $bulan,
+        'tahun'    => $tahun,
+        'is_popup' => $this->input->get('popup') == '1'
+    ];
+
+    $this->active_nav = 'reagen';
+
+    if ($data['is_popup']) {
+        $this->load->view('form/reagen/reagen-detail', $data);
+    } else {
+        $this->render('form/reagen/reagen-detail', $data);
+    }
+}
 
 	public function tambah()
 	{

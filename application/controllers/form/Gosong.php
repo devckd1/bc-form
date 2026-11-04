@@ -64,14 +64,29 @@ class Gosong extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'gosong' => $this->gosong_model->get_by_uuid($uuid),
-		);
+{
+    $gosong = $this->gosong_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'gosong';
-		$this->render('form/gosong/gosong-detail', $data);
-	}
+    if (!$gosong) {
+        show_404();
+        return;
+    }
+
+    $is_popup = $this->input->get('popup') == '1';
+
+    $data = [
+        'gosong'   => $gosong,
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'gosong';
+
+    if ($is_popup) {
+        $this->load->view('form/gosong/gosong-detail', $data);
+    } else {
+        $this->render('form/gosong/gosong-detail', $data);
+    }
+}
 
 	public function tambah()
 	{

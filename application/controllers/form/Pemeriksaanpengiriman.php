@@ -1,31 +1,63 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Dompdf\Dompdf;
+
 setlocale(LC_TIME, 'id_ID.UTF-8');
 
-class Pemeriksaanpengiriman extends MY_Controller {
+class Pemeriksaanpengiriman extends MY_Controller
+{
 
 	public function __construct()
 	{
 		parent::__construct();
 
 		$this->load->library('form_validation');
-		$this->load->model('auth_model'); 
+		$this->load->model('auth_model');
 		$this->load->model('pemeriksaanpengiriman_model');
-		if(!$this->auth_model->current_user()){
+		if (!$this->auth_model->current_user()) {
 			redirect('login');
 		}
 	}
 
 	public function index()
 	{
-		$data = array(
-			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
 
-		$this->active_nav = 'pemeriksaanpengiriman'; 
+		$tanggal = trim($this->input->get('tanggal', true) ?? '');
+
+		if (!empty($tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$tanggal = '';
+			}
+		}
+
+		$config['base_url'] = base_url('pemeriksaanpengiriman/index');
+		$config['total_rows'] = $this->pemeriksaanpengiriman_model
+			->count_pemeriksaanpengiriman_by_plant($tanggal);
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = true;
+		$config['use_page_numbers'] = false;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model
+				->get_data_by_plant($config['per_page'], $start, $tanggal),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal
+		];
+
+		$this->active_nav = 'pemeriksaanpengiriman';
+
 		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman', $data);
 	}
 
@@ -35,7 +67,7 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'pemeriksaanpengiriman'; 
+		$this->active_nav = 'pemeriksaanpengiriman';
 		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman-detail', $data);
 	}
 
@@ -49,13 +81,13 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			if ($insert) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Pengiriman RM, pemeriksaanpengiriman, Kemasan dan Chemical berhasil di simpan');
 				redirect('pemeriksaanpengiriman');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Pengiriman RM, pemeriksaanpengiriman, Kemasan dan Chemical gagal di simpan');
 				redirect('pemeriksaanpengiriman');
 			}
 		}
 
-		$this->active_nav = 'pemeriksaanpengiriman'; 
+		$this->active_nav = 'pemeriksaanpengiriman';
 		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman-tambah', $data);
 	}
 
@@ -65,12 +97,12 @@ class Pemeriksaanpengiriman extends MY_Controller {
 		$this->form_validation->set_rules($rules);
 
 		if ($this->form_validation->run() == TRUE) {
-			
+
 			$update = $this->pemeriksaanpengiriman_model->update($uuid);
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Pengiriman RM, pemeriksaanpengiriman, Kemasan dan Chemical berhasil di Update');
 				redirect('pemeriksaanpengiriman');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Pengiriman RM, pemeriksaanpengiriman, Kemasan dan Chemical gagal di Update');
 				redirect('pemeriksaanpengiriman');
 			}
@@ -80,7 +112,7 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'pemeriksaanpengiriman'; 
+		$this->active_nav = 'pemeriksaanpengiriman';
 		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman-edit', $data);
 	}
 
@@ -101,17 +133,61 @@ class Pemeriksaanpengiriman extends MY_Controller {
 
 		redirect('pemeriksaanpengiriman');
 	}
-	
+
 	public function verifikasi()
 	{
 		$data = array(
 			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pemeriksaanpengiriman'; 
+		$this->active_nav = 'verifikasi-pemeriksaanpengiriman';
 		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman-verifikasi', $data);
 	}
 
+	public function verifikasi_massal()
+	{
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		if (!in_array($tipe_user, [0, 1, 2, 9], true)) {
+			show_error('Anda tidak memiliki akses verifikasi massal.', 403);
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', true);
+
+		$date = DateTime::createFromFormat('Y-m-d', $tanggal ?? '');
+
+		if (!$date || $date->format('Y-m-d') !== $tanggal) {
+			$response = [
+				'status' => false,
+				'message' => 'Tanggal tidak valid.'
+			];
+		} else {
+			$jumlah = $this->pemeriksaanpengiriman_model
+				->verifikasi_massal_spv($tanggal);
+
+			if ($jumlah === false) {
+				$response = [
+					'status' => false,
+					'message' => 'Verifikasi massal gagal.'
+				];
+			} elseif ($jumlah == 0) {
+				$response = [
+					'status' => false,
+					'message' => 'Tidak ada data Created atau Revision pada tanggal tersebut.'
+				];
+			} else {
+				$response = [
+					'status' => true,
+					'message' => $jumlah . ' data berhasil diverifikasi.'
+				];
+			}
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
+	}
 
 	public function status($uuid)
 	{
@@ -124,7 +200,7 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			if ($update) {
 				$this->session->set_flashdata('success_msg', 'Data Pemeriksaan Pengiriman RM, pemeriksaanpengiriman, Kemasan dan Chemical berhasil di Update');
 				redirect('pemeriksaanpengiriman/verifikasi');
-			}else {
+			} else {
 				$this->session->set_flashdata('error_msg', 'Data Pemeriksaan Pengiriman RM, pemeriksaanpengiriman, Kemasan dan Chemical gagal di Update');
 				redirect('pemeriksaanpengiriman/verifikasi');
 			}
@@ -134,13 +210,13 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pemeriksaanpengiriman'; 
+		$this->active_nav = 'verifikasi-pemeriksaanpengiriman';
 		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman-status', $data);
 	}
 
 	public function cetak()
 	{
-		$tanggal = $this->input->post('tanggal');  
+		$tanggal = $this->input->post('tanggal');
 
 		log_message('debug', 'Tanggal yang dipilih: ' . print_r($tanggal, true));
 
@@ -150,20 +226,20 @@ class Pemeriksaanpengiriman extends MY_Controller {
 
 		$plant = $this->session->userdata('plant');
 
-		$pemeriksaanpengiriman_data = $this->pemeriksaanpengiriman_model->get_by_date($tanggal, $plant); 
-		$pemeriksaanpengiriman_data_verif = $this->pemeriksaanpengiriman_model->get_last_verif_by_date($tanggal, $plant); 
+		$pemeriksaanpengiriman_data = $this->pemeriksaanpengiriman_model->get_by_date($tanggal, $plant);
+		$pemeriksaanpengiriman_data_verif = $this->pemeriksaanpengiriman_model->get_last_verif_by_date($tanggal, $plant);
 
 		if (!$pemeriksaanpengiriman_data || !$pemeriksaanpengiriman_data_verif) {
 			show_error('Data tidak ditemukan, Pilih tanggal yang ingin dicetak', 404);
 		}
 
 		$data['pemeriksaanpengiriman'] = $pemeriksaanpengiriman_data_verif;
-		
+
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
 		$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
-		$pdf->setPrintHeader(false); 
-		$pdf->SetMargins(17, 16, 15); 
+		$pdf->setPrintHeader(false);
+		$pdf->SetMargins(17, 16, 15);
 		$pdf->AddPage('L', 'LEGAL');
 		$pdf->SetFont('times', 'B', 13);
 
@@ -214,7 +290,7 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
 
 			$time = $pemeriksaanpengiriman->jam_datang;
-			$time2 = new DateTime($time); 
+			$time2 = new DateTime($time);
 			$created_time = $time2->format('H:i');
 
 			$pdf->SetFont('times', '', 11);
@@ -225,7 +301,7 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			$pdf->Cell(25, 8, $pemeriksaanpengiriman->jenis_mobil, 1, 0, 'C');
 			$pdf->Cell(25, 8, $pemeriksaanpengiriman->no_polisi, 1, 0, 'C');
 			$pdf->Cell(25, 8, $pemeriksaanpengiriman->identitas_pengantar, 1, 0, 'C');
-			$pdf->SetFont('dejavusans', '', 10);	
+			$pdf->SetFont('dejavusans', '', 10);
 			$pdf->Cell(15, 8, ($pemeriksaanpengiriman->segel == 'ok') ? '✔' : (($pemeriksaanpengiriman->segel == 'tidak ok') ? '✘' : '−'), 1, 0, 'C');
 			$pdf->Cell(15, 8, ($pemeriksaanpengiriman->kebersihan == 'ok') ? '✔' : (($pemeriksaanpengiriman->kebersihan == 'tidak ok') ? '✘' : '−'), 1, 0, 'C');
 			$pdf->Cell(15, 8, ($pemeriksaanpengiriman->bocor == 'ok') ? '✔' : (($pemeriksaanpengiriman->bocor == 'tidak ok') ? '✘' : '−'), 1, 0, 'C');
@@ -239,7 +315,7 @@ class Pemeriksaanpengiriman extends MY_Controller {
 		}
 
 		$pdf->SetFont('times', 'I', 7);
-		$pdf->Cell(330, 5, 'QW 02/00', 0, 1, 'R'); 
+		$pdf->Cell(330, 5, 'QW 02/00', 0, 1, 'R');
 
 		$this->load->model('pegawai_model');
 		$data['pemeriksaanpengiriman']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['pemeriksaanpengiriman']->username);
@@ -260,17 +336,17 @@ class Pemeriksaanpengiriman extends MY_Controller {
 		if ($status_verifikasi) {
 			$y_verifikasi = $y_after_keterangan;
 
-	// Dibuat oleh (QC)
+			// Dibuat oleh (QC)
 			$pdf->SetXY(60, $y_verifikasi);
 			$pdf->Cell(50, 5, 'Dibuat Oleh,', 0, 0, 'C');
 			$pdf->SetXY(60, $y_verifikasi + 10);
 			$pdf->SetFont('times', 'U', 9);
 			$pdf->Cell(50, 5, $data['pemeriksaanpengiriman']->nama_lengkap_qc, 0, 1, 'C');
-			$pdf->SetFont('times', '', 9); 
+			$pdf->SetFont('times', '', 9);
 			$pdf->SetXY(60, $y_verifikasi + 15);
 			$pdf->Cell(50, 5, 'QC Inspector', 0, 0, 'C');
 
-	// Disetujui oleh (SPV)
+			// Disetujui oleh (SPV)
 			$update_tanggal = (new DateTime($data['pemeriksaanpengiriman']->tgl_update_spv))->format('d-m-Y | H:i');
 			$qr_text = "Diverifikasi secara digital oleh,\n" . $data['pemeriksaanpengiriman']->nama_lengkap_spv . "\nSPV QC Bread Crumb\n" . $update_tanggal;
 			$pdf->SetXY(160, $y_verifikasi);
@@ -278,9 +354,8 @@ class Pemeriksaanpengiriman extends MY_Controller {
 			$pdf->write2DBarcode($qr_text, 'QRCODE,L', 227, $y_verifikasi + 5, 16, 16, null, 'N');
 			$pdf->SetXY(160, $y_verifikasi + 20);
 			$pdf->Cell(150, 5, 'Supervisor QC', 0, 0, 'C');
-
 		} else {
-			$pdf->SetTextColor(255, 0, 0); 
+			$pdf->SetTextColor(255, 0, 0);
 			$pdf->SetFont('times', '', 9);
 			$pdf->SetXY(200, $y_after_keterangan);
 			$pdf->Cell(80, 5, 'Data Belum Diverifikasi', 0, 0, 'C');
@@ -290,7 +365,5 @@ class Pemeriksaanpengiriman extends MY_Controller {
 		$currentDate = date('d-m-Y');
 		$filename = "Pemeriksaan Pengiriman_{$currentDate}.pdf";
 		$pdf->Output($filename, 'I');
-
 	}
 }
-

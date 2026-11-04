@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Pemeriksaanpengiriman_model extends CI_Model {
-	
+class Pemeriksaanpengiriman_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -17,7 +19,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 				'field' => 'nama_supplier',
 				'label' => 'Supplier Name',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'nama_barang',
 				'label' => 'Name of Product',
@@ -45,7 +47,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 			[
 				'field' => 'kebersihan',
 				'label' => 'Cleanliness'
-			], 
+			],
 			[
 				'field' => 'Bocor',
 				'label' => 'Leak'
@@ -104,8 +106,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 		);
 
 		$this->db->insert('pemeriksaan_pengiriman', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function update($uuid)
@@ -124,7 +125,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 		$jam_datang = $this->input->post('jam_datang');
 		$keterangan = $this->input->post('keterangan');
 
-		$old_data = $this->db->get_where('pemeriksaan_pengiriman', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('pemeriksaan_pengiriman', ['uuid' => $uuid])->row_array();
 
 		$data = array(
 			'username' => $username,
@@ -146,27 +147,26 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 
 		$this->db->update('pemeriksaan_pengiriman', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('pemeriksaan_pengiriman', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('pemeriksaan_pengiriman', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus pemeriksaan_pengiriman_logs
+			// simpan log ke tabel khusus pemeriksaan_pengiriman_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'pemeriksaan_pengiriman_logs', // nama tabel log khusus pemeriksaan_pengiriman
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'pemeriksaan_pengiriman_logs', // nama tabel log khusus pemeriksaan_pengiriman
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -176,7 +176,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -195,8 +195,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 		);
 
 		$this->db->update('pemeriksaan_pengiriman', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
-
+		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
 	public function get_all()
@@ -215,7 +214,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 	public function get_by_uuid_pemeriksaanpengiriman($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -225,28 +224,84 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_pemeriksaanpengiriman_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('pemeriksaan_pengiriman');
 
-		$data_pemeriksaan_pengiriman = $query->row();  
-		return $data_pemeriksaan_pengiriman; 
+		$data_pemeriksaan_pengiriman = $query->row();
+		return $data_pemeriksaan_pengiriman;
 	}
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
-		return $this->db->get_where('pemeriksaan_pengiriman', ['plant' => $plant])->result();
+
+		$this->db->from('pemeriksaan_pengiriman');
+		$this->db->where('plant', $plant);
+
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get()->result();
+	}
+
+	public function count_pemeriksaanpengiriman_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->from('pemeriksaan_pengiriman');
+		$this->db->where('plant', $plant);
+
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
+		}
+
+		return $this->db->count_all_results();
+	}
+
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$nama_spv = $this->session->userdata('username');
+
+		$this->db->trans_begin();
+
+		$this->db->where('plant', $plant);
+		$this->db->where('date', $tanggal);
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		$this->db->update('pemeriksaan_pengiriman', [
+			'nama_spv'       => $nama_spv,
+			'status_spv'     => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		$jumlah = $this->db->affected_rows();
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $jumlah;
 	}
 
 	public function delete_by_uuid($uuid)
@@ -264,7 +319,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -285,7 +340,7 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
@@ -294,5 +349,4 @@ class Pemeriksaanpengiriman_model extends CI_Model {
 
 		return $query->row();
 	}
-
 }

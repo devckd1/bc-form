@@ -71,15 +71,14 @@
 
 
 				<!-- Tambah dan Mode Audit -->
-				<div class="text-right mb-2">
-
-					<a href="<?= base_url('kontaminasi/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-
-					</a>
+				<div class="text-right mb-2 ml-auto">
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('kontaminasi/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 
@@ -190,9 +189,11 @@
 										</a>
 									<?php endif; ?>
 
-									<a href="<?= base_url('kontaminasi/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split mb-1">
-										<span class="text">Detail</span>
-									</a>
+									<a href="<?= base_url('kontaminasi/detail/' . $val->uuid); ?>"
+    data-url="<?= base_url('kontaminasi/detail/' . $val->uuid . '?popup=1'); ?>"
+    class="btn btn-success btn-icon-split mb-1 btn-detail-kontaminasi">
+    <span class="text">Detail</span>
+</a>
 
 									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 										<a href="<?= base_url('kontaminasi/verifikasi_produksi/' . $val->uuid); ?>"
@@ -255,12 +256,88 @@
 	</div>
 </div>
 </div>
+<!-- Modal Detail Kontaminasi -->
+<div class="modal fade" id="modalDetailKontaminasi" tabindex="-1"
+    role="dialog" aria-labelledby="modalDetailKontaminasiLabel" aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDetailKontaminasiLabel">
+                    Detail Kontaminasi Benda Asing
+                </h5>
+
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="contentDetailKontaminasi">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat data...</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 <script>
 	var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
 	tooltipTriggerList.forEach(function(tooltipTriggerEl) {
 		new bootstrap.Tooltip(tooltipTriggerEl)
 	})
+</script>
+<script>
+    $(document).ready(function() {
+
+        const cacheDetailKontaminasi = {};
+
+        $(document).on('click', '.btn-detail-kontaminasi', function(e) {
+            e.preventDefault();
+
+            const url = $(this).data('url');
+
+            $('#modalDetailKontaminasi').modal('show');
+
+            if (cacheDetailKontaminasi[url]) {
+                $('#contentDetailKontaminasi').html(
+                    cacheDetailKontaminasi[url]
+                );
+                return;
+            }
+
+            $('#contentDetailKontaminasi').html(`
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat data...</p>
+                </div>
+            `);
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'html',
+
+                success: function(response) {
+                    cacheDetailKontaminasi[url] = response;
+                    $('#contentDetailKontaminasi').html(response);
+                },
+
+                error: function() {
+                    $('#contentDetailKontaminasi').html(`
+                        <div class="alert alert-danger text-center">
+                            Gagal memuat detail Kontaminasi.
+                        </div>
+                    `);
+                }
+            });
+
+        });
+
+    });
 </script>
 <style>
 	th {

@@ -370,25 +370,87 @@ class Pemeriksaanchemical_model extends CI_Model
 		return $query->row();
 	}
 
-
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
+		$this->db->from('pemeriksaan_chemical');
 		$this->db->where('is_audit', 0);
-		$this->db->order_by('created_at', 'DESC');
 
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get('pemeriksaan_chemical')->result();
+		// User tipe 1 dan 9 dapat melihat seluruh plant.
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
 		}
 
-		return $this->db
-			->get_where('pemeriksaan_chemical', [
-				'plant' => $plant,
-				'is_audit' => 0
-			])
-			->result();
+		// Filter berdasarkan tanggal pemeriksaan.
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get()->result();
+	}
+
+	public function count_pemeriksaanchemical_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->from('pemeriksaan_chemical');
+		$this->db->where('is_audit', 0);
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		return $this->db->count_all_results();
+	}
+
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		$this->db->trans_begin();
+
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+
+		// User tipe 1 dan 9 dapat memverifikasi lintas plant.
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		// Hanya Created dan Revision yang diproses.
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		$this->db->update('pemeriksaan_chemical', [
+			'nama_spv'       => $nama_spv,
+			'status_spv'     => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		$jumlah = $this->db->affected_rows();
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $jumlah;
 	}
 
 	public function get_latest_chemical()

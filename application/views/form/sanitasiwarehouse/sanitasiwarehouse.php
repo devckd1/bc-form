@@ -1,3 +1,10 @@
+<?php
+$tipe_user = (int) $this->session->userdata('tipe_user');
+$boleh_verifikasi = in_array($tipe_user, [0, 1, 2, 9]);
+
+$filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
+?>
+
 <div class="container-fluid">
 	<div class="d-sm-flex align-items-center justify-content-between mb-4">
 		<h1 class="h3 mb-2 text-gray-800">Pemeriksaan Sanitasi Warehouse</h1>
@@ -19,28 +26,65 @@
 		<br>
 	<?php endif ?>
 
-	<?php
-	$tipe_user = $this->session->userdata('tipe_user');
-	?>
-
 	<div class="card shadow mb-4">
 		<div class="card-body">
-			<div class="form-group text-right">
-				<a href="<?= base_url('sanitasiwarehouse/tambah') ?>" class="btn btn-md btn-primary shadow-sm">
-					<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-				</a>
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<a href="<?= base_url('sanitasiwarehouse/audit'); ?>"
-						class="btn shadow-sm"
-						style="background-color: #5a3298; color: #fff;">
 
-						<i class="fas fa-clipboard-check mr-1"></i>
-						Mode Audit
+			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-					</a>
+				<!-- KIRI: Filter dan Verifikasi Massal -->
+				<?php if ($boleh_verifikasi): ?>
+					<div class="d-flex align-items-center flex-wrap mb-2">
+
+						<input
+							type="date"
+							id="filterTanggal"
+							class="form-control mr-2 mb-2"
+							style="width: 170px;"
+							value="<?= html_escape($filter_tanggal) ?>">
+
+						<button
+							type="button"
+							id="btnVerifikasiMassal"
+							class="btn btn-primary mb-2">
+							<i class="fas fa-check-double mr-1"></i>
+							Verifikasi Massal
+						</button>
+
+						<a
+							href="<?= base_url('sanitasiwarehouse') ?>"
+							class="btn btn-secondary ml-2 mb-2">
+							<i class="fas fa-sync-alt mr-1"></i>
+							Reset
+						</a>
+
+					</div>
 				<?php endif; ?>
+
+				<!-- KANAN: Tambah dan Mode Audit -->
+				<div class="text-right mb-2 ml-auto">
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('sanitasiwarehouse/tambah'); ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
+
+					<?php if ($boleh_verifikasi): ?>
+						<a href="<?= base_url('sanitasiwarehouse/audit'); ?>"
+							class="btn shadow-sm"
+							style="background-color: #5a3298; color: #fff;">
+							<i class="fas fa-clipboard-check mr-1"></i>
+							Mode Audit
+						</a>
+					<?php endif; ?>
+
+				</div>
 			</div>
+
 			<hr>
+
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
 					<thead>
@@ -55,8 +99,9 @@
 					</thead>
 					<tbody>
 						<?php
-						$no = 1;
-						foreach ($sanitasiwarehouse as $val) {
+						$no = (int) ($start ?? 0) + 1;
+
+						foreach ($sanitasiwarehouse as $val):
 							$datetime = new DateTime($val->date);
 							$tanggalFormatted = $datetime->format('d-m-Y');
 
@@ -72,30 +117,11 @@
 								'6' => 'Terdapat aktifitas binatang (tikus, kecoa, lalat, ulat, belatung)',
 								'7' => 'Sarang laba-laba',
 							];
-
-							// $bagianList = '';
-							// $kondisiList = '';
-							// $problemList = '';
-							// $tindakanList = '';
-
-							// if (is_array($details)) {
-							//     foreach ($details as $d) {
-							//         $bagianList .= '<li>' . htmlspecialchars($d['bagian']) . '</li>';
-							//         $kondisiList .= '<li>' . ($kondisiMap[$d['kondisi']] ?? htmlspecialchars($d['kondisi'])) . '</li>';
-							//         $problemList .= '<li>' . (!empty($d['problem']) ? htmlspecialchars($d['problem']) : '-') . '</li>';
-							//         $tindakanList .= '<li>' . (!empty($d['tindakan']) ? htmlspecialchars($d['tindakan']) : '-') . '</li>';
-							//     }
-							// }
-
 						?>
 							<tr>
 								<td class="text-center"><?= $no; ?></td>
 								<td><?= $tanggalFormatted; ?></td>
 								<td><?= htmlspecialchars($val->area); ?></td>
-								<!-- <td><ul><?= $bagianList ?></ul></td>
-                                <td><ul><?= $kondisiList ?></ul></td>
-                                <td><ul><?= $problemList ?></ul></td>
-                                <td><ul><?= $tindakanList ?></ul></td> -->
 								<td>
 									<table class="table table-sm table-bordered mb-0">
 										<thead style="background-color:#2E86C1; color:gray; text-align:center;">
@@ -111,23 +137,28 @@
 												<?php foreach ($result as $row): ?>
 													<tr>
 														<td><?= htmlspecialchars($row['bagian'] ?? '-'); ?></td>
-														<td style="text-align:center;"><?= ($kondisiMap[$row['kondisi']] ?? htmlspecialchars($row['kondisi']) ?? '-'); ?></td>
-														<td style="text-align:center;"><?= htmlspecialchars($row['problem'] ?? '-'); ?></td>
-														<td style="text-align:center;"><?= htmlspecialchars($row['tindakan'] ?? '-'); ?></td>
+														<td style="text-align:center;">
+															<?= $kondisiMap[$row['kondisi'] ?? ''] ?? htmlspecialchars($row['kondisi'] ?? '-'); ?>
+														</td>
+														<td style="text-align:center;">
+															<?= htmlspecialchars($row['problem'] ?? '-'); ?>
+														</td>
+														<td style="text-align:center;">
+															<?= htmlspecialchars($row['tindakan'] ?? '-'); ?>
+														</td>
 													</tr>
-												<?php endforeach ?>
+												<?php endforeach; ?>
 											<?php else: ?>
 												<tr>
-													<td colspan="3" class="text-center">Tidak ada data</td>
+													<td colspan="4" class="text-center">Tidak ada data</td>
 												</tr>
-											<?php endif ?>
+											<?php endif; ?>
 										</tbody>
 									</table>
 								</td>
+
 								<td class="text-center">
 									<?php
-									$tipe_user = (int) $this->session->userdata('tipe_user');
-
 									if ($val->status_spv == '1') {
 										echo '<span style="color:#28b463;font-weight:bold;font-size:12px;">Verified</span>';
 									} elseif ($val->status_spv == '2') {
@@ -141,14 +172,18 @@
 									}
 									?>
 								</td>
+
 								<td class="text-center">
 									<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
-										<a href="<?= base_url('sanitasiwarehouse/edit/' . $val->uuid); ?>" class="btn btn-warning btn-icon-split">
+										<a href="<?= base_url('sanitasiwarehouse/edit/' . $val->uuid); ?>"
+											class="btn btn-warning btn-icon-split">
 											<span class="text">Edit</span>
 										</a>
 									<?php endif; ?>
 
-									<a href="<?= base_url('sanitasiwarehouse/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split">
+									<a href="<?= base_url('sanitasiwarehouse/detail/' . $val->uuid); ?>"
+										data-url="<?= base_url('sanitasiwarehouse/detail/' . $val->uuid . '?popup=1'); ?>"
+										class="btn btn-success btn-icon-split btn-detail-sanitasiwarehouse">
 										<span class="text">Detail</span>
 									</a>
 
@@ -160,47 +195,209 @@
 										</a>
 									<?php endif; ?>
 
-									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+									<?php if ($boleh_verifikasi): ?>
 										<?php if ($val->status_wh == '1' && $val->status_spv == '0'): ?>
-											<a href="<?= base_url('sanitasiwarehouse/status/' . $val->uuid); ?>" class="btn btn-info btn-icon-split">
+											<a href="<?= base_url('sanitasiwarehouse/status/' . $val->uuid); ?>"
+												class="btn btn-info btn-icon-split">
 												<span class="text">Verifikasi</span>
 											</a>
 										<?php elseif ($val->status_wh == '1' && $val->status_spv == '2'): ?>
-											<a href="<?= base_url('sanitasiwarehouse/status/' . $val->uuid); ?>" class="btn btn-info btn-icon-split">
+											<a href="<?= base_url('sanitasiwarehouse/status/' . $val->uuid); ?>"
+												class="btn btn-info btn-icon-split">
 												<span class="text">Verifikasi Ulang</span>
 											</a>
 										<?php endif; ?>
 									<?php endif; ?>
-									<!-- <a href="<?= base_url('sanitasiwarehouse/delete/' . $val->uuid); ?>" class="btn btn-danger btn-icon-split" onclick="return confirm('Yakin ingin menghapus data ini?')">
-                                    <span class="text">Delete</span>
-                                </a> -->
 								</td>
 							</tr>
 						<?php
 							$no++;
-						}
+						endforeach;
 						?>
 					</tbody>
 				</table>
 			</div>
-			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+			<?php if ($boleh_verifikasi): ?>
 				<br>
 				<div class="mb-3">
-					<form action="<?= base_url('sanitasiwarehouse/cetak') ?>" method="post" class="form-inline">
-						<label for="tanggal" class="mr-2 font-weight-bold">Pilih Tanggal:</label>
-						<input type="date" name="tanggal" class="form-control mr-2" required>
+					<form action="<?= base_url('sanitasiwarehouse/cetak') ?>"
+						method="post"
+						class="form-inline">
+						<label for="tanggalCetak" class="mr-2 font-weight-bold">Pilih Tanggal:</label>
+						<input
+							type="date"
+							name="tanggal"
+							id="tanggalCetak"
+							class="form-control mr-2"
+							required>
 						<button type="submit" class="btn btn-success">
 							<i class="fas fa-print fa-sm text-white-50"></i> Cetak PDF
 						</button>
 					</form>
 				</div>
 			<?php endif; ?>
+
 		</div>
 	</div>
 </div>
+<div class="modal fade" id="modalDetailSanitasiWarehouse" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Sanitasi Warehouse</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body" id="contentDetailSanitasiWarehouse">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin"></i> Memuat data...
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 <style>
 	th {
 		background-color: #f8f9fc;
 	}
 </style>
+
+<?php if ($boleh_verifikasi): ?>
+	<script>
+		$(document).ready(function() {
+
+			// Filter otomatis berdasarkan tanggal
+			$('#filterTanggal').on('change', function() {
+				const tanggal = $(this).val();
+				let url = '<?= base_url('sanitasiwarehouse') ?>';
+
+				if (tanggal) {
+					url += '?tanggal=' + encodeURIComponent(tanggal);
+				}
+
+				window.location.href = url;
+			});
+
+			// Verifikasi massal
+			$('#btnVerifikasiMassal').on('click', function() {
+
+				const tanggal = $('#filterTanggal').val();
+
+				if (!tanggal) {
+					Swal.fire({
+						icon: 'warning',
+						title: 'Tanggal belum dipilih',
+						text: 'Silakan pilih tanggal terlebih dahulu.'
+					});
+					return;
+				}
+
+				Swal.fire({
+					title: 'Verifikasi Massal?',
+					text: 'Data Sanitasi Warehouse pada tanggal ' + tanggal +
+						' yang memenuhi status Warehouse dan berstatus SPV Created atau Revision akan diverifikasi.',
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonColor: '#28a745',
+					cancelButtonColor: '#6c757d',
+					confirmButtonText: 'Ya, Verifikasi',
+					cancelButtonText: 'Batal'
+				}).then((result) => {
+
+					if (!result.isConfirmed) {
+						return;
+					}
+
+					$.ajax({
+						url: '<?= base_url('sanitasiwarehouse/verifikasi_massal'); ?>',
+						type: 'POST',
+						dataType: 'json',
+						data: {
+							tanggal: tanggal
+						},
+
+						beforeSend: function() {
+							$('#btnVerifikasiMassal')
+								.prop('disabled', true)
+								.html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
+						},
+
+						success: function(response) {
+							Swal.fire({
+								icon: response.status ? 'success' : 'info',
+								title: response.status ? 'Berhasil' : 'Informasi',
+								text: response.message
+							}).then(() => {
+								if (response.status) {
+									window.location.href =
+										'<?= base_url('sanitasiwarehouse') ?>?tanggal=' +
+										encodeURIComponent(tanggal);
+								}
+							});
+						},
+
+						error: function(xhr) {
+							Swal.fire({
+								icon: 'error',
+								title: 'Gagal',
+								text: xhr.responseJSON?.message ||
+									'Terjadi kesalahan saat memproses verifikasi massal.'
+							});
+						},
+
+						complete: function() {
+							$('#btnVerifikasiMassal')
+								.prop('disabled', false)
+								.html('<i class="fas fa-check-double"></i> Verifikasi');
+						}
+					});
+				});
+			});
+		});
+	</script>
+<?php endif; ?>
+
+<script>
+	$(document).ready(function() {
+		const cacheDetailSanitasiWarehouse = {};
+
+		$(document).on('click', '.btn-detail-sanitasiwarehouse', function(e) {
+			e.preventDefault();
+
+			const url = $(this).data('url');
+			const $content = $('#contentDetailSanitasiWarehouse');
+
+			$('#modalDetailSanitasiWarehouse').modal('show');
+
+			if (cacheDetailSanitasiWarehouse[url]) {
+				$content.html(cacheDetailSanitasiWarehouse[url]);
+				return;
+			}
+
+			$content.html(`
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin"></i> Memuat data...
+				</div>
+			`);
+
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'html',
+				success: function(response) {
+					cacheDetailSanitasiWarehouse[url] = response;
+					$content.html(response);
+				},
+				error: function() {
+					$content.html(`
+						<div class="alert alert-danger mb-0">
+							Gagal memuat detail Sanitasi Warehouse. Silakan coba lagi.
+						</div>
+					`);
+				}
+			});
+		});
+	});
+</script>

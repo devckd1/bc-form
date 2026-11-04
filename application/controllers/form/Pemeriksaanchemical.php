@@ -25,23 +25,108 @@ class Pemeriksaanchemical extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'pemeriksaanchemical' => $this->pemeriksaanchemical_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$filter_tanggal = $this->input->get('tanggal', true);
+
+		// Validasi format tanggal.
+		if (!empty($filter_tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $filter_tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $filter_tanggal) {
+				$filter_tanggal = '';
+			}
+		}
+
+		$config['base_url'] = base_url('pemeriksaanchemical/index');
+		$config['total_rows'] = $this->pemeriksaanchemical_model
+			->count_pemeriksaanchemical_by_plant($filter_tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['use_page_numbers'] = false;
+		$config['reuse_query_string'] = true;
+
+		// Pagination Bootstrap.
+		$config['full_tag_open'] = '<ul class="pagination justify-content-center">';
+		$config['full_tag_close'] = '</ul>';
+
+		$config['first_link'] = 'First';
+		$config['last_link'] = 'Last';
+
+		$config['first_tag_open'] = '<li class="page-item">';
+		$config['first_tag_close'] = '</li>';
+
+		$config['last_tag_open'] = '<li class="page-item">';
+		$config['last_tag_close'] = '</li>';
+
+		$config['next_link'] = '&raquo;';
+		$config['next_tag_open'] = '<li class="page-item">';
+		$config['next_tag_close'] = '</li>';
+
+		$config['prev_link'] = '&laquo;';
+		$config['prev_tag_open'] = '<li class="page-item">';
+		$config['prev_tag_close'] = '</li>';
+
+		$config['cur_tag_open'] = '<li class="page-item active"><a class="page-link" href="#">';
+		$config['cur_tag_close'] = '</a></li>';
+
+		$config['num_tag_open'] = '<li class="page-item">';
+		$config['num_tag_close'] = '</li>';
+
+		$config['attributes'] = [
+			'class' => 'page-link'
+		];
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'pemeriksaanchemical' => $this->pemeriksaanchemical_model
+				->get_data_by_plant(
+					$config['per_page'],
+					$start,
+					$filter_tanggal
+				),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $filter_tanggal
+		];
 
 		$this->active_nav = 'pemeriksaanchemical';
-		$this->render('form/pemeriksaanchemical/pemeriksaanchemical', $data);
+
+		$this->render(
+			'form/pemeriksaanchemical/pemeriksaanchemical',
+			$data
+		);
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'pemeriksaanchemical' => $this->pemeriksaanchemical_model->get_by_uuid($uuid),
-		);
+{
+    $pemeriksaanchemical = $this->pemeriksaanchemical_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'pemeriksaanchemical';
-		$this->render('form/pemeriksaanchemical/pemeriksaanchemical-detail', $data);
-	}
+    if (!$pemeriksaanchemical) {
+        show_404();
+        return;
+    }
+
+    $is_popup = $this->input->get('popup') == '1';
+
+    $data = [
+        'pemeriksaanchemical' => $pemeriksaanchemical,
+        'mode' => 'qc',
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'pemeriksaanchemical';
+
+    if ($is_popup) {
+        $this->load->view('form/pemeriksaanchemical/pemeriksaanchemical-detail', $data);
+    } else {
+        $this->render('form/pemeriksaanchemical/pemeriksaanchemical-detail', $data);
+    }
+}
 
 	public function file_check($str)
 	{
@@ -224,6 +309,62 @@ class Pemeriksaanchemical extends MY_Controller
 
 		$this->active_nav = 'verifikasi-pemeriksaanchemical';
 		$this->render('form/pemeriksaanchemical/pemeriksaanchemical-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		// Hak akses mengikuti menu verifikasi yang sudah ada.
+		if (!in_array($tipe_user, [0, 1, 2, 9], true)) {
+			show_error(
+				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
+				403
+			);
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', true);
+
+		if (empty($tanggal)) {
+			$response = [
+				'status' => false,
+				'message' => 'Tanggal pemeriksaan harus dipilih.'
+			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status' => false,
+					'message' => 'Format tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->pemeriksaanchemical_model
+					->verifikasi_massal_spv($tanggal);
+
+				if ($jumlah === false) {
+					$response = [
+						'status' => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					$response = [
+						'status' => false,
+						'message' => 'Tidak ada data Pemeriksaan Chemical berstatus Created atau Revision pada tanggal tersebut.'
+					];
+				} else {
+					$response = [
+						'status' => true,
+						'message' => $jumlah . ' data Pemeriksaan Chemical berhasil diverifikasi.'
+					];
+				}
+			}
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

@@ -25,31 +25,66 @@ class Seasoning extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'seasoning' => $this->seasoning_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$filter_tanggal = $this->input->get('tanggal', true);
+
+		if (!empty($filter_tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $filter_tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $filter_tanggal) {
+				$filter_tanggal = '';
+			}
+		}
+
+		$config['base_url'] = base_url('seasoning/index');
+		$config['total_rows'] = $this->seasoning_model
+			->count_data_by_plant($filter_tanggal);
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = true;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'seasoning' => $this->seasoning_model
+				->get_data_by_plant(10, $start, $filter_tanggal),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $filter_tanggal
+		];
 
 		$this->active_nav = 'seasoning';
 		$this->render('form/seasoning/seasoning', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$seasoning = $this->seasoning_model->get_by_uuid($uuid);
+{
+    $seasoning = $this->seasoning_model->get_by_uuid($uuid);
 
-		if (!$seasoning || (int) $seasoning->is_audit !== 0) {
-			redirect('seasoning');
-			return;
-		}
+    if (!$seasoning || (int) $seasoning->is_audit !== 0) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'seasoning' => $seasoning,
-			'mode'      => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'seasoning';
-		$this->render('form/seasoning/seasoning-detail', $data);
-	}
+    $data = [
+        'seasoning' => $seasoning,
+        'mode' => 'qc',
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'seasoning';
+
+    if ($is_popup) {
+        $this->load->view('form/seasoning/seasoning-detail', $data);
+    } else {
+        $this->render('form/seasoning/seasoning-detail', $data);
+    }
+}
 
 	public function file_check($str)
 	{
@@ -273,6 +308,61 @@ class Seasoning extends MY_Controller
 
 		$this->active_nav = 'verifikasi-seasoning';
 		$this->render('form/seasoning/seasoning-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		if (!in_array($tipe_user, [0, 1, 2, 9, '0', '1', '2', '9'], true)) {
+			show_error(
+				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
+				403
+			);
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', true);
+
+		if (empty($tanggal)) {
+			$response = [
+				'status' => false,
+				'message' => 'Silakan pilih tanggal terlebih dahulu.'
+			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status' => false,
+					'message' => 'Format tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->seasoning_model
+					->verifikasi_massal_spv($tanggal);
+
+				if ($jumlah === false) {
+					$response = [
+						'status' => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					$response = [
+						'status' => false,
+						'message' => 'Tidak ada data Seasoning dengan status Created atau Revision pada tanggal tersebut.'
+					];
+				} else {
+					$response = [
+						'status' => true,
+						'message' => $jumlah . ' data Seasoning berhasil diverifikasi.'
+					];
+				}
+			}
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

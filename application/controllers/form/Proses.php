@@ -28,29 +28,72 @@ class Proses extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'proses' => $this->proses_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$tanggal = trim($this->input->get('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->get('shift', TRUE) ?? '');
+
+		$config['base_url'] = base_url('proses/index');
+		$config['total_rows'] = $this->proses_model
+			->count_proses_by_plant($tanggal, $shift);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'proses' => $this->proses_model->get_data_by_plant(
+				$config['per_page'],
+				$start,
+				$tanggal,
+				$shift
+			),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $tanggal,
+			'filter_shift' => $shift
+		];
 
 		$this->active_nav = 'proses';
 		$this->render('form/proses/proses', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$proses = $this->proses_model->get_by_uuid($uuid);
+{
+    $proses = $this->proses_model->get_by_uuid($uuid);
 
-		if ($proses && isset($proses->proses_produksi)) {
-			$proses->proses_produksi = json_decode($proses->proses_produksi, true);
-		}
+    if (!$proses) {
+        show_404();
+        return;
+    }
 
-		$data = array(
-			'proses' => $proses
-		);
+    if (isset($proses->proses_produksi)) {
+        $proses->proses_produksi = json_decode($proses->proses_produksi, true);
+    }
 
-		$this->active_nav = 'proses';
-		$this->render('form/proses/proses-detail', $data);
-	}
+    $is_popup = $this->input->get('popup') == '1';
+
+    $data = array(
+        'proses' => $proses,
+        'is_popup' => $is_popup
+    );
+
+    $this->active_nav = 'proses';
+
+    if ($is_popup) {
+        $this->load->view('form/proses/proses-detail', $data);
+    } else {
+        $this->render('form/proses/proses-detail', $data);
+    }
+}
 
 	public function tambah()
 	{
@@ -242,6 +285,52 @@ class Proses extends MY_Controller
 		}
 
 		redirect('proses/verifikasi');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->proses_model
+			->verifikasi_massal_spv($tanggal, $shift);
+
+		if ($updated === false) {
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Proses gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Proses berhasil.'
+			];
+		} else {
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

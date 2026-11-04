@@ -269,6 +269,73 @@ class Thermometer_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
+	public function verifikasi_massal_spv($tanggal, $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$tipe_user = $this->session->userdata('tipe_user');
+		$username = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($username)) {
+			return false;
+		}
+
+		// Filter data yang memenuhi syarat
+		$this->db
+			->from('thermometer')
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal)
+			->where_in('status_spv', ['0', '2']);
+
+		if ($tipe_user != 9 && $tipe_user != 1) {
+			if (empty($plant)) {
+				return false;
+			}
+
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$total = $this->db->count_all_results();
+
+		if ($total == 0) {
+			return 0;
+		}
+
+		// Update data
+		$this->db->trans_begin();
+
+		$this->db
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal)
+			->where_in('status_spv', ['0', '2']);
+
+		if ($tipe_user != 9 && $tipe_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		$this->db->update('thermometer', [
+			'nama_spv' => $username,
+			'status_spv' => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $total;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -364,12 +431,44 @@ class Thermometer_model extends CI_Model
 		return $data_thermometer;
 	}
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = 10, $start = 0, $tanggal = '', $shift = '')
 	{
 		$plant = $this->session->userdata('plant');
 		$tipe_user = $this->session->userdata('tipe_user');
 
 		$this->db->where('is_audit', 0);
+
+		// Pertahankan akses lintas plant untuk tipe user 1 dan 9
+		if ($tipe_user != 9 && $tipe_user != 1) {
+			if (!empty($plant)) {
+				$this->db->where('plant', $plant);
+			}
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db
+			->order_by('date', 'DESC')
+			->order_by('created_at', 'DESC')
+			->limit($limit, $start)
+			->get('thermometer')
+			->result();
+	}
+
+	public function count_thermometer_by_plant($tanggal = '', $shift = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		$this->db
+			->from('thermometer')
+			->where('is_audit', 0);
 
 		if ($tipe_user != 9 && $tipe_user != 1) {
 			if (!empty($plant)) {
@@ -377,11 +476,15 @@ class Thermometer_model extends CI_Model
 			}
 		}
 
-		return $this->db
-			->order_by('date', 'DESC')
-			->order_by('created_at', 'DESC')
-			->get('thermometer')
-			->result();
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		return $this->db->count_all_results();
 	}
 
 	public function delete_by_uuid($uuid)

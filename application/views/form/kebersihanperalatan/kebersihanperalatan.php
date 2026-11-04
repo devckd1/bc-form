@@ -67,12 +67,14 @@
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
-				<div class="text-right mb-2">
-					<a href="<?= base_url('kebersihanperalatan/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-					</a>
+				<div class="text-right mb-2 ml-auto">
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('kebersihanperalatan/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<a href="<?= base_url('kebersihanperalatan/audit'); ?>"
@@ -165,7 +167,8 @@
 										<?php endif; ?>
 
 										<a href="<?= base_url('kebersihanperalatan/detail/' . $val->uuid); ?>"
-											class="btn btn-success btn-icon-split mb-1">
+											data-url="<?= base_url('kebersihanperalatan/detail/' . $val->uuid . '?popup=1'); ?>"
+											class="btn btn-success btn-icon-split mb-1 btn-detail-kebersihanperalatan">
 											<span class="text">Detail</span>
 										</a>
 
@@ -238,6 +241,20 @@
 		</div>
 	</div>
 </div>
+</div>
+<div class="modal fade" id="modalDetailKebersihanPeralatan" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Kebersihan Peralatan</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+			<div class="modal-body" id="contentDetailKebersihanPeralatan">
+			</div>
+		</div>
+	</div>
 </div>
 <style>
 	th {
@@ -370,5 +387,47 @@
 			});
 		});
 
+	});
+
+	// Modal Detail AJAX Kebersihan Peralatan
+	var cacheDetailKebersihanPeralatan = {};
+
+	$(document).on('click', '.btn-detail-kebersihanperalatan', function(e) {
+		e.preventDefault();
+
+		var url = $(this).data('url');
+		var modal = $('#modalDetailKebersihanPeralatan');
+		var content = $('#contentDetailKebersihanPeralatan');
+
+		modal.modal('show');
+
+		if (cacheDetailKebersihanPeralatan[url]) {
+			content.html(cacheDetailKebersihanPeralatan[url]);
+			return;
+		}
+
+		content.html(`
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat detail...</p>
+        </div>
+    `);
+
+		$.ajax({
+			url: url,
+			type: 'GET',
+			dataType: 'html',
+			success: function(response) {
+				cacheDetailKebersihanPeralatan[url] = response;
+				content.html(response);
+			},
+			error: function() {
+				content.html(`
+                <div class="alert alert-danger text-center">
+                    Gagal memuat detail Kebersihan Peralatan.
+                </div>
+            `);
+			}
+		});
 	});
 </script>

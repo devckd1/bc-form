@@ -74,14 +74,14 @@
 				<?php endif; ?>
 
 				<!-- Tombol Tambah dan Audit -->
-				<div class="text-right mb-2">
-
-					<a href="<?= base_url('pecahbelah/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-					</a>
+				<div class="text-right mb-2 ml-auto">
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('pecahbelah/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<a href="<?= base_url('pecahbelah/audit'); ?>"
@@ -229,9 +229,11 @@
 										</a>
 									<?php endif; ?>
 
-									<a href="<?= base_url('pecahbelah/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split">
-										<span class="text">Detail</span>
-									</a>
+									<a href="<?= base_url('pecahbelah/detail/' . $val->uuid); ?>"
+    data-url="<?= base_url('pecahbelah/detail/' . $val->uuid . '?popup=1'); ?>"
+    class="btn btn-success btn-icon-split btn-detail-pecahbelah">
+    <span class="text">Detail</span>
+</a>
 
 									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 										<a href="<?= base_url('pecahbelah/delete/' . $val->uuid); ?>"
@@ -302,6 +304,33 @@
 		</div>
 	</div>
 </div>
+</div>
+<!-- Modal Detail Benda Mudah Pecah -->
+<div class="modal fade" id="modalDetailPecahbelah" tabindex="-1" role="dialog"
+    aria-labelledby="modalDetailPecahbelahLabel" aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDetailPecahbelahLabel">
+                    Detail Benda Mudah Pecah
+                </h5>
+
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="contentDetailPecahbelah">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat detail...</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
 <style>
 	th {
@@ -421,4 +450,50 @@
 		});
 
 	});
+</script>
+<script>
+    $(document).ready(function() {
+
+        let cacheDetailPecahbelah = {};
+
+        $(document).on('click', '.btn-detail-pecahbelah', function(e) {
+            e.preventDefault();
+
+            let url = $(this).data('url');
+
+            $('#modalDetailPecahbelah').modal('show');
+
+            if (cacheDetailPecahbelah[url]) {
+                $('#contentDetailPecahbelah').html(cacheDetailPecahbelah[url]);
+                return;
+            }
+
+            $('#contentDetailPecahbelah').html(`
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat detail...</p>
+                </div>
+            `);
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'html',
+
+                success: function(response) {
+                    cacheDetailPecahbelah[url] = response;
+                    $('#contentDetailPecahbelah').html(response);
+                },
+
+                error: function() {
+                    $('#contentDetailPecahbelah').html(`
+                        <div class="alert alert-danger text-center">
+                            Gagal memuat detail benda mudah pecah.
+                        </div>
+                    `);
+                }
+            });
+        });
+
+    });
 </script>

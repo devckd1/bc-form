@@ -413,6 +413,56 @@ class Suhu_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$nama_spv = $this->session->userdata('username');
+
+		if (empty($tanggal) || empty($nama_spv) || empty($plant)) {
+			return false;
+		}
+
+		// Hitung data yang memenuhi syarat
+		$this->db->from('suhu');
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		$total_data = $this->db->count_all_results();
+
+		if ($total_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Update hanya data QC yang memenuhi syarat
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+		$this->db->where('date', $tanggal);
+		$this->db->where('status_produksi', '1');
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		$this->db->update('suhu', [
+			'nama_spv'       => $nama_spv,
+			'status_spv'     => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$jumlah_update = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $jumlah_update;
+	}
+
 	public function rules_diketahui()
 	{
 		return [
@@ -686,15 +736,61 @@ class Suhu_model extends CI_Model
 			->row();
 	}
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
 		$plant = $this->session->userdata('plant');
 
+		$this->db->from('suhu');
 		$this->db->where('plant', $plant);
 		$this->db->where('is_audit', 0);
-		$this->db->order_by('created_at', 'DESC');
 
-		return $this->db->get('suhu')->result();
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
+		}
+
+		// Urut tanggal terbaru
+		$this->db->order_by('date', 'DESC');
+
+		// Urut shift per hari: Shift 2, Shift 1, Shift 3
+		$this->db->order_by("
+        CASE
+            WHEN TIME(pukul) >= '15:00:00'
+                AND TIME(pukul) < '23:00:00' THEN 1
+
+            WHEN TIME(pukul) >= '07:00:00'
+                AND TIME(pukul) < '15:00:00' THEN 2
+
+            WHEN TIME(pukul) >= '23:00:00'
+                OR TIME(pukul) < '07:00:00' THEN 3
+        END
+    ", '', false);
+
+		// Urut pukul
+		$this->db->order_by('pukul', 'DESC');
+
+		// Pagination
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get()->result();
+	}
+
+	public function count_suhu_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+
+		$this->db->from('suhu');
+		$this->db->where('plant', $plant);
+		$this->db->where('is_audit', 0);
+
+		// Filter tanggal
+		if (!empty($tanggal)) {
+			$this->db->where('date', $tanggal);
+		}
+
+		return $this->db->count_all_results();
 	}
 
 	public function get_audit_by_date($tanggal, $plant)

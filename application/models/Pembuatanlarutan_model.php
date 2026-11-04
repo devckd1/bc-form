@@ -1,13 +1,15 @@
-<?php 
+<?php
 date_default_timezone_set('Asia/Jakarta');
+
 use Ramsey\Uuid\Uuid;
 
 
-class Pembuatanlarutan_model extends CI_Model {
-	
+class Pembuatanlarutan_model extends CI_Model
+{
+
 	public function rules()
 	{
-		return[
+		return [
 			[
 				'field' => 'date',
 				'label' => 'Date',
@@ -17,7 +19,7 @@ class Pembuatanlarutan_model extends CI_Model {
 				'field' => 'area',
 				'label' => 'Area',
 				'rules' => 'required'
-			], 
+			],
 			[
 				'field' => 'pukul',
 				'label' => 'Time',
@@ -45,7 +47,7 @@ class Pembuatanlarutan_model extends CI_Model {
 			[
 				'field' => 'air',
 				'label' => 'water'
-			], 
+			],
 			[
 				'field' => 'catatan',
 				'label' => 'Notes'
@@ -86,9 +88,8 @@ class Pembuatanlarutan_model extends CI_Model {
 		);
 
 		$this->db->insert('pembuatan_larutan', $data);
-		return($this->db->affected_rows() > 0) ? true :false;
-
-	} 
+		return ($this->db->affected_rows() > 0) ? true : false;
+	}
 
 	public function update($uuid)
 	{
@@ -103,7 +104,7 @@ class Pembuatanlarutan_model extends CI_Model {
 		$air = $this->input->post('air');
 		$catatan = $this->input->post('catatan');
 
-		$old_data = $this->db->get_where('pembuatan_larutan', ['uuid'=>$uuid])->row_array();
+		$old_data = $this->db->get_where('pembuatan_larutan', ['uuid' => $uuid])->row_array();
 
 		$data = array(
 			'username' => $username,
@@ -122,27 +123,26 @@ class Pembuatanlarutan_model extends CI_Model {
 
 		$this->db->update('pembuatan_larutan', $data, ['uuid' => $uuid]);
 
-        // ambil data baru setelah update
-		$new_data = $this->db->get_where('pembuatan_larutan', ['uuid'=>$uuid])->row_array();
+		// ambil data baru setelah update
+		$new_data = $this->db->get_where('pembuatan_larutan', ['uuid' => $uuid])->row_array();
 
 		if ($this->db->affected_rows() > 0) {
-            // simpan log ke tabel khusus pembuatan_larutan_logs
+			// simpan log ke tabel khusus pembuatan_larutan_logs
 			$this->activity_logger->log_activity(
 				'update',
-                'pembuatan_larutan_logs', // nama tabel log khusus pembuatan_larutan
-                $uuid,
-                $old_data,
-                $new_data
-            );
+				'pembuatan_larutan_logs', // nama tabel log khusus pembuatan_larutan
+				$uuid,
+				$old_data,
+				$new_data
+			);
 			return true;
 		}
 		return false;
-
 	}
 
 	public function rules_verifikasi()
 	{
-		return[
+		return [
 			[
 				'field' => 'status_spv',
 				'label' => 'Date',
@@ -152,7 +152,7 @@ class Pembuatanlarutan_model extends CI_Model {
 				'field' => 'catatan_spv',
 				'label' => 'Notes'
 			]
-			
+
 		];
 	}
 
@@ -171,8 +171,44 @@ class Pembuatanlarutan_model extends CI_Model {
 		);
 
 		$this->db->update('pembuatan_larutan', $data, array('uuid' => $uuid));
-		return($this->db->affected_rows() > 0) ? true :false;
+		return ($this->db->affected_rows() > 0) ? true : false;
+	}
 
+	public function verifikasi_massal_spv($tanggal)
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+		$nama_spv = $this->session->userdata('username');
+
+		$this->db->trans_begin();
+
+		// Filter tanggal.
+		$this->db->where('DATE(date)', $tanggal);
+
+		// Scope plant.
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		// Hanya data Created dan Revision.
+		$this->db->where_in('status_spv', ['0', '2']);
+
+		$this->db->update('pembuatan_larutan', [
+			'nama_spv'       => $nama_spv,
+			'status_spv'     => '1',
+			'tgl_update_spv' => date('Y-m-d H:i:s')
+		]);
+
+		$jumlah = $this->db->affected_rows();
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $jumlah;
 	}
 
 	public function get_all()
@@ -191,7 +227,7 @@ class Pembuatanlarutan_model extends CI_Model {
 	public function get_by_uuid_pembuatanlarutan($uuid_array)
 	{
 		if (empty($uuid_array)) {
-			return false; 
+			return false;
 		}
 		log_message('debug', 'Array UUID yang diterima: ' . print_r($uuid_array, true));
 
@@ -201,34 +237,62 @@ class Pembuatanlarutan_model extends CI_Model {
 		log_message('debug', 'Query yang dijalankan: ' . $this->db->last_query());
 
 		if ($query->num_rows() > 0) {
-			return $query->result(); 
-		}	
-		return false;  
+			return $query->result();
+		}
+		return false;
 	}
 
 	public function get_by_uuid_pembuatanlarutan_verif($uuid_array)
 	{
 		$this->db->select('nama_spv, tgl_update_spv, username, date, area');
 		$this->db->where_in('uuid', $uuid_array);
-		$this->db->order_by('tgl_update_spv', 'DESC');   
-		$this->db->limit(1);  
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->limit(1);
 		$query = $this->db->get('pembuatan_larutan');
 
-		$data_pembuatan_larutan = $query->row();  
-		return $data_pembuatan_larutan; 
+		$data_pembuatan_larutan = $query->row();
+		return $data_pembuatan_larutan;
 	}
 
-	public function get_data_by_plant()
+	public function get_data_by_plant($limit = null, $start = 0, $tanggal = '')
 	{
-		$this->db->order_by('created_at', 'DESC');
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
-		if ($type_user == 9 || $type_user == 1) {
-			return $this->db->get('pembuatan_larutan')->result();
+		// Tipe user 1 dan 9 dapat melihat seluruh plant.
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
 		}
 
-		return $this->db->get_where('pembuatan_larutan', ['plant' => $plant])->result();
+		// Filter tanggal.
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		// Pagination.
+		if ($limit !== null) {
+			$this->db->limit($limit, $start);
+		}
+
+		return $this->db->get('pembuatan_larutan')->result();
+	}
+
+	public function count_pembuatanlarutan_by_plant($tanggal = '')
+	{
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($tanggal)) {
+			$this->db->where('DATE(date)', $tanggal);
+		}
+
+		return $this->db->count_all_results('pembuatan_larutan');
 	}
 
 	public function delete_by_uuid($uuid)
@@ -246,7 +310,7 @@ class Pembuatanlarutan_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
@@ -267,7 +331,7 @@ class Pembuatanlarutan_model extends CI_Model {
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
-			$this->db->where('plant', $plant); 
+			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
@@ -276,5 +340,4 @@ class Pembuatanlarutan_model extends CI_Model {
 
 		return $query->row();
 	}
-
 }

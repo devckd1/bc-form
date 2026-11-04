@@ -18,23 +18,69 @@ class Residu extends MY_Controller
 
 	public function index()
 	{
-		$data = array(
-			'residu' => $this->residu_model->get_data_by_plant()
-		);
+		$this->load->library('pagination');
+
+		$filter_tanggal = $this->input->get('tanggal', true);
+
+		if (!empty($filter_tanggal)) {
+			$date = DateTime::createFromFormat('Y-m-d', $filter_tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $filter_tanggal) {
+				$filter_tanggal = '';
+			}
+		}
+
+		$config['base_url'] = base_url('residu/index');
+		$config['total_rows'] = $this->residu_model
+			->count_data_by_plant($filter_tanggal);
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = true;
+
+		$this->pagination->initialize($config);
+
+		$start = (int) $this->uri->segment(3, 0);
+
+		$data = [
+			'residu' => $this->residu_model
+				->get_data_by_plant(10, $start, $filter_tanggal),
+			'pagination' => $this->pagination->create_links(),
+			'start' => $start,
+			'filter_tanggal' => $filter_tanggal
+		];
 
 		$this->active_nav = 'residu';
 		$this->render('form/residu/residu', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$data = array(
-			'residu' => $this->residu_model->get_by_uuid($uuid),
-		);
+{
+    $residu = $this->residu_model->get_by_uuid($uuid);
 
-		$this->active_nav = 'residu';
-		$this->render('form/residu/residu-detail', $data);
-	}
+    if (!$residu) {
+        show_404();
+        return;
+    }
+
+    $data = array(
+        'residu' => $residu,
+        'is_popup' => $this->input->get('popup') == '1'
+    );
+
+    $this->active_nav = 'residu';
+
+    if ($data['is_popup']) {
+        $this->load->view(
+            'form/residu/residu-detail',
+            $data
+        );
+    } else {
+        $this->render(
+            'form/residu/residu-detail',
+            $data
+        );
+    }
+}
 
 	public function tambah()
 	{
@@ -108,6 +154,61 @@ class Residu extends MY_Controller
 
 		$this->active_nav = 'verifikasi-residu';
 		$this->render('form/residu/residu-verifikasi', $data);
+	}
+
+	public function verifikasi_massal()
+	{
+		$tipe_user = $this->session->userdata('tipe_user');
+
+		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+			show_error(
+				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
+				403
+			);
+			return;
+		}
+
+		$tanggal = $this->input->post('tanggal', true);
+
+		if (empty($tanggal)) {
+			$response = [
+				'status' => false,
+				'message' => 'Silakan pilih tanggal terlebih dahulu.'
+			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status' => false,
+					'message' => 'Format tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->residu_model
+					->verifikasi_massal_spv($tanggal);
+
+				if ($jumlah === false) {
+					$response = [
+						'status' => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					$response = [
+						'status' => false,
+						'message' => 'Tidak ada data Residu dengan status Created atau Revision pada tanggal tersebut.'
+					];
+				} else {
+					$response = [
+						'status' => true,
+						'message' => $jumlah . ' data Residu berhasil diverifikasi.'
+					];
+				}
+			}
+		}
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

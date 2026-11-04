@@ -57,12 +57,25 @@ class Chiller extends MY_Controller
 
 	public function detail($uuid)
 	{
+		$chiller = $this->chiller_model->get_by_uuid($uuid);
+
+		if (!$chiller) {
+			show_404();
+			return;
+		}
+
 		$data = array(
-			'chiller' => $this->chiller_model->get_by_uuid($uuid),
+			'chiller' => $chiller,
+			'is_popup' => $this->input->get('popup') == '1'
 		);
 
 		$this->active_nav = 'chiller';
-		$this->render('form/chiller/chiller-detail', $data);
+
+		if ($data['is_popup']) {
+			$this->load->view('form/chiller/chiller-detail', $data);
+		} else {
+			$this->render('form/chiller/chiller-detail', $data);
+		}
 	}
 
 	public function tambah()

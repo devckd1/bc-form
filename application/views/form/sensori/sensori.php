@@ -25,21 +25,90 @@
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
-			<div class="form-group text-right">
-				<a href="<?= base_url('sensori/tambah') ?>" class="btn btn-md btn-primary shadow-sm">
-					<i class="fas fa-plus fa-sm text-white-50"></i> Tambah
-				</a>
+			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+
+				<!-- Filter tanggal dan verifikasi massal -->
 				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<a href="<?= base_url('sensori/audit'); ?>"
-						class="btn shadow-sm"
-						style="background-color: #5a3298; color: #fff;">
 
-						<i class="fas fa-clipboard-check mr-1"></i>
-						Mode Audit
+					<div class="d-flex align-items-center flex-wrap mb-2">
 
-					</a>
+						<form id="formVerifikasiMassal"
+							action="<?= base_url('sensori/verifikasi_massal'); ?>"
+							method="post"
+							class="d-flex align-items-center flex-wrap">
+
+							<input type="date"
+								id="filter_tanggal"
+								name="tanggal"
+								class="form-control mr-2 mb-2"
+								style="width: 170px;"
+								value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+								required>
+
+							<button type="submit"
+								id="btnVerifikasiMassal"
+								class="btn btn-primary mb-2">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+
+							</button>
+
+						</form>
+
+						<a href="<?= base_url('sensori'); ?>"
+							class="btn btn-secondary ml-2 mb-2">
+
+							<i class="fas fa-sync-alt mr-1"></i>
+							Reset
+
+						</a>
+
+					</div>
+
 				<?php endif; ?>
+
+
+				<!-- Tambah dan Mode Audit -->
+				<div class="text-right mb-2 ml-auto">
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('sensori/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+						<a href="<?= base_url('sensori/audit'); ?>"
+							class="btn shadow-sm"
+							style="background-color: #5a3298; color: #fff;">
+
+							<i class="fas fa-clipboard-check mr-1"></i>
+							Mode Audit
+
+						</a>
+
+					<?php endif; ?>
+
+				</div>
+
 			</div>
+
+			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+				<small class="text-muted d-block mb-2">
+
+					<i class="fas fa-info-circle mr-1"></i>
+
+					Hanya data Sensori Finish Good QC yang sudah diketahui
+					Produksi dan berstatus Created atau Revision pada tanggal
+					terpilih yang akan diverifikasi.
+
+				</small>
+
+			<?php endif; ?>
 			<hr>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
@@ -56,7 +125,7 @@
 					</thead>
 					<tbody>
 						<?php
-						$no = 1;
+						$no = (int) ($start ?? 0) + 1;
 						foreach ($sensori as $val) {
 							$tanggalFormatted = (new DateTime($val->date))->format('d-m-Y');
 							$products = json_decode($val->produk, true);
@@ -129,9 +198,11 @@
 										</a>
 									<?php endif; ?>
 
-									<a href="<?= base_url('sensori/detail/' . $val->uuid); ?>" class="btn btn-success btn-icon-split mb-1">
-										<span class="text">Detail</span>
-									</a>
+									<a href="<?= base_url('sensori/detail/' . $val->uuid); ?>"
+    data-url="<?= base_url('sensori/detail/' . $val->uuid . '?popup=1'); ?>"
+    class="btn btn-success btn-icon-split mb-1 btn-detail-sensori">
+    <span class="text">Detail</span>
+</a>
 
 									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 										<a href="<?= base_url('sensori/verifikasi_produksi/' . $val->uuid); ?>"
@@ -179,12 +250,85 @@
 	</div>
 </div>
 </div>
+<!-- Modal Detail Sensori -->
+<div class="modal fade" id="modalDetailSensori" tabindex="-1"
+    role="dialog" aria-labelledby="modalDetailSensoriLabel" aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDetailSensoriLabel">
+                    Detail Laporan Sensori Finish Good
+                </h5>
+
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="contentDetailSensori">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat data...</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
 <style>
 	th {
 		background-color: #f8f9fc;
 	}
 </style>
+<script>
+    $(document).ready(function() {
 
+        const cacheDetailSensori = {};
+
+        $(document).on('click', '.btn-detail-sensori', function(e) {
+            e.preventDefault();
+
+            const url = $(this).data('url');
+
+            $('#modalDetailSensori').modal('show');
+
+            if (cacheDetailSensori[url]) {
+                $('#contentDetailSensori').html(cacheDetailSensori[url]);
+                return;
+            }
+
+            $('#contentDetailSensori').html(`
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat data...</p>
+                </div>
+            `);
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'html',
+
+                success: function(response) {
+                    cacheDetailSensori[url] = response;
+                    $('#contentDetailSensori').html(response);
+                },
+
+                error: function() {
+                    $('#contentDetailSensori').html(`
+                        <div class="alert alert-danger text-center">
+                            Gagal memuat detail Sensori Finish Good.
+                        </div>
+                    `);
+                }
+            });
+
+        });
+
+    });
+</script>
 
 <!-- <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
@@ -312,7 +456,139 @@
 		});
 	});
 </script>
+<script>
+	$(document).ready(function() {
 
+		// Filter tanggal otomatis
+		$('#filter_tanggal').on('change', function() {
+
+			var tanggal = $(this).val();
+
+			if (tanggal) {
+				window.location.href =
+					"<?= base_url('sensori'); ?>?tanggal=" + tanggal;
+			}
+
+		});
+
+
+		// Verifikasi massal SPV
+		$('#formVerifikasiMassal').on('submit', function(e) {
+
+			e.preventDefault();
+
+			var form = $(this);
+			var tombol = $('#btnVerifikasiMassal');
+
+			if (!form.find('[name="tanggal"]').val()) {
+
+				Swal.fire(
+					'Perhatian',
+					'Silakan pilih tanggal terlebih dahulu.',
+					'warning'
+				);
+
+				return;
+			}
+
+			Swal.fire({
+
+				title: 'Verifikasi Massal?',
+
+				text: 'Data Sensori Finish Good QC yang sudah diketahui Produksi dan berstatus Created atau Revision pada tanggal tersebut akan diproses.',
+
+				icon: 'question',
+
+				showCancelButton: true,
+
+				confirmButtonText: 'Ya, Verifikasi',
+
+				cancelButtonText: 'Batal'
+
+			}).then(function(result) {
+
+				if (!result.isConfirmed) {
+					return;
+				}
+
+				tombol.prop('disabled', true);
+
+				tombol.html(
+					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+				);
+
+				$.ajax({
+
+					url: form.attr('action'),
+
+					type: 'POST',
+
+					data: form.serialize(),
+
+					dataType: 'json',
+
+					success: function(response) {
+
+						if (response.success) {
+
+							Swal.fire({
+
+								title: 'Berhasil',
+
+								text: response.message +
+									' Jumlah data: ' +
+									response.updated,
+
+								icon: 'success'
+
+							}).then(function() {
+
+								window.location.reload();
+
+							});
+
+						} else {
+
+							Swal.fire(
+								'Informasi',
+								response.message,
+								'info'
+							);
+
+							tombol.prop('disabled', false);
+
+							tombol.html(
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							);
+
+						}
+
+					},
+
+					error: function(xhr) {
+
+						Swal.fire(
+							'Error',
+							'Terjadi kesalahan saat memproses verifikasi massal.',
+							'error'
+						);
+
+						tombol.prop('disabled', false);
+
+						tombol.html(
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+						);
+
+					}
+
+				});
+
+			});
+
+		});
+
+	});
+</script>
 <style>
 	th {
 		background-color: #f8f9fc;

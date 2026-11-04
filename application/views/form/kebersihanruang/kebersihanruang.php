@@ -77,29 +77,23 @@
 
 
 				<!-- Tombol Tambah dan Mode Audit -->
-				<div class="text-right mb-2">
-
-					<a href="<?= base_url('kebersihanruang/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-
-					</a>
+				<div class="text-right mb-2 ml-auto">
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('kebersihanruang/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-
 						<a href="<?= base_url('kebersihanruang/audit'); ?>"
 							class="btn shadow-sm"
 							style="background-color: #5a3298; color: #fff;">
-
 							<i class="fas fa-clipboard-check mr-1"></i>
 							Mode Audit
-
 						</a>
-
 					<?php endif; ?>
-
 				</div>
 
 			</div>
@@ -210,7 +204,8 @@
 										<?php endif; ?>
 
 										<a href="<?= base_url('kebersihanruang/detail/' . $val->uuid); ?>"
-											class="btn btn-success btn-icon-split mb-1">
+											data-url="<?= base_url('kebersihanruang/detail/' . $val->uuid . '?popup=1'); ?>"
+											class="btn btn-success btn-icon-split mb-1 btn-detail-kebersihanruang">
 											<span class="text">Detail</span>
 										</a>
 
@@ -303,7 +298,20 @@
 	</div>
 </div>
 </div>
-
+<div class="modal fade" id="modalDetailKebersihanRuang" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Kebersihan Ruang Produksi</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+			<div class="modal-body" id="contentDetailKebersihanRuang">
+			</div>
+		</div>
+	</div>
+</div>
 <style>
 	th {
 		background-color: #f8f9fc;
@@ -562,5 +570,47 @@
 
 		});
 
+	});
+
+	// Modal Detail AJAX Kebersihan Ruang
+	var cacheDetailKebersihanRuang = {};
+
+	$(document).on('click', '.btn-detail-kebersihanruang', function(e) {
+		e.preventDefault();
+
+		var url = $(this).data('url');
+		var modal = $('#modalDetailKebersihanRuang');
+		var content = $('#contentDetailKebersihanRuang');
+
+		modal.modal('show');
+
+		if (cacheDetailKebersihanRuang[url]) {
+			content.html(cacheDetailKebersihanRuang[url]);
+			return;
+		}
+
+		content.html(`
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat detail...</p>
+        </div>
+    `);
+
+		$.ajax({
+			url: url,
+			type: 'GET',
+			dataType: 'html',
+			success: function(response) {
+				cacheDetailKebersihanRuang[url] = response;
+				content.html(response);
+			},
+			error: function() {
+				content.html(`
+                <div class="alert alert-danger text-center">
+                    Gagal memuat detail Kebersihan Ruang.
+                </div>
+            `);
+			}
+		});
 	});
 </script>

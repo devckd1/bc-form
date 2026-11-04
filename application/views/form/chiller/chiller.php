@@ -25,55 +25,55 @@
 	<div class="card shadow mb-4">
 		<div class="card-body">
 
-			<div class="d-flex justify-content-between align-items-center flex-wrap">
+			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
 				<!-- KIRI: Filter dan Verifikasi Massal -->
 				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<form
-						id="formVerifikasiMassalChiller"
-						action="<?= base_url('chiller/verifikasi_massal'); ?>"
-						method="post"
-						class="d-flex align-items-center flex-wrap mb-2">
+					<div class="d-flex align-items-center flex-wrap mb-2">
+						<form
+							id="formVerifikasiMassalChiller"
+							action="<?= base_url('chiller/verifikasi_massal'); ?>"
+							method="post"
+							class="d-flex align-items-center flex-wrap">
 
-						<label for="tanggal_massal_chiller" class="mr-2 mb-2 font-weight-bold">
-							Tanggal:
-						</label>
+							<input
+								type="date"
+								name="tanggal"
+								id="tanggal_massal_chiller"
+								class="form-control mr-2 mb-2"
+								style="width: 170px;"
+								value="<?= html_escape($filter_tanggal ?? ''); ?>"
+								required>
 
-						<input
-							type="date"
-							name="tanggal"
-							id="tanggal_massal_chiller"
-							class="form-control form-control-sm mr-2 mb-2"
-							value="<?= html_escape($filter_tanggal ?? ''); ?>"
-							required
-							style="width: 170px;">
-
-						<button
-							type="submit"
-							id="btnVerifikasiMassalChiller"
-							class="btn btn-primary btn-sm mr-2 mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+							<button
+								type="submit"
+								id="btnVerifikasiMassalChiller"
+								class="btn btn-primary mb-2">
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+							</button>
+						</form>
 
 						<button
 							type="button"
 							id="resetFilterChiller"
-							class="btn btn-secondary btn-sm mb-2">
-							<i class="fas fa-undo mr-1"></i>
+							class="btn btn-secondary ml-2 mb-2">
+							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</button>
-					</form>
+					</div>
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
-				<div class="d-flex align-items-center flex-wrap mb-2">
+				<div class="text-right mb-2 ml-auto">
 
-					<a href="<?= base_url('chiller/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm mr-2">
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-					</a>
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('chiller/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<a href="<?= base_url('chiller/audit'); ?>"
@@ -88,11 +88,12 @@
 			</div>
 
 			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-				<small class="text-muted d-block mb-3">
+				<small class="text-muted d-block mb-2">
 					<i class="fas fa-info-circle mr-1"></i>
 					Hanya data yang sudah diverifikasi Produksi yang akan diproses.
 				</small>
 			<?php endif; ?>
+
 			<hr>
 			<div class="table-responsive">
 				<table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
@@ -152,7 +153,8 @@
 										<?php endif; ?>
 
 										<a href="<?= base_url('chiller/detail/' . $val->uuid); ?>"
-											class="btn btn-success btn-icon-split mb-1">
+											class="btn btn-success btn-icon-split mb-1 btn-detail-chiller"
+											data-url="<?= base_url('chiller/detail/' . $val->uuid . '?popup=1'); ?>">
 											<span class="text">Detail</span>
 										</a>
 
@@ -222,7 +224,28 @@
 	</div>
 </div>
 </div>
+<div class="modal fade" id="modalDetailChiller" tabindex="-1"
+	role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
 
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Pemeriksaan Suhu Chiller</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+
+			<div class="modal-body" id="contentDetailChiller">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat detail...</p>
+				</div>
+			</div>
+
+		</div>
+	</div>
+</div>
 <style>
 	th {
 		background-color: #f8f9fc;
@@ -339,6 +362,50 @@
 					}
 				});
 			});
+		});
+
+	});
+
+	// Modal Detail Chiller AJAX
+	let cacheDetailChiller = {};
+
+	$(document).on('click', '.btn-detail-chiller', function(e) {
+
+		e.preventDefault();
+
+		let url = $(this).data('url');
+
+		$('#modalDetailChiller').modal('show');
+
+		if (cacheDetailChiller[url]) {
+			$('#contentDetailChiller').html(cacheDetailChiller[url]);
+			return;
+		}
+
+		$('#contentDetailChiller').html(`
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat detail...</p>
+        </div>
+    `);
+
+		$.ajax({
+			url: url,
+			type: 'GET',
+			dataType: 'html',
+
+			success: function(response) {
+				cacheDetailChiller[url] = response;
+				$('#contentDetailChiller').html(response);
+			},
+
+			error: function() {
+				$('#contentDetailChiller').html(`
+                <div class="alert alert-danger">
+                    Gagal memuat detail pemeriksaan Chiller.
+                </div>
+            `);
+			}
 		});
 
 	});

@@ -56,22 +56,30 @@ class Disposisi extends MY_Controller
 	}
 
 	public function detail($uuid)
-	{
-		$disposisi = $this->disposisi_model->get_qc_by_uuid($uuid);
+{
+    $disposisi = $this->disposisi_model->get_qc_by_uuid($uuid);
 
-		if (!$disposisi) {
-			show_404();
-			return;
-		}
+    if (!$disposisi) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'disposisi' => $disposisi,
-			'mode'      => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'disposisi';
-		$this->render('form/disposisi/disposisi-detail', $data);
-	}
+    $data = [
+        'disposisi' => $disposisi,
+        'mode'      => 'qc',
+        'is_popup'  => $is_popup
+    ];
+
+    $this->active_nav = 'disposisi';
+
+    if ($is_popup) {
+        $this->load->view('form/disposisi/disposisi-detail', $data);
+    } else {
+        $this->render('form/disposisi/disposisi-detail', $data);
+    }
+}
 
 	public function tambah()
 	{

@@ -71,27 +71,22 @@
 
 
 				<!-- KANAN: Tambah dan Mode Audit -->
-				<div class="text-right mb-2">
-
-					<a href="<?= base_url('kebersihanmesin/tambah') ?>"
-						class="btn btn-md btn-primary shadow-sm">
-
-						<i class="fas fa-plus fa-sm text-white-50"></i>
-						Tambah
-
-					</a>
+				<div class="text-right mb-2 ml-auto">
+					<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
+						<a href="<?= base_url('kebersihanmesin/tambah') ?>"
+							class="btn btn-md btn-primary shadow-sm">
+							<i class="fas fa-plus fa-sm text-white-50"></i>
+							Tambah
+						</a>
+					<?php endif; ?>
 
 					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-
 						<a href="<?= base_url('kebersihanmesin/audit'); ?>"
 							class="btn shadow-sm"
 							style="background-color: #5a3298; color: #fff;">
-
 							<i class="fas fa-clipboard-check mr-1"></i>
 							Mode Audit
-
 						</a>
-
 					<?php endif; ?>
 
 				</div>
@@ -166,9 +161,10 @@
 										<?php endif; ?>
 
 										<a href="<?= base_url('kebersihanmesin/detail/' . $val->uuid); ?>"
-											class="btn btn-success btn-icon-split mb-1">
-											<span class="text">Detail</span>
-										</a>
+    data-url="<?= base_url('kebersihanmesin/detail/' . $val->uuid . '?popup=1'); ?>"
+    class="btn btn-success btn-icon-split mb-1 btn-detail-kebersihanmesin">
+    <span class="text">Detail</span>
+</a>
 
 										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 											<a href="<?= base_url('kebersihanmesin/verifikasi_produksi/' . $val->uuid); ?>"
@@ -239,6 +235,26 @@
 		</div>
 	</div>
 </div>
+</div>
+<!-- Modal Detail Kebersihan Mesin -->
+<div class="modal fade" id="modalDetailKebersihanMesin" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Kebersihan Mesin</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="contentDetailKebersihanMesin">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Memuat detail...</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 <style>
 	th {
@@ -378,4 +394,49 @@
 		});
 
 	});
+
+	// Modal Detail Kebersihan Mesin
+var cacheDetailKebersihanMesin = {};
+
+$(document).on('click', '.btn-detail-kebersihanmesin', function(e) {
+    e.preventDefault();
+
+    var url = $(this).data('url');
+
+    $('#modalDetailKebersihanMesin').modal('show');
+
+    if (cacheDetailKebersihanMesin[url]) {
+        $('#contentDetailKebersihanMesin').html(
+            cacheDetailKebersihanMesin[url]
+        );
+        return;
+    }
+
+    $('#contentDetailKebersihanMesin').html(`
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Memuat detail...</p>
+        </div>
+    `);
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'html',
+
+        success: function(response) {
+            cacheDetailKebersihanMesin[url] = response;
+
+            $('#contentDetailKebersihanMesin').html(response);
+        },
+
+        error: function() {
+            $('#contentDetailKebersihanMesin').html(`
+                <div class="alert alert-danger text-center">
+                    Gagal memuat detail Kebersihan Mesin.
+                </div>
+            `);
+        }
+    });
+});
 </script>

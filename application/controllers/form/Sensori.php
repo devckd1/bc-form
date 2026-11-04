@@ -27,50 +27,67 @@ class Sensori extends MY_Controller
 	{
 		$this->load->library('pagination');
 
-		$plant = $this->session->userdata('plant');
-
-		$this->db->where('plant', $plant);
-		$config['total_rows'] = $this->db->count_all_results('sensori_fg');
+		$tanggal = trim(
+			$this->input->get('tanggal', TRUE) ?? ''
+		);
 
 		$config['base_url'] = base_url('sensori/index');
-		$config['per_page'] = 50;
-		$config['uri_segment'] = 5;
+
+		$config['total_rows'] =
+			$this->sensori_model->count_sensori_by_plant($tanggal);
+
+		$config['per_page'] = 10;
+		$config['uri_segment'] = 3;
+		$config['reuse_query_string'] = TRUE;
+		$config['use_page_numbers'] = FALSE;
 
 		$this->pagination->initialize($config);
 
-		$start = $this->uri->segment(3) ?? 0;
+		$start = (int) $this->uri->segment(3, 0);
 
-		$data = array(
+		$data = [
 			'sensori' => $this->sensori_model->get_data_by_plant(
 				$config['per_page'],
-				$start
+				$start,
+				$tanggal
 			),
+
 			'pagination' => $this->pagination->create_links(),
-			'start' => $start
-		);
+			'start' => $start,
+			'filter_tanggal' => $tanggal
+		];
 
 		$this->active_nav = 'sensori';
+
 		$this->render('form/sensori/sensori', $data);
 	}
 
 	public function detail($uuid)
-	{
-		$sensori = $this->sensori_model->get_qc_by_uuid($uuid);
+{
+    $sensori = $this->sensori_model->get_qc_by_uuid($uuid);
 
-		if (!$sensori) {
-			show_404();
-			return;
-		}
+    if (!$sensori) {
+        show_404();
+        return;
+    }
 
-		$data = [
-			'sensori' => $sensori,
-			'bagian_list' => $this->sensori_model->get_bagian_by_uuid($uuid),
-			'mode' => 'qc'
-		];
+    $is_popup = $this->input->get('popup') == '1';
 
-		$this->active_nav = 'sensori';
-		$this->render('form/sensori/sensori-detail', $data);
-	}
+    $data = [
+        'sensori' => $sensori,
+        'bagian_list' => $this->sensori_model->get_bagian_by_uuid($uuid),
+        'mode' => 'qc',
+        'is_popup' => $is_popup
+    ];
+
+    $this->active_nav = 'sensori';
+
+    if ($is_popup) {
+        $this->load->view('form/sensori/sensori-detail', $data);
+    } else {
+        $this->render('form/sensori/sensori-detail', $data);
+    }
+}
 
 	public function detail_audit($uuid)
 	{
@@ -242,6 +259,60 @@ class Sensori extends MY_Controller
 		}
 
 		redirect('sensori/verifikasi');
+	}
+
+	public function verifikasi_massal()
+	{
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat(
+			'Y-m-d',
+			$tanggal
+		);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Tanggal tidak valid.'
+				]));
+		}
+
+		$updated = $this->sensori_model
+			->verifikasi_massal_spv($tanggal);
+
+		if ($updated === false) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Verifikasi massal Sensori gagal diproses.'
+			];
+		} elseif ($updated > 0) {
+
+			$response = [
+				'success' => true,
+				'updated' => $updated,
+				'message' => 'Verifikasi massal Sensori Finish Good berhasil.'
+			];
+		} else {
+
+			$response = [
+				'success' => false,
+				'updated' => 0,
+				'message' => 'Tidak ada data Sensori yang memenuhi syarat verifikasi pada tanggal tersebut.'
+			];
+		}
+
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)
