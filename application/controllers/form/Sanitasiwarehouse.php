@@ -77,30 +77,30 @@ class Sanitasiwarehouse extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-	$sanitasiwarehouse = $this->sanitasiwarehouse_model->get_by_uuid($uuid);
+	{
+		$sanitasiwarehouse = $this->sanitasiwarehouse_model->get_by_uuid($uuid);
 
-	if (!$sanitasiwarehouse) {
-		show_404();
-		return;
+		if (!$sanitasiwarehouse) {
+			show_404();
+			return;
+		}
+
+		$is_popup = $this->input->get('popup') == '1';
+
+		$data = [
+			'sanitasiwarehouse' => $sanitasiwarehouse,
+			'mode' => 'qc',
+			'is_popup' => $is_popup
+		];
+
+		$this->active_nav = 'sanitasiwarehouse';
+
+		if ($is_popup) {
+			$this->load->view('form/sanitasiwarehouse/sanitasiwarehouse-detail', $data);
+		} else {
+			$this->render('form/sanitasiwarehouse/sanitasiwarehouse-detail', $data);
+		}
 	}
-
-	$is_popup = $this->input->get('popup') == '1';
-
-	$data = [
-		'sanitasiwarehouse' => $sanitasiwarehouse,
-		'mode' => 'qc',
-		'is_popup' => $is_popup
-	];
-
-	$this->active_nav = 'sanitasiwarehouse';
-
-	if ($is_popup) {
-		$this->load->view('form/sanitasiwarehouse/sanitasiwarehouse-detail', $data);
-	} else {
-		$this->render('form/sanitasiwarehouse/sanitasiwarehouse-detail', $data);
-	}
-}
 
 	public function tambah()
 	{
@@ -196,9 +196,25 @@ class Sanitasiwarehouse extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tipe_user = $this->session->userdata('tipe_user');
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
 
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		$tanggal = trim($this->input->post('tanggal', true) ?? '');
+		$jenis   = trim($this->input->post('jenis_verifikasi', true) ?? '');
+
+		// Validasi jenis dan hak akses
+		$boleh_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+		$boleh_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
+
+		if (
+			($jenis === 'spv' && !$boleh_spv) ||
+			($jenis === 'produksi' && !$boleh_produksi) ||
+			!in_array($jenis, ['spv', 'produksi'], true)
+		) {
 			show_error(
 				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
 				403
@@ -206,49 +222,53 @@ class Sanitasiwarehouse extends MY_Controller
 			return;
 		}
 
-		$tanggal = $this->input->post('tanggal', true);
-
 		if (empty($tanggal)) {
-			echo json_encode([
-				'status' => false,
+			$response = [
+				'status'  => false,
 				'message' => 'Tanggal harus dipilih.'
-			]);
-			return;
+			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status'  => false,
+					'message' => 'Format tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->sanitasiwarehouse_model
+					->verifikasi_massal($tanggal, $jenis);
+
+				if ($jumlah === false) {
+					$response = [
+						'status'  => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					if ($jenis === 'spv') {
+						$pesan = 'Tidak ada data Sanitasi Warehouse yang memenuhi status Warehouse dan status SPV pada tanggal tersebut.';
+					} else {
+						$pesan = 'Tidak ada data Sanitasi Warehouse dengan status Produksi Created pada tanggal tersebut.';
+					}
+
+					$response = [
+						'status'  => false,
+						'message' => $pesan
+					];
+				} else {
+					$namaJenis = $jenis === 'spv' ? 'SPV' : 'Produksi';
+
+					$response = [
+						'status'  => true,
+						'message' => $jumlah . ' data Sanitasi Warehouse berhasil diverifikasi oleh ' . $namaJenis . '.'
+					];
+				}
+			}
 		}
 
-		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
-
-		if (!$date || $date->format('Y-m-d') !== $tanggal) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Format tanggal tidak valid.'
-			]);
-			return;
-		}
-
-		$jumlah = $this->sanitasiwarehouse_model
-			->verifikasi_massal_spv($tanggal);
-
-		if ($jumlah === false) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Verifikasi massal gagal diproses.'
-			]);
-			return;
-		}
-
-		if ($jumlah == 0) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Tidak ada data Sanitasi Warehouse yang memenuhi syarat status Warehouse dan status SPV pada tanggal tersebut.'
-			]);
-			return;
-		}
-
-		echo json_encode([
-			'status' => true,
-			'message' => $jumlah . ' data Sanitasi Warehouse berhasil diverifikasi.'
-		]);
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function verifikasi_produksi($uuid)

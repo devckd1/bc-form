@@ -77,30 +77,30 @@ class Timbangan extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $timbangan = $this->timbangan_model->get_qc_by_uuid($uuid);
+	{
+		$timbangan = $this->timbangan_model->get_qc_by_uuid($uuid);
 
-    if (!$timbangan) {
-        show_404();
-        return;
-    }
+		if (!$timbangan) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'timbangan' => $timbangan,
-        'mode'      => 'qc',
-        'is_popup'  => $is_popup
-    ];
+		$data = [
+			'timbangan' => $timbangan,
+			'mode'      => 'qc',
+			'is_popup'  => $is_popup
+		];
 
-    $this->active_nav = 'timbangan';
+		$this->active_nav = 'timbangan';
 
-    if ($is_popup) {
-        $this->load->view('form/timbangan/timbangan-detail', $data);
-    } else {
-        $this->render('form/timbangan/timbangan-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/timbangan/timbangan-detail', $data);
+		} else {
+			$this->render('form/timbangan/timbangan-detail', $data);
+		}
+	}
 
 	// public function tambah()
 	// {
@@ -273,48 +273,99 @@ class Timbangan extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = $this->input->post('tanggal', true);
-
-		if (empty($tanggal)) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Tanggal harus dipilih.'
-			]);
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
 			return;
+		}
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
+		);
+
+		// Hak akses
+		$role_spv = [0, 1, 2, 9];
+		$role_produksi = [0, 1, 3, 9];
+
+		if (
+			($jenis_verifikasi === 'spv' && !in_array($tipe_user, $role_spv)) ||
+			($jenis_verifikasi === 'produksi' && !in_array($tipe_user, $role_produksi))
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Anda tidak memiliki hak akses untuk verifikasi ini.'
+				]));
+		}
+
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Jenis verifikasi tidak valid.'
+				]));
 		}
 
 		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
 
-		if (!$date || $date->format('Y-m-d') !== $tanggal) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Format tanggal tidak valid.'
-			]);
-			return;
+		if (
+			!$date ||
+			$date->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Format tanggal tidak valid.'
+				]));
 		}
 
-		$jumlah = $this->timbangan_model->verifikasi_massal_spv($tanggal);
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
+		$jumlah = $this->timbangan_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
 
 		if ($jumlah === false) {
-			echo json_encode([
+			$response = [
 				'status' => false,
-				'message' => 'Verifikasi massal gagal diproses.'
-			]);
-			return;
+				'message' => 'Verifikasi massal Timbangan gagal diproses.'
+			];
+		} elseif ($jumlah > 0) {
+			$nama_verifikasi = $jenis_verifikasi === 'spv'
+				? 'SPV'
+				: 'Produksi';
+
+			$response = [
+				'status' => true,
+				'jumlah' => $jumlah,
+				'message' => $jumlah . ' data Timbangan berhasil diverifikasi oleh ' . $nama_verifikasi . '.'
+			];
+		} else {
+			$response = [
+				'status' => false,
+				'jumlah' => 0,
+				'message' => 'Tidak ada data Timbangan yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
+			];
 		}
 
-		if ($jumlah == 0) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Tidak ada data Timbangan dengan status Created atau Revision pada tanggal tersebut.'
-			]);
-			return;
-		}
-
-		echo json_encode([
-			'status' => true,
-			'message' => $jumlah . ' data Timbangan berhasil diverifikasi.'
-		]);
+		return $this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

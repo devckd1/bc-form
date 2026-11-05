@@ -397,35 +397,84 @@ class Timbangan_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis_verifikasi = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+		$username  = $this->session->userdata('username');
 
-		$this->db->trans_begin();
+		if (empty($tanggal) || empty($username)) {
+			return false;
+		}
 
-		$this->db->where('is_audit', 0);
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return false;
+		}
 
-		if ($type_user != 9 && $type_user != 1) {
+		// Filter data
+		$this->db
+			->from('timbangan')
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal);
+
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where_in('status_spv', ['0', '2']);
+		} else {
+			$this->db->where('status_produksi', '0');
+		}
+
+		// Filter plant: role 1 dan 9 dapat lintas plant
+		if ($tipe_user != 9 && $tipe_user != 1) {
+			if (empty($plant)) {
+				return false;
+			}
+
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->where('DATE(date)', $tanggal);
-
-		if (!empty($shift)) {
+		// Filter shift
+		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
-		$this->db->where_in('status_spv', ['0', '2']);
+		$jumlah = $this->db->count_all_results();
 
-		$this->db->update('timbangan', [
-			'nama_spv'       => $nama_spv,
-			'status_spv'     => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+		if ($jumlah == 0) {
+			return 0;
+		}
 
-		$jumlah = $this->db->affected_rows();
+		// Transaksi update
+		$this->db->trans_begin();
+
+		$this->db
+			->where('is_audit', 0)
+			->where('DATE(date)', $tanggal);
+
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where_in('status_spv', ['0', '2']);
+		} else {
+			$this->db->where('status_produksi', '0');
+		}
+
+		if ($tipe_user != 9 && $tipe_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->update('timbangan', [
+				'nama_spv'       => $username,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		} else {
+			$this->db->update('timbangan', [
+				'status_produksi' => '1'
+			]);
+		}
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

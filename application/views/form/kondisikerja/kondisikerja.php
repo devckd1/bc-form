@@ -27,42 +27,59 @@
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<div class="d-flex align-items-center flex-wrap mb-2">
+				<?php
+				$tipe_user = (int) $this->session->userdata('tipe_user');
+				?>
 
-						<input type="date"
-							id="filter_tanggal"
-							class="form-control mr-2 mb-2"
-							style="width: 170px;"
-							value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+				<div class="d-flex align-items-center flex-wrap mb-2">
 
-						<select id="filter_shift"
-							class="form-control mr-2 mb-2"
-							style="width: 140px;">
-							<option value="">Semua Shift</option>
-							<?php foreach (['1', '2', '3'] as $shift): ?>
-								<option value="<?= $shift; ?>"
-									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
-									Shift <?= $shift; ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
+					<input type="date"
+						id="filter_tanggal"
+						class="form-control mr-2 mb-2"
+						style="width: 170px;"
+						value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 
+					<select id="filter_shift"
+						class="form-control mr-2 mb-2"
+						style="width: 140px;">
+
+						<option value="">Semua Shift</option>
+
+						<?php foreach (['1', '2', '3'] as $shift): ?>
+							<option value="<?= $shift; ?>"
+								<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
+								Shift <?= $shift; ?>
+							</option>
+						<?php endforeach; ?>
+
+					</select>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
 						<button type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
+							class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+							data-jenis="spv">
 							<i class="fas fa-check-double mr-1"></i>
 							Verifikasi Massal
 						</button>
+					<?php endif; ?>
 
-						<a href="<?= base_url('kondisikerja'); ?>"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
-						</a>
-					</div>
-				<?php endif; ?>
+					<?php if (in_array($tipe_user, [0, 1, 3, 9], true)): ?>
+						<button type="button"
+							class="btn btn-primary mb-2 btnVerifikasiMassal"
+							data-jenis="produksi">
+							<i class="fas fa-industry mr-1"></i>
+							Verifikasi Massal
+						</button>
+					<?php endif; ?>
+
+					<a href="<?= base_url('kondisikerja'); ?>"
+						class="btn btn-secondary ml-2 mb-2">
+
+						<i class="fas fa-sync-alt mr-1"></i>
+						Reset
+					</a>
+
+				</div>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -384,6 +401,7 @@
 
 		// Filter tanggal dan shift
 		function filterKondisiKerja() {
+
 			var tanggal = $('#filter_tanggal').val();
 			var shift = $('#filter_shift').val();
 
@@ -399,7 +417,8 @@
 
 			var query = params.toString();
 
-			window.location.href = "<?= base_url('kondisikerja'); ?>" +
+			window.location.href =
+				"<?= base_url('kondisikerja'); ?>" +
 				(query ? '?' + query : '');
 		}
 
@@ -407,12 +426,15 @@
 			filterKondisiKerja();
 		});
 
-		// Verifikasi massal SPV
-		$('#btnVerifikasiMassal').on('click', function() {
+
+		// Verifikasi massal SPV dan Produksi
+		$('.btnVerifikasiMassal').on('click', function() {
+
+			var tombol = $(this);
+			var jenis = tombol.data('jenis');
 
 			var tanggal = $('#filter_tanggal').val();
 			var shift = $('#filter_shift').val();
-			var tombol = $(this);
 
 			if (!tanggal) {
 				Swal.fire(
@@ -423,13 +445,30 @@
 				return;
 			}
 
+			var namaJenis = jenis === 'produksi' ?
+				'Produksi' :
+				'SPV';
+
+			var keterangan = jenis === 'produksi' ?
+				'Data Kondisi Kerja dengan status Produksi Created pada tanggal dan shift terpilih akan diverifikasi.' :
+				'Data Kondisi Kerja yang sudah diverifikasi Produksi dan status SPV masih Created atau Revision pada tanggal dan shift terpilih akan diverifikasi.';
+
+			var teksTombol = 'Verifikasi Massal ' + namaJenis;
+
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Data Kondisi Kerja yang sudah diverifikasi Produksi pada tanggal dan shift terpilih akan diproses.',
+
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+
+				text: keterangan,
+
 				icon: 'question',
+
 				showCancelButton: true,
+
 				confirmButtonText: 'Ya, Verifikasi',
+
 				cancelButtonText: 'Batal'
+
 			}).then(function(result) {
 
 				if (!result.isConfirmed) {
@@ -437,31 +476,47 @@
 				}
 
 				tombol.prop('disabled', true);
+
 				tombol.html(
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
 				);
 
 				$.ajax({
+
 					url: "<?= base_url('kondisikerja/verifikasi_massal'); ?>",
+
 					type: 'POST',
+
 					dataType: 'json',
+
 					data: {
 						tanggal: tanggal,
-						shift: shift || 'semua'
+						shift: shift || 'semua',
+						jenis_verifikasi: jenis
 					},
 
 					success: function(response) {
 
 						if (response.success) {
+
 							Swal.fire({
+
 								title: 'Berhasil',
+
 								text: response.message +
-									' Jumlah data: ' + response.updated,
+									' Jumlah data: ' +
+									response.updated,
+
 								icon: 'success'
+
 							}).then(function() {
+
 								window.location.reload();
+
 							});
+
 						} else {
+
 							Swal.fire(
 								'Informasi',
 								response.message,
@@ -469,13 +524,16 @@
 							);
 
 							tombol.prop('disabled', false);
+
 							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+								'<i class="fas fa-check-double mr-1"></i> ' +
+								teksTombol
 							);
 						}
 					},
 
 					error: function() {
+
 						Swal.fire(
 							'Error',
 							'Terjadi kesalahan saat memproses verifikasi massal.',
@@ -483,12 +541,16 @@
 						);
 
 						tombol.prop('disabled', false);
+
 						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							'<i class="fas fa-check-double mr-1"></i> ' +
+							teksTombol
 						);
 					}
 				});
+
 			});
+
 		});
 
 	});

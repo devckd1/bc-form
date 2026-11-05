@@ -197,33 +197,48 @@ class Sanitasiwarehouse_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv  = $this->session->userdata('username');
+
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
+		}
 
 		$this->db->trans_begin();
 
+		// Filter dasar
 		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
 
-		if ($type_user != 9 && $type_user != 1) {
+		// Role 1 dan 9 dapat memproses lintas plant
+		if (!in_array($type_user, [1, 9], true)) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->where('DATE(date)', $tanggal);
+		if ($jenis === 'produksi') {
 
-		// Syarat status Warehouse.
-		$this->db->where('status_wh', '1');
+			// Produksi: hanya data Created
+			$this->db->where('status_produksi', '0');
 
-		// Hanya Created dan Revision yang diproses.
-		$this->db->where_in('status_spv', ['0', '2']);
+			$this->db->update($this->table, [
+				'status_produksi' => '1'
+			]);
+		} else {
 
-		$this->db->update($this->table, [
-			'nama_spv'       => $nama_spv,
-			'status_spv'     => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+			// SPV: Warehouse sudah diverifikasi,
+			// dan status SPV masih Created atau Revision
+			$this->db->where('status_wh', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update($this->table, [
+				'nama_spv'       => $nama_spv,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		}
 
 		$jumlah = $this->db->affected_rows();
 

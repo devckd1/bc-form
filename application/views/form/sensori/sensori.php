@@ -27,8 +27,12 @@
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- Filter tanggal dan verifikasi massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<?php
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9]);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9]);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
 
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
@@ -45,14 +49,27 @@
 								value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 								required>
 
-							<button type="submit"
-								id="btnVerifikasiMassal"
-								class="btn btn-primary mb-2">
+							<?php if ($boleh_verifikasi_spv): ?>
+								<button type="submit"
+									class="btn btn-primary mr-1 mb-2 btn-verifikasi-massal"
+									data-jenis="spv">
 
-								<i class="fas fa-check-double mr-1"></i>
-								Verifikasi Massal
+									<i class="fas fa-check-double mr-1"></i>
+									Verifikasi Massal
 
-							</button>
+								</button>
+							<?php endif; ?>
+
+							<?php if ($boleh_verifikasi_produksi): ?>
+								<button type="submit"
+									class="btn btn-primary mb-2 btn-verifikasi-massal"
+									data-jenis="produksi">
+
+									<i class="fas fa-check-double mr-1"></i>
+									Verifikasi Massal
+
+								</button>
+							<?php endif; ?>
 
 						</form>
 
@@ -67,7 +84,6 @@
 					</div>
 
 				<?php endif; ?>
-
 
 				<!-- Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -199,10 +215,10 @@
 									<?php endif; ?>
 
 									<a href="<?= base_url('sensori/detail/' . $val->uuid); ?>"
-    data-url="<?= base_url('sensori/detail/' . $val->uuid . '?popup=1'); ?>"
-    class="btn btn-success btn-icon-split mb-1 btn-detail-sensori">
-    <span class="text">Detail</span>
-</a>
+										data-url="<?= base_url('sensori/detail/' . $val->uuid . '?popup=1'); ?>"
+										class="btn btn-success btn-icon-split mb-1 btn-detail-sensori">
+										<span class="text">Detail</span>
+									</a>
 
 									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 										<a href="<?= base_url('sensori/verifikasi_produksi/' . $val->uuid); ?>"
@@ -252,30 +268,30 @@
 </div>
 <!-- Modal Detail Sensori -->
 <div class="modal fade" id="modalDetailSensori" tabindex="-1"
-    role="dialog" aria-labelledby="modalDetailSensoriLabel" aria-hidden="true">
+	role="dialog" aria-labelledby="modalDetailSensoriLabel" aria-hidden="true">
 
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalDetailSensoriLabel">
-                    Detail Laporan Sensori Finish Good
-                </h5>
+			<div class="modal-header">
+				<h5 class="modal-title" id="modalDetailSensoriLabel">
+					Detail Laporan Sensori Finish Good
+				</h5>
 
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
 
-            <div class="modal-body" id="contentDetailSensori">
-                <div class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Memuat data...</p>
-                </div>
-            </div>
+			<div class="modal-body" id="contentDetailSensori">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat data...</p>
+				</div>
+			</div>
 
-        </div>
-    </div>
+		</div>
+	</div>
 </div>
 <style>
 	th {
@@ -283,51 +299,51 @@
 	}
 </style>
 <script>
-    $(document).ready(function() {
+	$(document).ready(function() {
 
-        const cacheDetailSensori = {};
+		const cacheDetailSensori = {};
 
-        $(document).on('click', '.btn-detail-sensori', function(e) {
-            e.preventDefault();
+		$(document).on('click', '.btn-detail-sensori', function(e) {
+			e.preventDefault();
 
-            const url = $(this).data('url');
+			const url = $(this).data('url');
 
-            $('#modalDetailSensori').modal('show');
+			$('#modalDetailSensori').modal('show');
 
-            if (cacheDetailSensori[url]) {
-                $('#contentDetailSensori').html(cacheDetailSensori[url]);
-                return;
-            }
+			if (cacheDetailSensori[url]) {
+				$('#contentDetailSensori').html(cacheDetailSensori[url]);
+				return;
+			}
 
-            $('#contentDetailSensori').html(`
+			$('#contentDetailSensori').html(`
                 <div class="text-center py-5">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p class="mt-2">Memuat data...</p>
                 </div>
             `);
 
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'html',
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'html',
 
-                success: function(response) {
-                    cacheDetailSensori[url] = response;
-                    $('#contentDetailSensori').html(response);
-                },
+				success: function(response) {
+					cacheDetailSensori[url] = response;
+					$('#contentDetailSensori').html(response);
+				},
 
-                error: function() {
-                    $('#contentDetailSensori').html(`
+				error: function() {
+					$('#contentDetailSensori').html(`
                         <div class="alert alert-danger text-center">
                             Gagal memuat detail Sensori Finish Good.
                         </div>
                     `);
-                }
-            });
+				}
+			});
 
-        });
+		});
 
-    });
+	});
 </script>
 
 <!-- <div class="container-fluid">
@@ -471,38 +487,43 @@
 
 		});
 
-
-		// Verifikasi massal SPV
+		// Verifikasi massal SPV dan Produksi
 		$('#formVerifikasiMassal').on('submit', function(e) {
 
 			e.preventDefault();
 
 			var form = $(this);
-			var tombol = $('#btnVerifikasiMassal');
+			var tombol = $(document.activeElement);
+			var jenis = tombol.data('jenis');
 
-			if (!form.find('[name="tanggal"]').val()) {
+			if (!jenis) {
+				return;
+			}
 
+			var tanggal = form.find('[name="tanggal"]').val();
+
+			if (!tanggal) {
 				Swal.fire(
 					'Perhatian',
 					'Silakan pilih tanggal terlebih dahulu.',
 					'warning'
 				);
-
 				return;
 			}
 
+			var namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
+
+			var pesanKonfirmasi = jenis === 'spv' ?
+				'Data Sensori Finish Good yang sudah diverifikasi Produksi dan berstatus Created atau Revision pada tanggal tersebut akan diproses oleh SPV.' :
+				'Data Sensori Finish Good yang belum diverifikasi Produksi pada tanggal tersebut akan diproses.';
+
 			Swal.fire({
 
-				title: 'Verifikasi Massal?',
-
-				text: 'Data Sensori Finish Good QC yang sudah diketahui Produksi dan berstatus Created atau Revision pada tanggal tersebut akan diproses.',
-
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+				text: pesanKonfirmasi,
 				icon: 'question',
-
 				showCancelButton: true,
-
 				confirmButtonText: 'Ya, Verifikasi',
-
 				cancelButtonText: 'Batal'
 
 			}).then(function(result) {
@@ -511,7 +532,9 @@
 					return;
 				}
 
-				tombol.prop('disabled', true);
+				var semuaTombol = $('.btn-verifikasi-massal');
+
+				semuaTombol.prop('disabled', true);
 
 				tombol.html(
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
@@ -520,10 +543,12 @@
 				$.ajax({
 
 					url: form.attr('action'),
-
 					type: 'POST',
 
-					data: form.serialize(),
+					data: {
+						tanggal: tanggal,
+						jenis_verifikasi: jenis
+					},
 
 					dataType: 'json',
 
@@ -534,17 +559,13 @@
 							Swal.fire({
 
 								title: 'Berhasil',
-
 								text: response.message +
 									' Jumlah data: ' +
 									response.updated,
-
 								icon: 'success'
 
 							}).then(function() {
-
 								window.location.reload();
-
 							});
 
 						} else {
@@ -555,28 +576,35 @@
 								'info'
 							);
 
-							tombol.prop('disabled', false);
+							semuaTombol.prop('disabled', false);
 
 							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal ' +
+								namaJenis
 							);
-
 						}
 
 					},
 
 					error: function(xhr) {
 
+						var pesan = 'Terjadi kesalahan saat memproses verifikasi massal.';
+
+						if (xhr.responseJSON && xhr.responseJSON.message) {
+							pesan = xhr.responseJSON.message;
+						}
+
 						Swal.fire(
 							'Error',
-							'Terjadi kesalahan saat memproses verifikasi massal.',
+							pesan,
 							'error'
 						);
 
-						tombol.prop('disabled', false);
+						semuaTombol.prop('disabled', false);
 
 						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal ' +
+							namaJenis
 						);
 
 					}

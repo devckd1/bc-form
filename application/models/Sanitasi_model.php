@@ -324,7 +324,7 @@ class Sanitasi_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis = 'spv')
 	{
 		$plant = $this->session->userdata('plant');
 		$username = $this->session->userdata('username');
@@ -333,51 +333,72 @@ class Sanitasi_model extends CI_Model
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
-		$this->db
-			->from('sanitasi')
-			->where('plant', $plant)
-			->where('is_audit', 0)
-			->where('DATE(date)', $tanggal)
-			->where_in('status_spv', ['0', '2']);
-
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
 		}
 
-		$total = $this->db->count_all_results();
+		// Filter dasar data Sanitasi
+		$filter_data = function () use ($tanggal, $shift, $plant) {
+			$this->db
+				->where('plant', $plant)
+				->where('is_audit', 0)
+				->where('DATE(date)', $tanggal);
+
+			if (!empty($shift) && $shift !== 'semua') {
+				$this->db->where('shift', $shift);
+			}
+		};
+
+		// Tentukan status berdasarkan jenis verifikasi
+		if ($jenis === 'produksi') {
+			$filter_data();
+			$this->db->where('status_produksi', '0');
+		} else {
+			$filter_data();
+			$this->db
+				->where_in('status_spv', ['0', '2']);
+		}
+
+		$total = $this->db->count_all_results('sanitasi');
 
 		if ($total == 0) {
 			return 0;
 		}
 
-		// Proses verifikasi massal
 		$this->db->trans_begin();
 
-		$this->db
-			->where('plant', $plant)
-			->where('is_audit', 0)
-			->where('DATE(date)', $tanggal)
-			->where_in('status_spv', ['0', '2']);
+		// Update status Produksi
+		if ($jenis === 'produksi') {
 
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+			$filter_data();
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('sanitasi', [
+				'status_produksi' => '1'
+			]);
+		} else {
+
+			// Update status SPV
+			$filter_data();
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('sanitasi', [
+				'nama_spv'       => $username,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
 		}
-
-		$this->db->update('sanitasi', [
-			'nama_spv' => $username,
-			'status_spv' => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
 			return false;
 		}
 
+		$jumlah_update = $this->db->affected_rows();
+
 		$this->db->trans_commit();
 
-		return $total;
+		return $jumlah_update;
 	}
 
 	public function rules_diketahui()

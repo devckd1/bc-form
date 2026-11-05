@@ -34,59 +34,76 @@
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
 				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<form
-						id="formVerifikasiMassal"
-						action="<?= base_url('magnettrap/verifikasi_massal'); ?>"
-						method="post"
-						class="d-flex align-items-center flex-wrap mb-2">
+				<form
+					id="formVerifikasiMassal"
+					action="<?= base_url('magnettrap/verifikasi_massal'); ?>"
+					method="post"
+					class="d-flex align-items-center flex-wrap mb-2">
 
-						<input
-							type="date"
-							name="tanggal"
-							id="tanggal_massal"
-							class="form-control mr-2 mb-2"
-							style="width: 170px;"
-							value="<?= html_escape($filter_tanggal ?? ''); ?>"
-							required>
+					<input
+						type="date"
+						name="tanggal"
+						id="tanggal_massal"
+						class="form-control mr-2 mb-2"
+						style="width: 170px;"
+						value="<?= html_escape($filter_tanggal ?? ''); ?>"
+						required>
 
-						<select
-							name="shift"
-							id="shift_massal"
-							class="form-control mr-2 mb-2"
-							style="width: 140px;">
-							<option value="">Pilih Shift</option>
-							<option value="semua" <?= ($filter_shift ?? '') === 'semua' ? 'selected' : ''; ?>>
-								Semua Shift
-							</option>
-							<option value="1" <?= ($filter_shift ?? '') === '1' ? 'selected' : ''; ?>>
-								Shift 1
-							</option>
-							<option value="2" <?= ($filter_shift ?? '') === '2' ? 'selected' : ''; ?>>
-								Shift 2
-							</option>
-							<option value="3" <?= ($filter_shift ?? '') === '3' ? 'selected' : ''; ?>>
-								Shift 3
-							</option>
-						</select>
+					<select
+						name="shift"
+						id="shift_massal"
+						class="form-control mr-2 mb-2"
+						style="width: 140px;">
 
+						<option value="">Pilih Shift</option>
+
+						<option value="semua" <?= ($filter_shift ?? '') === 'semua' ? 'selected' : ''; ?>>
+							Semua Shift
+						</option>
+
+						<option value="1" <?= ($filter_shift ?? '') === '1' ? 'selected' : ''; ?>>
+							Shift 1
+						</option>
+
+						<option value="2" <?= ($filter_shift ?? '') === '2' ? 'selected' : ''; ?>>
+							Shift 2
+						</option>
+
+						<option value="3" <?= ($filter_shift ?? '') === '3' ? 'selected' : ''; ?>>
+							Shift 3
+						</option>
+
+					</select>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<button
-							type="submit"
-							class="btn btn-primary mb-2">
+							type="button"
+							class="btn btn-primary btn-verifikasi-massal mr-1 mb-2"
+							data-jenis="spv">
 							<i class="fas fa-check-double mr-1"></i>
 							Verifikasi Massal
 						</button>
+					<?php endif; ?>
 
+					<?php if (in_array($tipe_user, [0, 1, 3, 9])): ?>
 						<button
 							type="button"
-							id="resetFilterMagnetTrap"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
+							class="btn btn-primary btn-verifikasi-massal mb-2"
+							data-jenis="produksi">
+							<i class="fas fa-check-double mr-1"></i>
+							Verifikasi Massal
 						</button>
+					<?php endif; ?>
 
-					</form>
-				<?php endif; ?>
+					<button
+						type="button"
+						id="resetFilterMagnetTrap"
+						class="btn btn-secondary ml-2 mb-2">
+						<i class="fas fa-sync-alt mr-1"></i>
+						Reset
+					</button>
+
+				</form>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -433,7 +450,7 @@
 		});
 
 		// =====================================================
-		// 2. FILTER TANGGAL DAN SHIFT (SERVER-SIDE)
+		// 2. FILTER TANGGAL DAN SHIFT
 		// =====================================================
 		function terapkanFilter() {
 			var tanggal = $('#tanggal_massal').val();
@@ -461,76 +478,126 @@
 			terapkanFilter();
 		});
 
+		// =====================================================
+		// 3. RESET FILTER
+		// =====================================================
 		$('#resetFilterMagnetTrap').on('click', function() {
 			$('#tanggal_massal').val('');
 			$('#shift_massal').val('');
+
 			terapkanFilter();
 		});
 
 		// =====================================================
-		// 3. VERIFIKASI MASSAL
+		// 4. VERIFIKASI MASSAL SPV DAN PRODUKSI
 		// =====================================================
-		$('#formVerifikasiMassal').on('submit', function(e) {
-			e.preventDefault();
+		$('.btn-verifikasi-massal').on('click', function() {
 
 			var tanggal = $('#tanggal_massal').val();
 			var shift = $('#shift_massal').val();
+			var jenis = $(this).data('jenis');
+			var tombol = $(this);
+
+			var namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
 
 			if (!tanggal || !shift) {
-				alert('Pilih tanggal dan shift terlebih dahulu.');
+				Swal.fire({
+					icon: 'warning',
+					title: 'Data belum lengkap',
+					text: 'Pilih tanggal dan shift terlebih dahulu.'
+				});
 				return;
 			}
 
-			if (!confirm(
-					'Verifikasi semua data pada tanggal dan shift yang dipilih?\n' +
-					'Data yang belum diverifikasi Produksi akan dilewati.'
-				)) {
-				return;
-			}
+			Swal.fire({
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+				text: 'Data Magnet Trap tanggal ' + tanggal +
+					(shift === 'semua' ? ' semua shift' : ' Shift ' + shift) +
+					' yang memenuhi syarat akan diverifikasi oleh ' + namaJenis + '.',
+				icon: 'question',
+				showCancelButton: true,
+				confirmButtonText: 'Ya, Verifikasi',
+				cancelButtonText: 'Batal'
+			}).then(function(result) {
 
-			var form = $(this);
-			var tombol = form.find('button[type="submit"]');
-			var teksAwal = tombol.html();
-
-			tombol.prop('disabled', true).html(
-				'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
-			);
-
-			$.ajax({
-				url: form.attr('action'),
-				type: 'POST',
-				data: form.serialize(),
-				dataType: 'json',
-
-				success: function(res) {
-					if (res.success) {
-						alert(
-							(res.message || 'Verifikasi selesai.') +
-							'\nBerhasil diverifikasi: ' + (res.updated || 0) +
-							'\nBelum diverifikasi Produksi: ' +
-							(res.belum_engineer || 0)
-						);
-
-						// Muat ulang halaman dengan filter aktif
-						window.location.reload();
-					} else {
-						alert(res.message || 'Verifikasi massal gagal.');
-					}
-				},
-
-				error: function(xhr) {
-					console.error(xhr.responseText);
-
-					alert(
-						'Permintaan gagal. Periksa controller, route, ' +
-						'atau respons server.'
-					);
-				},
-
-				complete: function() {
-					tombol.prop('disabled', false).html(teksAwal);
+				if (!result.isConfirmed) {
+					return;
 				}
+
+				var teksAwal = tombol.html();
+
+				$('.btn-verifikasi-massal').prop('disabled', true);
+
+				tombol.html(
+					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+				);
+
+				$.ajax({
+					url: '<?= base_url('magnettrap/verifikasi_massal'); ?>',
+					type: 'POST',
+					dataType: 'json',
+
+					data: {
+						tanggal: tanggal,
+						shift: shift,
+						jenis_verifikasi: jenis
+					},
+
+					success: function(res) {
+
+						if (res.success) {
+
+							var pesan = res.message || 'Verifikasi selesai.';
+
+							pesan += '\nBerhasil diverifikasi: ' + (res.updated || 0);
+
+							if (jenis === 'spv') {
+								pesan += '\nBelum diverifikasi Engineering: ' +
+									(res.belum_engineer || 0);
+							}
+
+							Swal.fire({
+								icon: 'success',
+								title: 'Berhasil',
+								text: pesan
+							}).then(function() {
+								if ((res.updated || 0) > 0) {
+									window.location.reload();
+								}
+							});
+
+						} else {
+							Swal.fire({
+								icon: 'info',
+								title: 'Informasi',
+								text: res.message || 'Verifikasi massal gagal.'
+							});
+						}
+					},
+
+					error: function(xhr) {
+						console.error(xhr.responseText);
+
+						Swal.fire({
+							icon: 'error',
+							title: 'Gagal',
+							text: 'Permintaan gagal. Periksa controller, route, atau respons server.'
+						});
+					},
+
+					complete: function() {
+						tombol.prop('disabled', false).html(teksAwal);
+						$('.btn-verifikasi-massal').prop('disabled', false);
+					}
+				});
 			});
+		});
+
+		// =====================================================
+		// 5. LOADING PAGINATION
+		// =====================================================
+		$('.pagination a').on('click', function() {
+			$('#pageLoading').css('display', 'flex');
 		});
 
 		// =====================================================

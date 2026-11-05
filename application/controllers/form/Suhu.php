@@ -428,46 +428,88 @@ class Suhu extends MY_Controller
 			$this->input->post('tanggal', TRUE) ?? ''
 		);
 
-		// Validasi tanggal
-		$tanggal_obj = DateTime::createFromFormat(
-			'Y-m-d',
-			$tanggal
+		$jenis = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
 		);
+
+		$type_user = (int) $this->session->userdata('type_user');
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
 			$tanggal_obj->format('Y-m-d') !== $tanggal
 		) {
+			$response = [
+				'success' => false,
+				'message' => 'Tanggal tidak valid.'
+			];
+
 			return $this->output
 				->set_content_type('application/json')
-				->set_output(json_encode([
-					'success' => false,
-					'message' => 'Tanggal tidak valid.'
-				]));
+				->set_output(json_encode($response));
 		}
 
-		$updated = $this->suhu_model
-			->verifikasi_massal_spv($tanggal);
+		// Validasi jenis verifikasi
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			$response = [
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+		}
+
+		// Hak akses khusus verifikasi produksi
+		if (
+			$jenis === 'produksi' &&
+			!in_array($type_user, [0, 1, 3, 9], true)
+		) {
+			$response = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi produksi.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+		}
+
+		$updated = $this->suhu_model->verifikasi_massal(
+			$tanggal,
+			$jenis
+		);
 
 		if ($updated === false) {
 
 			$response = [
 				'success' => false,
-				'message' => 'Verifikasi massal Suhu gagal diproses.'
+				'message' => 'Verifikasi massal gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+
+			$nama_verifikasi = $jenis === 'produksi'
+				? 'Produksi'
+				: 'SPV';
 
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Suhu Ruang berhasil.'
+				'message' => 'Verifikasi massal ' .
+					$nama_verifikasi .
+					' Suhu Ruang berhasil.'
 			];
 		} else {
 
 			$response = [
 				'success' => false,
 				'updated' => 0,
-				'message' => 'Tidak ada data Suhu yang memenuhi syarat verifikasi pada tanggal tersebut.'
+				'message' => $jenis === 'produksi'
+					? 'Tidak ada data Produksi dengan status Created pada tanggal tersebut.'
+					: 'Tidak ada data SPV yang memenuhi syarat verifikasi pada tanggal tersebut.'
 			];
 		}
 

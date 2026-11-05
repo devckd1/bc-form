@@ -27,8 +27,13 @@
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<?php
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9]);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9]);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
+
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<input
@@ -42,30 +47,52 @@
 							id="filter_shift"
 							class="form-control mr-2 mb-2"
 							style="width: 140px;">
+
 							<option value="">Semua Shift</option>
+
 							<?php foreach (['1', '2', '3'] as $shift): ?>
 								<option value="<?= $shift; ?>"
 									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
 									Shift <?= $shift; ?>
 								</option>
 							<?php endforeach; ?>
+
 						</select>
 
-						<button
-							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+						<?php if ($boleh_verifikasi_spv): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btn-verifikasi-massal"
+								data-jenis="spv">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+
+							</button>
+						<?php endif; ?>
+
+						<?php if ($boleh_verifikasi_produksi): ?>
+							<button
+								type="button"
+								class="btn btn-primary mb-2 btn-verifikasi-massal"
+								data-jenis="produksi">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+
+							</button>
+						<?php endif; ?>
 
 						<a href="<?= base_url('pengayakan'); ?>"
 							class="btn btn-secondary ml-2 mb-2">
+
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
+
 						</a>
 
 					</div>
+
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
@@ -279,6 +306,7 @@
 
 		// Filter tanggal dan shift
 		function filterPengayakan() {
+
 			var tanggal = $('#filter_tanggal').val();
 			var shift = $('#filter_shift').val();
 
@@ -302,12 +330,15 @@
 			filterPengayakan();
 		});
 
-		// Verifikasi massal SPV
-		$('#btnVerifikasiMassal').on('click', function() {
+
+		// Verifikasi massal SPV dan Produksi
+		$('.btn-verifikasi-massal').on('click', function() {
+
+			var tombol = $(this);
+			var jenis = tombol.data('jenis');
 
 			var tanggal = $('#filter_tanggal').val();
 			var shift = $('#filter_shift').val();
-			var tombol = $(this);
 
 			if (!tanggal) {
 				Swal.fire(
@@ -318,72 +349,116 @@
 				return;
 			}
 
+			var namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
+
+			var pesanKonfirmasi = jenis === 'spv' ?
+				'Data Pengayakan yang sudah diverifikasi Produksi pada tanggal dan shift terpilih akan diproses oleh SPV.' :
+				'Data Pengayakan yang belum diverifikasi Produksi pada tanggal dan shift terpilih akan diproses.';
+
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Data Pengayakan yang sudah diverifikasi Produksi pada tanggal dan shift terpilih akan diproses.',
+
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+
+				text: pesanKonfirmasi,
+
 				icon: 'question',
+
 				showCancelButton: true,
+
 				confirmButtonText: 'Ya, Verifikasi',
+
 				cancelButtonText: 'Batal'
+
 			}).then(function(result) {
 
 				if (!result.isConfirmed) {
 					return;
 				}
 
-				tombol.prop('disabled', true);
+				var semuaTombol = $('.btn-verifikasi-massal');
+
+				semuaTombol.prop('disabled', true);
+
 				tombol.html(
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
 				);
 
 				$.ajax({
+
 					url: "<?= base_url('pengayakan/verifikasi_massal'); ?>",
+
 					type: 'POST',
+
 					dataType: 'json',
+
 					data: {
 						tanggal: tanggal,
-						shift: shift || 'semua'
+						shift: shift || 'semua',
+						jenis_verifikasi: jenis
 					},
 
 					success: function(response) {
 
 						if (response.success) {
+
 							Swal.fire({
+
 								title: 'Berhasil',
+
 								text: response.message +
 									' Jumlah data: ' + response.updated,
+
 								icon: 'success'
+
 							}).then(function() {
 								window.location.reload();
 							});
+
 						} else {
+
 							Swal.fire(
 								'Informasi',
 								response.message,
 								'info'
 							);
 
-							tombol.prop('disabled', false);
+							semuaTombol.prop('disabled', false);
+
 							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal ' +
+								namaJenis
 							);
 						}
+
 					},
 
-					error: function() {
+					error: function(xhr) {
+
+						var pesan = 'Terjadi kesalahan saat memproses verifikasi massal.';
+
+						if (xhr.responseJSON && xhr.responseJSON.message) {
+							pesan = xhr.responseJSON.message;
+						}
+
 						Swal.fire(
 							'Error',
-							'Terjadi kesalahan saat memproses verifikasi massal.',
+							pesan,
 							'error'
 						);
 
-						tombol.prop('disabled', false);
+						semuaTombol.prop('disabled', false);
+
 						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal ' +
+							namaJenis
 						);
+
 					}
+
 				});
+
 			});
+
 		});
 
 	});

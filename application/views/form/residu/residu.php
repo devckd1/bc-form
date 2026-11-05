@@ -35,37 +35,48 @@
 
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<div class="d-flex align-items-center flex-wrap mb-2">
+				<?php $tipe_user = (int) $this->session->userdata('tipe_user'); ?>
 
-						<input
-							type="date"
-							name="tanggal"
-							id="tanggal_massal"
-							class="form-control mr-2 mb-2"
-							style="width: 170px;"
-							value="<?= html_escape($filter_tanggal ?? ''); ?>"
-							required>
+				<div class="d-flex align-items-center flex-wrap mb-2">
 
+					<input
+						type="date"
+						name="tanggal"
+						id="tanggal_massal"
+						class="form-control mr-2 mb-2"
+						style="width: 170px;"
+						value="<?= html_escape($filter_tanggal ?? ''); ?>"
+						required>
+
+					<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
 						<button
-							type="submit"
-							form="formVerifikasiMassal"
-							class="btn btn-primary mb-2">
+							type="button"
+							class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+							data-jenis="spv">
 							<i class="fas fa-check-double mr-1"></i>
 							Verifikasi Massal
 						</button>
+					<?php endif; ?>
 
+					<?php if (in_array($tipe_user, [0, 1, 3, 9], true)): ?>
 						<button
 							type="button"
-							id="resetFilterResidu"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
+							class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+							data-jenis="produksi">
+							<i class="fas fa-industry mr-1"></i>
+							Verifikasi Massal
 						</button>
+					<?php endif; ?>
 
-					</div>
-				<?php endif; ?>
+					<button
+						type="button"
+						id="resetFilterResidu"
+						class="btn btn-secondary mb-2">
+						<i class="fas fa-sync-alt mr-1"></i>
+						Reset
+					</button>
+
+				</div>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -212,11 +223,10 @@
 		}
 
 		// =====================================================
-		// 2. FILTER TANGGAL (TETAP DI HALAMAN UTAMA RESIDU)
+		// 2. FILTER TANGGAL
 		// =====================================================
 		function terapkanFilter() {
 			var tanggal = $('#tanggal_massal').val();
-
 			var url = '<?= base_url("residu"); ?>';
 
 			if (tanggal) {
@@ -224,7 +234,6 @@
 			}
 
 			$('#pageLoading').css('display', 'flex');
-
 			window.location.href = url;
 		}
 
@@ -244,11 +253,12 @@
 		});
 
 		// =====================================================
-		// 4. VERIFIKASI MASSAL
+		// 4. VERIFIKASI MASSAL SPV DAN PRODUKSI
 		// =====================================================
-		$('#formVerifikasiMassal').on('submit', function(e) {
-			e.preventDefault();
+		$('.btnVerifikasiMassal').on('click', function() {
 
+			var tombol = $(this);
+			var jenis = tombol.data('jenis');
 			var tanggal = $('#tanggal_massal').val();
 
 			if (!tanggal) {
@@ -260,24 +270,27 @@
 				return;
 			}
 
+			var namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
+
+			var keterangan = jenis === 'spv' ?
+				'Semua data Residu berstatus Created atau Revision pada tanggal ' + tanggal + ' akan diverifikasi oleh SPV.' :
+				'Semua data Residu berstatus Created pada tanggal ' + tanggal + ' akan diverifikasi oleh Produksi.';
+
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Semua data Residu berstatus Created atau Revision pada tanggal ' +
-					tanggal + ' akan diverifikasi.',
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+				text: keterangan,
 				icon: 'question',
 				showCancelButton: true,
-				confirmButtonColor: '#28a745',
+				confirmButtonColor: jenis === 'spv' ? '#007bff' : '#28a745',
 				cancelButtonColor: '#6c757d',
 				confirmButtonText: 'Ya, Verifikasi',
 				cancelButtonText: 'Batal'
-			}).then((result) => {
+			}).then(function(result) {
 
 				if (!result.isConfirmed) {
 					return;
 				}
 
-				var form = $(this);
-				var tombol = form.find('button[type="submit"]');
 				var teksAwal = tombol.html();
 
 				tombol.prop('disabled', true).html(
@@ -285,17 +298,18 @@
 				);
 
 				$.ajax({
-					url: form.attr('action'),
+					url: '<?= base_url("residu/verifikasi_massal"); ?>',
 					type: 'POST',
 					data: {
-						tanggal: tanggal
+						tanggal: tanggal,
+						jenis_verifikasi: jenis
 					},
 					dataType: 'json',
 
 					beforeSend: function() {
 						Swal.fire({
 							title: 'Memproses...',
-							text: 'Sedang melakukan verifikasi Residu.',
+							text: 'Sedang melakukan verifikasi Residu oleh ' + namaJenis + '.',
 							allowOutsideClick: false,
 							didOpen: function() {
 								Swal.showLoading();
@@ -309,9 +323,8 @@
 							Swal.fire({
 								icon: 'success',
 								title: 'Berhasil',
-								text: response.message || 'Verifikasi massal berhasil.'
-							}).then(() => {
-
+								text: response.message
+							}).then(function() {
 								var url = '<?= base_url("residu"); ?>';
 
 								if (tanggal) {
@@ -348,7 +361,7 @@
 		});
 
 		// =====================================================
-		// 5. LOADING SAAT BERPINDAH HALAMAN
+		// 5. LOADING SAAT PINDAH HALAMAN
 		// =====================================================
 		$(document).on('click', '.pagination .page-link', function() {
 			$('#pageLoading').css('display', 'flex');

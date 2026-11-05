@@ -81,30 +81,30 @@ class Metal extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $metal = $this->metal_model->get_qc_by_uuid($uuid);
+	{
+		$metal = $this->metal_model->get_qc_by_uuid($uuid);
 
-    if (!$metal) {
-        show_404();
-        return;
-    }
+		if (!$metal) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'metal' => $metal,
-        'mode' => 'qc',
-        'is_popup' => $is_popup
-    ];
+		$data = [
+			'metal' => $metal,
+			'mode' => 'qc',
+			'is_popup' => $is_popup
+		];
 
-    $this->active_nav = 'metal';
+		$this->active_nav = 'metal';
 
-    if ($is_popup) {
-        $this->load->view('form/metal/metal-detail', $data);
-    } else {
-        $this->render('form/metal/metal-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/metal/metal-detail', $data);
+		} else {
+			$this->render('form/metal/metal-detail', $data);
+		}
+	}
 
 	// public function tambah()
 	// {
@@ -320,43 +320,74 @@ class Metal extends MY_Controller
 	public function verifikasi_massal()
 	{
 		if ($this->input->method(TRUE) !== 'POST') {
-			show_404();
+			show_error('Method tidak diizinkan.', 405);
 			return;
 		}
 
-		$tipe_user = $this->session->userdata('tipe_user');
-
-		// Hanya role yang berwenang melakukan verifikasi SPV
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
-			show_error('Anda tidak memiliki akses untuk melakukan verifikasi.', 403);
-			return;
-		}
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
 		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$jenis   = trim($this->input->post('jenis_verifikasi', TRUE) ?? '');
 
-		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+		$boleh_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+		$boleh_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
 
-		if (!$date || $date->format('Y-m-d') !== $tanggal) {
-			$this->output
-				->set_content_type('application/json')
-				->set_output(json_encode([
-					'status' => false,
-					'message' => 'Tanggal tidak valid.'
-				]));
+		// Validasi jenis verifikasi dan akses
+		if (
+			($jenis === 'spv' && !$boleh_spv) ||
+			($jenis === 'produksi' && !$boleh_produksi) ||
+			!in_array($jenis, ['spv', 'produksi'], true)
+		) {
+			show_error(
+				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
+				403
+			);
 			return;
 		}
 
-		$jumlah = $this->metal_model->verifikasi_massal_spv($tanggal);
-
-		$response = $jumlah > 0
-			? [
-				'status' => true,
-				'message' => $jumlah . ' data Metal Detector berhasil diverifikasi.'
-			]
-			: [
-				'status' => false,
-				'message' => 'Tidak ada data yang memenuhi syarat untuk diverifikasi.'
+		if (empty($tanggal)) {
+			$response = [
+				'status'  => false,
+				'message' => 'Tanggal harus dipilih.'
 			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status'  => false,
+					'message' => 'Tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->metal_model->verifikasi_massal(
+					$tanggal,
+					$jenis
+				);
+
+				if ($jumlah === false) {
+					$response = [
+						'status'  => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					$pesan = $jenis === 'spv'
+						? 'Tidak ada data Metal Detector yang memenuhi syarat Produksi dan status SPV pada tanggal tersebut.'
+						: 'Tidak ada data Metal Detector dengan status Produksi Created pada tanggal tersebut.';
+
+					$response = [
+						'status'  => false,
+						'message' => $pesan
+					];
+				} else {
+					$namaJenis = $jenis === 'spv' ? 'SPV' : 'Produksi';
+
+					$response = [
+						'status'  => true,
+						'message' => $jumlah . ' data Metal Detector berhasil diverifikasi oleh ' . $namaJenis . '.'
+					];
+				}
+			}
+		}
 
 		$this->output
 			->set_content_type('application/json')

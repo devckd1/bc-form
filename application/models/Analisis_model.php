@@ -522,33 +522,49 @@ class Analisis_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv  = $this->session->userdata('username');
+
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
+		}
 
 		$this->db->trans_begin();
 
+		// Filter dasar
 		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
 
-		if ($type_user != 9 && $type_user != 1) {
+		// Role 1 dan 9 dapat memproses lintas plant
+		if (!in_array($type_user, [1, 9], true)) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->where('DATE(date)', $tanggal);
+		if ($jenis === 'produksi') {
 
-		// Syarat tambahan: LAB harus sudah Accepted.
-		$this->db->where('status_lab', '1');
+			// Produksi: Created menjadi Verified
+			$this->db->where('status_produksi', '0');
 
-		// Hanya Created dan Revision yang dapat diverifikasi.
-		$this->db->where_in('status_spv', ['0', '2']);
+			$this->db->update('analisis_lab', [
+				'status_produksi' => '1'
+			]);
+		} else {
 
-		$this->db->update('analisis_lab', [
-			'nama_spv'       => $nama_spv,
-			'status_spv'     => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+			// LAB harus Accepted
+			$this->db->where('status_lab', '1');
+
+			// SPV hanya memproses Created atau Revision
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('analisis_lab', [
+				'nama_spv'       => $nama_spv,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		}
 
 		$jumlah = $this->db->affected_rows();
 

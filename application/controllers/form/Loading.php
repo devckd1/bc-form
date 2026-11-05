@@ -77,39 +77,39 @@ class Loading extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $loading = $this->loading_model->get_by_uuid($uuid);
+	{
+		$loading = $this->loading_model->get_by_uuid($uuid);
 
-    if (!$loading || (int) $loading->is_audit !== 0) {
-        if ($this->input->get('popup') == '1') {
-            show_404();
-            return;
-        }
+		if (!$loading || (int) $loading->is_audit !== 0) {
+			if ($this->input->get('popup') == '1') {
+				show_404();
+				return;
+			}
 
-        $this->session->set_flashdata(
-            'error_msg',
-            'Data Pemeriksaan Loading Produk tidak ditemukan.'
-        );
-        redirect('loading');
-        return;
-    }
+			$this->session->set_flashdata(
+				'error_msg',
+				'Data Pemeriksaan Loading Produk tidak ditemukan.'
+			);
+			redirect('loading');
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'loading' => $loading,
-        'mode' => 'qc',
-        'is_popup' => $is_popup
-    ];
+		$data = [
+			'loading' => $loading,
+			'mode' => 'qc',
+			'is_popup' => $is_popup
+		];
 
-    $this->active_nav = 'loading';
+		$this->active_nav = 'loading';
 
-    if ($is_popup) {
-        $this->load->view('form/loading/loading-detail', $data);
-    } else {
-        $this->render('form/loading/loading-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/loading/loading-detail', $data);
+		} else {
+			$this->render('form/loading/loading-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -229,9 +229,26 @@ class Loading extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tipe_user = $this->session->userdata('tipe_user');
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
 
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		$tanggal = trim($this->input->post('tanggal', true) ?? '');
+		$shift   = trim($this->input->post('shift', true) ?? 'semua');
+		$jenis   = trim($this->input->post('jenis_verifikasi', true) ?? '');
+
+		$boleh_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+		$boleh_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
+
+		// Validasi jenis verifikasi dan akses
+		if (
+			($jenis === 'spv' && !$boleh_spv) ||
+			($jenis === 'produksi' && !$boleh_produksi) ||
+			!in_array($jenis, ['spv', 'produksi'], true)
+		) {
 			show_error(
 				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
 				403
@@ -239,48 +256,62 @@ class Loading extends MY_Controller
 			return;
 		}
 
-		$tanggal = $this->input->post('tanggal', true);
-
-		if (empty($tanggal)) {
-			echo json_encode([
-				'status' => false,
+		// Validasi shift
+		if (!in_array($shift, ['semua', '1', '2', '3'], true)) {
+			$response = [
+				'status'  => false,
+				'message' => 'Filter shift tidak valid.'
+			];
+		} elseif (empty($tanggal)) {
+			$response = [
+				'status'  => false,
 				'message' => 'Tanggal harus dipilih.'
-			]);
-			return;
+			];
+		} else {
+			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+			if (!$date || $date->format('Y-m-d') !== $tanggal) {
+				$response = [
+					'status'  => false,
+					'message' => 'Format tanggal tidak valid.'
+				];
+			} else {
+				$jumlah = $this->loading_model->verifikasi_massal(
+					$tanggal,
+					$shift,
+					$jenis
+				);
+
+				if ($jumlah === false) {
+					$response = [
+						'status'  => false,
+						'message' => 'Verifikasi massal gagal diproses.'
+					];
+				} elseif ($jumlah == 0) {
+					if ($jenis === 'spv') {
+						$pesan = 'Tidak ada data Loading yang memenuhi syarat Warehouse dan status SPV pada tanggal serta shift tersebut.';
+					} else {
+						$pesan = 'Tidak ada data Loading dengan status Produksi Created pada tanggal serta shift tersebut.';
+					}
+
+					$response = [
+						'status'  => false,
+						'message' => $pesan
+					];
+				} else {
+					$namaJenis = $jenis === 'spv' ? 'SPV' : 'Produksi';
+
+					$response = [
+						'status'  => true,
+						'message' => $jumlah . ' data Loading berhasil diverifikasi oleh ' . $namaJenis . '.'
+					];
+				}
+			}
 		}
 
-		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
-
-		if (!$date || $date->format('Y-m-d') !== $tanggal) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Format tanggal tidak valid.'
-			]);
-			return;
-		}
-
-		$jumlah = $this->loading_model->verifikasi_massal_spv($tanggal);
-
-		if ($jumlah === false) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Verifikasi massal gagal diproses.'
-			]);
-			return;
-		}
-
-		if ($jumlah == 0) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Tidak ada data Loading yang memenuhi syarat Warehouse dan status SPV pada tanggal tersebut.'
-			]);
-			return;
-		}
-
-		echo json_encode([
-			'status' => true,
-			'message' => $jumlah . ' data Loading berhasil diverifikasi.'
-		]);
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($response));
 	}
 
 	public function status($uuid)

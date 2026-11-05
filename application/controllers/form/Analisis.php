@@ -77,29 +77,29 @@ class Analisis extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-	$analisis = $this->analisis_model->get_by_uuid($uuid);
+	{
+		$analisis = $this->analisis_model->get_by_uuid($uuid);
 
-	if (!$analisis) {
-		show_404();
-		return;
+		if (!$analisis) {
+			show_404();
+			return;
+		}
+
+		$is_popup = $this->input->get('popup') == '1';
+
+		$data = [
+			'analisis' => $analisis,
+			'is_popup' => $is_popup
+		];
+
+		$this->active_nav = 'analisis';
+
+		if ($is_popup) {
+			$this->load->view('form/analisis/analisis-detail', $data);
+		} else {
+			$this->render('form/analisis/analisis-detail', $data);
+		}
 	}
-
-	$is_popup = $this->input->get('popup') == '1';
-
-	$data = [
-		'analisis' => $analisis,
-		'is_popup' => $is_popup
-	];
-
-	$this->active_nav = 'analisis';
-
-	if ($is_popup) {
-		$this->load->view('form/analisis/analisis-detail', $data);
-	} else {
-		$this->render('form/analisis/analisis-detail', $data);
-	}
-}
 
 	public function tambah()
 	{
@@ -257,60 +257,60 @@ class Analisis extends MY_Controller
 		redirect('analisis/verifikasi');
 	}
 
-	public function verifikasi_massal()
+	public function verifikasi_massal($tanggal, $jenis = 'spv')
 	{
-		$tipe_user = $this->session->userdata('tipe_user');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv  = $this->session->userdata('username');
 
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
-			show_error(
-				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
-				403
-			);
-			return;
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
 		}
 
-		$tanggal = $this->input->post('tanggal', true);
+		$this->db->trans_begin();
 
-		if (empty($tanggal)) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Tanggal harus dipilih.'
+		// Filter dasar
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+
+		// Role 1 dan 9 dapat memproses lintas plant
+		if (!in_array($type_user, [1, 9], true)) {
+			$this->db->where('plant', $plant);
+		}
+
+		if ($jenis === 'produksi') {
+
+			// Produksi: Created menjadi Verified
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('analisis_lab', [
+				'status_produksi' => '1'
 			]);
-			return;
-		}
+		} else {
 
-		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+			// LAB harus Accepted
+			$this->db->where('status_lab', '1');
 
-		if (!$date || $date->format('Y-m-d') !== $tanggal) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Format tanggal tidak valid.'
+			// SPV hanya memproses Created atau Revision
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('analisis_lab', [
+				'nama_spv'       => $nama_spv,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
 			]);
-			return;
 		}
 
-		$jumlah = $this->analisis_model->verifikasi_massal_spv($tanggal);
+		$jumlah = $this->db->affected_rows();
 
-		if ($jumlah === false) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Verifikasi massal gagal diproses.'
-			]);
-			return;
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
 		}
 
-		if ($jumlah == 0) {
-			echo json_encode([
-				'status' => false,
-				'message' => 'Tidak ada data Analisis yang memenuhi syarat verifikasi pada tanggal tersebut.'
-			]);
-			return;
-		}
+		$this->db->trans_commit();
 
-		echo json_encode([
-			'status' => true,
-			'message' => $jumlah . ' data Analisis berhasil diverifikasi.'
-		]);
+		return $jumlah;
 	}
 
 	public function status($uuid)

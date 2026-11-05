@@ -192,30 +192,46 @@ class Residu_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv  = $this->session->userdata('username');
+
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
+		}
 
 		$this->db->trans_begin();
 
+		// Filter utama
 		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
 
-		// Role 1 dan 9 dapat memproses lintas plant,
-		// sesuai aturan get_data_by_plant() yang asli.
-		if ($type_user != 9 && $type_user != 1) {
+		// Role 1 dan 9 dapat memproses lintas plant
+		if (!in_array($type_user, [1, 9], true)) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where_in('status_spv', ['0', '2']);
+		if ($jenis === 'produksi') {
 
-		$this->db->update('residu', [
-			'nama_spv'       => $nama_spv,
-			'status_spv'     => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+			// Produksi: Created (0) menjadi Verified (1)
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('residu', [
+				'status_produksi' => '1'
+			]);
+		} else {
+
+			// SPV: Created (0) atau Revision (2)
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('residu', [
+				'nama_spv'       => $nama_spv,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		}
 
 		$jumlah = $this->db->affected_rows();
 

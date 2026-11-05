@@ -226,24 +226,37 @@ class Sensori_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis_verifikasi = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv  = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($nama_spv) || empty($plant)) {
+		if (empty($tanggal) || empty($plant)) {
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
-		$this->db->from('sensori_fg');
+		if ($jenis_verifikasi === 'spv' && empty($nama_spv)) {
+			return false;
+		}
+
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return false;
+		}
+
+		// Kondisi dasar
 		$this->db->where('plant', $plant);
 		$this->db->where('is_audit', 0);
 		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
-		$total_data = $this->db->count_all_results();
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+		} else {
+			$this->db->where('status_produksi', '0');
+		}
+
+		$total_data = $this->db->count_all_results('sensori_fg');
 
 		if ($total_data == 0) {
 			return 0;
@@ -251,18 +264,31 @@ class Sensori_model extends CI_Model
 
 		$this->db->trans_begin();
 
-		// Update hanya data QC yang memenuhi syarat
+		// Kondisi update
 		$this->db->where('plant', $plant);
 		$this->db->where('is_audit', 0);
 		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
-		$this->db->update('sensori_fg', [
-			'nama_spv'       => $nama_spv,
-			'status_spv'     => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+		if ($jenis_verifikasi === 'spv') {
+
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$data_update = [
+				'nama_spv'        => $nama_spv,
+				'status_spv'      => '1',
+				'tgl_update_spv'  => date('Y-m-d H:i:s')
+			];
+		} else {
+
+			$this->db->where('status_produksi', '0');
+
+			$data_update = [
+				'status_produksi' => '1'
+			];
+		}
+
+		$this->db->update('sensori_fg', $data_update);
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

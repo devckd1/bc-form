@@ -24,34 +24,34 @@ $nama_bulan = [
 ?>
 
 <div class="container-fluid">
-<?php if (empty($is_popup)): ?>
-	<div class="d-sm-flex align-items-center justify-content-between mb-4">
-		<h1 class="h3 mb-2 text-gray-800 font-weight-bold">
-			Detail <?= $is_audit ? 'Audit ' : '' ?>Reagen
-			<?= $nama_bulan[(int) $bulan] ?? $bulan ?>
-			<?= html_escape($tahun) ?>
+	<?php if (empty($is_popup)): ?>
+		<div class="d-sm-flex align-items-center justify-content-between mb-4">
+			<h1 class="h3 mb-2 text-gray-800 font-weight-bold">
+				Detail <?= $is_audit ? 'Audit ' : '' ?>Reagen
+				<?= $nama_bulan[(int) $bulan] ?? $bulan ?>
+				<?= html_escape($tahun) ?>
 
-			<?php if ($is_audit): ?>
-				<span class="badge-mode-audit">
-					<i class="fas fa-clipboard-check mr-1"></i>
-					MODE AUDIT
-				</span>
-			<?php endif; ?>
-		</h1>
-	</div>
+				<?php if ($is_audit): ?>
+					<span class="badge-mode-audit">
+						<i class="fas fa-clipboard-check mr-1"></i>
+						MODE AUDIT
+					</span>
+				<?php endif; ?>
+			</h1>
+		</div>
 
-	<nav aria-label="breadcrumb">
-		<ol class="breadcrumb">
-			<li class="breadcrumb-item">
-				<a class="text-white"
-					href="<?= base_url('reagen/audit'); ?>">
-					<i class="fas fa-arrow-left"></i>
-					Daftar Audit Pemeriksaan Release Packing \ Detail
-				</a>
-			</li>
-		</ol>
-	</nav>
-<?php endif; ?>
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item">
+					<a class="text-white"
+						href="<?= base_url('reagen/audit'); ?>">
+						<i class="fas fa-arrow-left"></i>
+						Daftar Audit Pemeriksaan Release Packing \ Detail
+					</a>
+				</li>
+			</ol>
+		</nav>
+	<?php endif; ?>
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
 			<i class="fas fa-info-circle mr-1"></i>
@@ -78,12 +78,14 @@ $nama_bulan = [
 
 	<div class="card shadow mb-4">
 		<?php if (empty($is_popup)): ?>
-		<div class="card-header py-3">
-			<h6 class="m-0 font-weight-bold text-primary">
-				Daftar <?= $is_audit ? 'Audit ' : '' ?>Penggunaan Reagen Klorin
-			</h6>
-		</div>
+			<div class="card-header py-3">
+				<h6 class="m-0 font-weight-bold text-primary">
+					Daftar <?= $is_audit ? 'Audit ' : '' ?>Penggunaan Reagen Klorin
+				</h6>
+			</div>
 		<?php endif; ?>
+
+		<?php $tipe_user = $this->session->userdata('tipe_user'); ?>
 
 		<div class="card-body">
 			<div class="table-responsive">
@@ -96,7 +98,9 @@ $nama_bulan = [
 							<th>No Lot</th>
 							<th>Best Before</th>
 							<th>Status SPV</th>
-							<th>Aksi</th>
+							<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+								<th>Aksi</th>
+							<?php endif; ?>
 						</tr>
 					</thead>
 
@@ -152,25 +156,27 @@ $nama_bulan = [
 										<?php endif; ?>
 									</td>
 
-									<td class="text-center">
-										<?php if ($is_audit): ?>
-											<a href="<?= base_url('reagen/edit-audit/' . rawurlencode($row->uuid)) ?>"
-												class="btn btn-warning btn-sm">
-												Edit
-											</a>
-										<?php else: ?>
-											<a href="<?= base_url('reagen/edit/' . rawurlencode($row->uuid)) ?>"
-												class="btn btn-warning btn-sm">
-												Edit
-											</a>
+									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+										<td class="text-center">
+											<?php if ($is_audit): ?>
+												<a href="<?= base_url('reagen/edit-audit/' . rawurlencode($row->uuid)) ?>"
+													class="btn btn-warning btn-sm">
+													Edit
+												</a>
+											<?php else: ?>
+												<a href="<?= base_url('reagen/edit/' . rawurlencode($row->uuid)) ?>"
+													class="btn btn-warning btn-sm">
+													Edit
+												</a>
 
-											<a href="<?= base_url('reagen/delete/' . rawurlencode($row->uuid)) ?>"
-												class="btn btn-danger btn-sm"
-												onclick="return confirm('Yakin hapus data?')">
-												Hapus
-											</a>
-										<?php endif; ?>
-									</td>
+												<a href="<?= base_url('reagen/delete/' . rawurlencode($row->uuid)) ?>"
+													class="btn btn-danger btn-sm"
+													onclick="return confirm('Yakin hapus data?')">
+													Hapus
+												</a>
+											<?php endif; ?>
+										</td>
+									<?php endif; ?>
 								</tr>
 							<?php endforeach; ?>
 						<?php endif; ?>

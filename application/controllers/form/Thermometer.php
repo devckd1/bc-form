@@ -62,30 +62,30 @@ class Thermometer extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $thermometer = $this->thermometer_model->get_qc_by_uuid($uuid);
+	{
+		$thermometer = $this->thermometer_model->get_qc_by_uuid($uuid);
 
-    if (!$thermometer) {
-        show_404();
-        return;
-    }
+		if (!$thermometer) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'thermometer' => $thermometer,
-        'mode' => 'qc',
-        'is_popup' => $is_popup
-    ];
+		$data = [
+			'thermometer' => $thermometer,
+			'mode' => 'qc',
+			'is_popup' => $is_popup
+		];
 
-    $this->active_nav = 'thermometer';
+		$this->active_nav = 'thermometer';
 
-    if ($is_popup) {
-        $this->load->view('form/thermometer/thermometer-detail', $data);
-    } else {
-        $this->render('form/thermometer/thermometer-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/thermometer/thermometer-detail', $data);
+		} else {
+			$this->render('form/thermometer/thermometer-detail', $data);
+		}
+	}
 
 	// public function tambah()
 	// {
@@ -256,8 +256,43 @@ class Thermometer extends MY_Controller
 
 	public function verifikasi_massal()
 	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
 		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
 		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		$jenis_verifikasi = trim($this->input->post('jenis_verifikasi', TRUE) ?? 'spv');
+
+		// Hak akses SPV
+		$role_spv = [0, 1, 2, 9];
+
+		// Hak akses Produksi
+		$role_produksi = [0, 1, 3, 9];
+
+		if (
+			($jenis_verifikasi === 'spv' && !in_array($tipe_user, $role_spv)) ||
+			($jenis_verifikasi === 'produksi' && !in_array($tipe_user, $role_produksi))
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Anda tidak memiliki hak akses untuk verifikasi ini.'
+				]));
+		}
+
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Jenis verifikasi tidak valid.'
+				]));
+		}
 
 		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
@@ -273,8 +308,20 @@ class Thermometer extends MY_Controller
 				]));
 		}
 
-		$updated = $this->thermometer_model
-			->verifikasi_massal_spv($tanggal, $shift);
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
+		$updated = $this->thermometer_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
 
 		if ($updated === false) {
 			$response = [
@@ -282,10 +329,12 @@ class Thermometer extends MY_Controller
 				'message' => 'Verifikasi massal Thermometer gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+			$nama_verifikasi = $jenis_verifikasi === 'spv' ? 'SPV' : 'Produksi';
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Thermometer berhasil.'
+				'message' => 'Verifikasi massal Thermometer ' . $nama_verifikasi . ' berhasil.'
 			];
 		} else {
 			$response = [

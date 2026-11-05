@@ -28,16 +28,21 @@
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
 				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<?php
+				$tipe_user = (int) $this->session->userdata('tipe_user');
+				$akses_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+				$akses_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
+				?>
+
+				<?php if ($akses_spv || $akses_produksi): ?>
 					<div class="d-flex align-items-center flex-wrap mb-2">
-						<form
-							id="formVerifikasiMassalChiller"
+
+						<form id="formVerifikasiMassalChiller"
 							action="<?= base_url('chiller/verifikasi_massal'); ?>"
 							method="post"
 							class="d-flex align-items-center flex-wrap">
 
-							<input
-								type="date"
+							<input type="date"
 								name="tanggal"
 								id="tanggal_massal_chiller"
 								class="form-control mr-2 mb-2"
@@ -45,22 +50,35 @@
 								value="<?= html_escape($filter_tanggal ?? ''); ?>"
 								required>
 
-							<button
-								type="submit"
-								id="btnVerifikasiMassalChiller"
-								class="btn btn-primary mb-2">
-								<i class="fas fa-check-double mr-1"></i>
-								Verifikasi Massal
-							</button>
+							<?php if ($akses_spv): ?>
+								<button type="submit"
+									name="jenis_verifikasi"
+									value="spv"
+									class="btn btn-primary mb-2 mr-1">
+									<i class="fas fa-check-double mr-1"></i>
+									Verifikasi Massal
+								</button>
+							<?php endif; ?>
+
+							<?php if ($akses_produksi): ?>
+								<button type="submit"
+									name="jenis_verifikasi"
+									value="produksi"
+									class="btn btn-primary mb-2">
+									<i class="fas fa-industry mr-1"></i>
+									Verifikasi Massal
+								</button>
+							<?php endif; ?>
+
 						</form>
 
-						<button
-							type="button"
+						<button type="button"
 							id="resetFilterChiller"
 							class="btn btn-secondary ml-2 mb-2">
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</button>
+
 					</div>
 				<?php endif; ?>
 
@@ -257,10 +275,10 @@
 
 		const baseUrlChiller = "<?= base_url('chiller'); ?>";
 
-		// Filter tanggal menggunakan GET
+		// Filter tanggal
 		function terapkanFilterChiller() {
-			const tanggal = $('#tanggal_massal_chiller').val();
 
+			const tanggal = $('#tanggal_massal_chiller').val();
 			const params = new URLSearchParams();
 
 			if (tanggal) {
@@ -269,10 +287,10 @@
 
 			const query = params.toString();
 
-			window.location.href = baseUrlChiller + (query ? '?' + query : '');
+			window.location.href =
+				baseUrlChiller + (query ? '?' + query : '');
 		}
 
-		// Tanggal berubah, filter langsung diterapkan
 		$('#tanggal_massal_chiller').on('change', function() {
 			terapkanFilterChiller();
 		});
@@ -282,13 +300,24 @@
 			window.location.href = baseUrlChiller;
 		});
 
-		// Verifikasi massal tetap menggunakan POST
+		// Verifikasi massal SPV dan Produksi
 		$('#formVerifikasiMassalChiller').on('submit', function(e) {
+
 			e.preventDefault();
 
 			const form = $(this);
+
+			const submitter = e.originalEvent ?
+				e.originalEvent.submitter :
+				null;
+
+			const jenis = submitter ?
+				$(submitter).val() :
+				'spv';
+
+			const tombol = $(submitter);
+
 			const tanggal = $('#tanggal_massal_chiller').val();
-			const button = $('#btnVerifikasiMassalChiller');
 
 			if (!tanggal) {
 				Swal.fire({
@@ -299,54 +328,79 @@
 				return;
 			}
 
+			const judul = jenis === 'produksi' ?
+				'Verifikasi Massal Produksi?' :
+				'Verifikasi Massal SPV?';
+
+			const keterangan = jenis === 'produksi' ?
+				'Data Chiller QC dengan status Produksi Created pada tanggal tersebut akan diverifikasi.' :
+				'Data Chiller QC dengan status Produksi Verified dan status SPV Created atau Revision pada tanggal tersebut akan diverifikasi.';
+
+			const teksTombol = jenis === 'produksi' ?
+				'Verifikasi Massal Produksi' :
+				'Verifikasi Massal SPV';
+
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Data Chiller yang memenuhi syarat pada tanggal tersebut akan diverifikasi.',
+				title: judul,
+				text: keterangan,
 				icon: 'question',
 				showCancelButton: true,
 				confirmButtonColor: '#3085d6',
 				cancelButtonColor: '#6c757d',
 				confirmButtonText: 'Ya, Verifikasi',
 				cancelButtonText: 'Batal'
-			}).then((result) => {
+			}).then(function(result) {
 
 				if (!result.isConfirmed) {
 					return;
 				}
 
-				button.prop('disabled', true);
-				button.html(
+				tombol.prop('disabled', true);
+
+				tombol.html(
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
 				);
+
+				let dataForm = form.serialize();
+
+				// serialize() tidak mengambil tombol submit yang diklik
+				dataForm += '&jenis_verifikasi=' +
+					encodeURIComponent(jenis);
 
 				$.ajax({
 					url: form.attr('action'),
 					type: 'POST',
-					data: form.serialize(),
+					data: dataForm,
 					dataType: 'json',
 
 					success: function(response) {
 
-						if (response.success) {
+						if (response.success && response.updated > 0) {
+
 							Swal.fire({
 								icon: 'success',
 								title: 'Berhasil',
-								text: response.message || 'Verifikasi massal berhasil diproses.',
+								text: response.message +
+									' Jumlah data: ' +
+									response.updated,
 								confirmButtonText: 'OK'
-							}).then(() => {
+							}).then(function() {
 								location.reload();
 							});
 
 						} else {
+
 							Swal.fire({
-								icon: 'warning',
+								icon: 'info',
 								title: 'Informasi',
-								text: response.message || 'Tidak ada data yang dapat diverifikasi.'
+								text: response.message ||
+									'Tidak ada data yang memenuhi syarat verifikasi.'
 							});
 						}
 					},
 
 					error: function() {
+
 						Swal.fire({
 							icon: 'error',
 							title: 'Gagal',
@@ -355,9 +409,12 @@
 					},
 
 					complete: function() {
-						button.prop('disabled', false);
-						button.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+
+						tombol.prop('disabled', false);
+
+						tombol.html(
+							'<i class="fas fa-check-double mr-1"></i> ' +
+							teksTombol
 						);
 					}
 				});

@@ -54,33 +54,33 @@ class Residu extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $residu = $this->residu_model->get_by_uuid($uuid);
+	{
+		$residu = $this->residu_model->get_by_uuid($uuid);
 
-    if (!$residu) {
-        show_404();
-        return;
-    }
+		if (!$residu) {
+			show_404();
+			return;
+		}
 
-    $data = array(
-        'residu' => $residu,
-        'is_popup' => $this->input->get('popup') == '1'
-    );
+		$data = array(
+			'residu' => $residu,
+			'is_popup' => $this->input->get('popup') == '1'
+		);
 
-    $this->active_nav = 'residu';
+		$this->active_nav = 'residu';
 
-    if ($data['is_popup']) {
-        $this->load->view(
-            'form/residu/residu-detail',
-            $data
-        );
-    } else {
-        $this->render(
-            'form/residu/residu-detail',
-            $data
-        );
-    }
-}
+		if ($data['is_popup']) {
+			$this->load->view(
+				'form/residu/residu-detail',
+				$data
+			);
+		} else {
+			$this->render(
+				'form/residu/residu-detail',
+				$data
+			);
+		}
+	}
 
 	public function tambah()
 	{
@@ -158,9 +158,22 @@ class Residu extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tipe_user = $this->session->userdata('tipe_user');
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
 
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		$tanggal = trim($this->input->post('tanggal', true) ?? '');
+		$jenis   = trim($this->input->post('jenis_verifikasi', true) ?? '');
+
+		// Validasi jenis verifikasi dan hak akses
+		if (
+			($jenis === 'spv' && !in_array($tipe_user, [0, 1, 2, 9], true)) ||
+			($jenis === 'produksi' && !in_array($tipe_user, [0, 1, 3, 9], true)) ||
+			!in_array($jenis, ['spv', 'produksi'], true)
+		) {
 			show_error(
 				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
 				403
@@ -168,11 +181,9 @@ class Residu extends MY_Controller
 			return;
 		}
 
-		$tanggal = $this->input->post('tanggal', true);
-
 		if (empty($tanggal)) {
 			$response = [
-				'status' => false,
+				'status'  => false,
 				'message' => 'Silakan pilih tanggal terlebih dahulu.'
 			];
 		} else {
@@ -180,27 +191,35 @@ class Residu extends MY_Controller
 
 			if (!$date || $date->format('Y-m-d') !== $tanggal) {
 				$response = [
-					'status' => false,
+					'status'  => false,
 					'message' => 'Format tanggal tidak valid.'
 				];
 			} else {
-				$jumlah = $this->residu_model
-					->verifikasi_massal_spv($tanggal);
+				$jumlah = $this->residu_model->verifikasi_massal(
+					$tanggal,
+					$jenis
+				);
 
 				if ($jumlah === false) {
 					$response = [
-						'status' => false,
+						'status'  => false,
 						'message' => 'Verifikasi massal gagal diproses.'
 					];
 				} elseif ($jumlah == 0) {
+					$pesan = $jenis === 'spv'
+						? 'Tidak ada data Residu dengan status Created atau Revision pada tanggal tersebut.'
+						: 'Tidak ada data Residu dengan status Created pada tanggal tersebut.';
+
 					$response = [
-						'status' => false,
-						'message' => 'Tidak ada data Residu dengan status Created atau Revision pada tanggal tersebut.'
+						'status'  => false,
+						'message' => $pesan
 					];
 				} else {
+					$namaJenis = $jenis === 'spv' ? 'SPV' : 'Produksi';
+
 					$response = [
-						'status' => true,
-						'message' => $jumlah . ' data Residu berhasil diverifikasi.'
+						'status'  => true,
+						'message' => $jumlah . ' data Residu berhasil diverifikasi oleh ' . $namaJenis . '.'
 					];
 				}
 			}

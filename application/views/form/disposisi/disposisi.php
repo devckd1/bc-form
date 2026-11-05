@@ -27,8 +27,6 @@
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<form id="formVerifikasiMassal"
@@ -44,12 +42,24 @@
 								value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 								required>
 
-							<button type="submit"
-								id="btnVerifikasiMassal"
-								class="btn btn-primary mb-2">
-								<i class="fas fa-check-double mr-1"></i>
-								Verifikasi Massal
-							</button>
+							<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+								<button type="submit"
+									class="btn btn-primary btn-verifikasi-massal mr-1 mb-2"
+									data-jenis="spv">
+									<i class="fas fa-check-double mr-1"></i>
+									Verifikasi Massal
+								</button>
+							<?php endif; ?>
+
+							<?php if (in_array($tipe_user, [0, 1, 3, 9])): ?>
+								<button type="submit"
+									class="btn btn-primary btn-verifikasi-massal mb-2"
+									data-jenis="produksi">
+									<i class="fas fa-industry mr-1"></i>
+									Verifikasi Massal
+								</button>
+							<?php endif; ?>
+
 						</form>
 
 						<a href="<?= base_url('disposisi'); ?>"
@@ -57,8 +67,8 @@
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</a>
-					</div> 
-				<?php endif; ?>
+
+					</div>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -146,10 +156,10 @@
 										<?php endif; ?>
 
 										<a href="<?= base_url('disposisi/detail/' . $val->uuid); ?>"
-    data-url="<?= base_url('disposisi/detail/' . $val->uuid . '?popup=1'); ?>"
-    class="btn btn-success btn-icon-split btn-detail-disposisi">
-    <span class="text">Detail</span>
-</a>
+											data-url="<?= base_url('disposisi/detail/' . $val->uuid . '?popup=1'); ?>"
+											class="btn btn-success btn-icon-split btn-detail-disposisi">
+											<span class="text">Detail</span>
+										</a>
 
 										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 											<a href="<?= base_url('disposisi/verifikasi_produksi/' . $val->uuid); ?>"
@@ -201,23 +211,23 @@
 </div>
 </div>
 <div class="modal fade" id="modalDetailDisposisi" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Detail Disposisi</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Disposisi</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
 
-            <div class="modal-body" id="contentDetailDisposisi">
-                <div class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Memuat detail...</p>
-                </div>
-            </div>
-        </div>
-    </div>
+			<div class="modal-body" id="contentDetailDisposisi">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat detail...</p>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 <script>
 	document.getElementById('select_all').addEventListener('change', function() {
@@ -254,21 +264,38 @@
 			}
 		});
 
-		// Verifikasi massal SPV
+		// Verifikasi massal SPV dan Produksi
+		$('#formVerifikasiMassal').on('click', '.btn-verifikasi-massal', function() {
+			$('#formVerifikasiMassal').data('jenis-verifikasi', $(this).data('jenis'));
+		});
+
 		$('#formVerifikasiMassal').on('submit', function(e) {
 			e.preventDefault();
 
 			var form = $(this);
-			var tombol = $('#btnVerifikasiMassal');
+			var jenis = form.data('jenis-verifikasi');
+			var tombol = form.find('.btn-verifikasi-massal[data-jenis="' + jenis + '"]');
 
-			if (!form.find('[name="tanggal"]').val()) {
+			if (!jenis) {
+				return;
+			}
+
+			var tanggal = form.find('[name="tanggal"]').val();
+
+			if (!tanggal) {
 				Swal.fire('Perhatian', 'Silakan pilih tanggal terlebih dahulu.', 'warning');
 				return;
 			}
 
+			var namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
+
+			var pesan = jenis === 'spv' ?
+				'Data Disposisi yang sudah diverifikasi Produksi pada tanggal tersebut akan diproses oleh SPV.' :
+				'Data Disposisi pada tanggal tersebut akan diverifikasi oleh Produksi.';
+
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Data Disposisi yang sudah diverifikasi Produksi pada tanggal tersebut akan diproses.',
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+				text: pesan,
 				icon: 'question',
 				showCancelButton: true,
 				confirmButtonText: 'Ya, Verifikasi',
@@ -285,7 +312,10 @@
 				$.ajax({
 					url: form.attr('action'),
 					type: 'POST',
-					data: form.serialize(),
+					data: {
+						tanggal: tanggal,
+						jenis_verifikasi: jenis
+					},
 					dataType: 'json',
 
 					success: function(response) {
@@ -305,7 +335,11 @@
 							);
 
 							tombol.prop('disabled', false);
-							tombol.html('<i class="fas fa-check-double mr-1"></i> Verifikasi Massal');
+							tombol.html(
+								jenis === 'spv' ?
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi SPV' :
+								'<i class="fas fa-check-circle mr-1"></i> Verifikasi Produksi'
+							);
 						}
 					},
 
@@ -317,94 +351,98 @@
 						);
 
 						tombol.prop('disabled', false);
-						tombol.html('<i class="fas fa-check-double mr-1"></i> Verifikasi Massal');
+						tombol.html(
+							jenis === 'spv' ?
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi SPV' :
+							'<i class="fas fa-check-circle mr-1"></i> Verifikasi Produksi'
+						);
 					}
 				});
 			});
 		});
 
-		// Pilih semua checkbox jika elemen tersedia
-		var selectAll = document.getElementById('select_all');
+	// Pilih semua checkbox jika elemen tersedia
+	var selectAll = document.getElementById('select_all');
 
-		if (selectAll) {
-			selectAll.addEventListener('change', function() {
-				var checkboxes = document.querySelectorAll('.select_row');
+	if (selectAll) {
+		selectAll.addEventListener('change', function() {
+			var checkboxes = document.querySelectorAll('.select_row');
 
-				checkboxes.forEach(function(checkbox) {
-					checkbox.checked = selectAll.checked;
-				});
+			checkboxes.forEach(function(checkbox) {
+				checkbox.checked = selectAll.checked;
 			});
-		}
-
-		// Validasi cetak PDF
-		$('#form_cetak_pdf').on('submit', function(event) {
-			var selectedCheckboxes = document.querySelectorAll('.select_row:checked');
-			var selectedItems = [];
-
-			selectedCheckboxes.forEach(function(checkbox) {
-				selectedItems.push(checkbox.value);
-			});
-
-			if (selectedItems.length === 0) {
-				event.preventDefault();
-				alert('Silakan pilih data yang ingin dicetak.');
-				return;
-			}
-
-			document.getElementById('selected_items').value = selectedItems.join(',');
 		});
+	}
+
+	// Validasi cetak PDF
+	$('#form_cetak_pdf').on('submit', function(event) {
+	var selectedCheckboxes = document.querySelectorAll('.select_row:checked');
+	var selectedItems = [];
+
+	selectedCheckboxes.forEach(function(checkbox) {
+		selectedItems.push(checkbox.value);
+	});
+
+	if (selectedItems.length === 0) {
+		event.preventDefault();
+		alert('Silakan pilih data yang ingin dicetak.');
+		return;
+	}
+
+	document.getElementById('selected_items').value = selectedItems.join(',');
+	});
 
 	});
 </script>
 <script>
-    $(document).ready(function() {
+	$(document).ready(function() {
 
-        // Cache detail disposisi
-        let cacheDetailDisposisi = {};
+		// Cache detail disposisi
+		let cacheDetailDisposisi = {};
 
-        // AJAX Modal Detail
-        $(document).on('click', '.btn-detail-disposisi', function(e) {
-            e.preventDefault();
+		// AJAX Modal Detail
+		$(document).on('click', '.btn-detail-disposisi', function(e) {
+			e.preventDefault();
 
-            let url = $(this).data('url');
-            let content = $('#contentDetailDisposisi');
+			let url = $(this).data('url');
+			let content = $('#contentDetailDisposisi');
 
-            $('#modalDetailDisposisi').modal('show');
+			$('#modalDetailDisposisi').modal('show');
 
-            // Gunakan cache jika detail sudah pernah dibuka
-            if (cacheDetailDisposisi[url]) {
-                content.html(cacheDetailDisposisi[url]);
-                return;
-            }
+			// Gunakan cache jika detail sudah pernah dibuka
+			if (cacheDetailDisposisi[url]) {
+				content.html(cacheDetailDisposisi[url]);
+				return;
+			}
 
-            content.html(`
+			content.html(`
                 <div class="text-center py-5">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p class="mt-2">Memuat detail...</p>
                 </div>
             `);
 
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'html',
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'html',
 
-                success: function(response) {
-                    cacheDetailDisposisi[url] = response;
-                    content.html(response);
-                },
+				success: function(response) {
+					cacheDetailDisposisi[url] = response;
+					content.html(response);
+				},
 
-                error: function() {
-                    content.html(`
+				error: function() {
+					content.html(`
                         <div class="alert alert-danger text-center">
                             Gagal memuat detail disposisi.
                         </div>
                     `);
-                }
-            });
-        });
+				}
+			});
+		});
 
-    });
+	});
 </script>
 <style>
 	th {

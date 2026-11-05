@@ -78,30 +78,30 @@ class Kontaminasi extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $kontaminasi = $this->kontaminasi_model->get_qc_by_uuid($uuid);
+	{
+		$kontaminasi = $this->kontaminasi_model->get_qc_by_uuid($uuid);
 
-    if (!$kontaminasi) {
-        show_404();
-        return;
-    }
+		if (!$kontaminasi) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'kontaminasi' => $kontaminasi,
-        'mode' => 'qc',
-        'is_popup' => $is_popup
-    ];
+		$data = [
+			'kontaminasi' => $kontaminasi,
+			'mode' => 'qc',
+			'is_popup' => $is_popup
+		];
 
-    $this->active_nav = 'kontaminasi';
+		$this->active_nav = 'kontaminasi';
 
-    if ($is_popup) {
-        $this->load->view('form/kontaminasi/kontaminasi-detail', $data);
-    } else {
-        $this->render('form/kontaminasi/kontaminasi-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/kontaminasi/kontaminasi-detail', $data);
+		} else {
+			$this->render('form/kontaminasi/kontaminasi-detail', $data);
+		}
+	}
 
 	public function file_check($str)
 	{
@@ -343,18 +343,55 @@ class Kontaminasi extends MY_Controller
 		redirect('kontaminasi/verifikasi');
 	}
 
-
 	public function verifikasi_massal()
 	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
+			return;
+		}
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
 		$tanggal = trim(
 			$this->input->post('tanggal', TRUE) ?? ''
 		);
 
-		// Validasi tanggal
-		$tanggal_obj = DateTime::createFromFormat(
-			'Y-m-d',
-			$tanggal
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
 		);
+
+		// Validasi role
+		if ($jenis_verifikasi === 'spv') {
+			if (!in_array($tipe_user, [0, 1, 2, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
+						'success' => false,
+						'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+					]));
+			}
+		} elseif ($jenis_verifikasi === 'produksi') {
+			if (!in_array($tipe_user, [0, 1, 3, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
+						'success' => false,
+						'message' => 'Anda tidak memiliki akses verifikasi Produksi.'
+					]));
+			}
+		} else {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Jenis verifikasi tidak valid.'
+				]));
+		}
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
@@ -368,31 +405,36 @@ class Kontaminasi extends MY_Controller
 				]));
 		}
 
-		$updated =
-			$this->kontaminasi_model
-			->verifikasi_massal_spv($tanggal);
+		$updated = $this->kontaminasi_model
+			->verifikasi_massal($tanggal, $jenis_verifikasi);
 
 		if ($updated === false) {
-
 			$response = [
 				'success' => false,
 				'message' => 'Verifikasi massal gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+			$nama_verifikasi = ($jenis_verifikasi === 'spv')
+				? 'SPV'
+				: 'Produksi';
 
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' =>
-				'Verifikasi massal Kontaminasi berhasil.'
+				'message' => 'Verifikasi massal Kontaminasi ' .
+					$nama_verifikasi . ' berhasil.'
 			];
 		} else {
+			$nama_verifikasi = ($jenis_verifikasi === 'spv')
+				? 'SPV'
+				: 'Produksi';
 
 			$response = [
 				'success' => false,
 				'updated' => 0,
-				'message' =>
-				'Tidak ada data Kontaminasi yang memenuhi syarat verifikasi pada tanggal tersebut.'
+				'message' => 'Tidak ada data Kontaminasi yang memenuhi ' .
+					'syarat verifikasi ' . $nama_verifikasi .
+					' pada tanggal tersebut.'
 			];
 		}
 

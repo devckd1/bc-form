@@ -303,30 +303,55 @@ class Pengayakan_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis_verifikasi = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
+		$plant     = $this->session->userdata('plant');
 		$type_user = (int) $this->session->userdata('tipe_user');
-		$username = $this->session->userdata('username');
+		$username  = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($username)) {
+		if (empty($tanggal)) {
 			return false;
 		}
 
+		if ($jenis_verifikasi === 'spv' && empty($username)) {
+			return false;
+		}
+
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return false;
+		}
+
+		// Fungsi untuk menerapkan kondisi pencarian
+		$apply_conditions = function () use (
+			$tanggal,
+			$shift,
+			$type_user,
+			$plant,
+			$jenis_verifikasi
+		) {
+			$this->db->where('is_audit', 0);
+			$this->db->where('DATE(date)', $tanggal);
+
+			if (!empty($shift) && $shift !== 'semua') {
+				$this->db->where('shift', $shift);
+			}
+
+			// Role 1 dan 9 dapat memproses lintas plant
+			if (!in_array($type_user, [9, 1])) {
+				$this->db->where('plant', $plant);
+			}
+
+			if ($jenis_verifikasi === 'spv') {
+				$this->db->where('status_produksi', '1');
+				$this->db->where_in('status_spv', ['0', '2']);
+			} else {
+				$this->db->where('status_produksi', '0');
+			}
+		};
+
 		// Hitung data yang memenuhi syarat
 		$this->db->from('pengayakan');
-		$this->db->where('is_audit', 0);
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
-
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
-		}
-
-		if ($type_user != 9 && $type_user != 1) {
-			$this->db->where('plant', $plant);
-		}
+		$apply_conditions();
 
 		$jumlah_data = $this->db->count_all_results();
 
@@ -336,25 +361,24 @@ class Pengayakan_model extends CI_Model
 
 		$this->db->trans_begin();
 
-		// Update data utama saja
-		$this->db->where('is_audit', 0);
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
+		// Terapkan kembali kondisi yang sama untuk update
+		$apply_conditions();
 
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+		if ($jenis_verifikasi === 'spv') {
+
+			$data_update = [
+				'nama_spv'   => $username,
+				'status_spv' => '1',
+				'tgl_update' => date('Y-m-d H:i:s')
+			];
+		} else {
+
+			$data_update = [
+				'status_produksi' => '1'
+			];
 		}
 
-		if ($type_user != 9 && $type_user != 1) {
-			$this->db->where('plant', $plant);
-		}
-
-		$this->db->update('pengayakan', [
-			'nama_spv'   => $username,
-			'status_spv' => '1',
-			'tgl_update' => date('Y-m-d H:i:s')
-		]);
+		$this->db->update('pengayakan', $data_update);
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

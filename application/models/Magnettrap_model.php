@@ -242,86 +242,153 @@ class Magnettrap_model extends CI_Model
 		return ($this->db->affected_rows() > 0);
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift)
+	public function verifikasi_massal($tanggal, $shift, $jenis_verifikasi = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$username  = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($shift)) {
+		if (empty($tanggal) || empty($username)) {
 			return [
 				'success' => false,
-				'message' => 'Tanggal dan shift wajib dipilih.'
+				'message' => 'Tanggal tidak valid.'
 			];
 		}
 
-		// Fungsi filter tanggal, shift, audit, dan plant
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return [
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+		}
+
+		// Filter utama
 		$filter_data = function () use ($tanggal, $shift, $type_user, $plant) {
 			$this->db
 				->where('DATE(date)', $tanggal)
 				->where('is_audit', 0);
 
-			// Jika memilih Semua Shift, filter shift tidak diterapkan
-			if ($shift !== 'semua') {
+			if (!empty($shift) && $shift !== 'semua') {
 				$this->db->where('shift', $shift);
 			}
 
-			// User tipe 1 dan 9 dapat melihat lintas plant
+			// Role 1 dan 9 dapat lintas plant
 			if ($type_user != 9 && $type_user != 1) {
+				if (empty($plant)) {
+					return false;
+				}
+
 				$this->db->where('plant', $plant);
 			}
+
+			return true;
 		};
 
-		// Hitung seluruh data QC sesuai filter
-		$filter_data();
-		$total = $this->db->count_all_results('magnet_trap');
+		if (!$filter_data()) {
+			return [
+				'success' => false,
+				'message' => 'Plant pengguna tidak ditemukan.'
+			];
+		}
 
-		// Hitung data yang belum diverifikasi Produksi/Engineering
-		$filter_data();
-		$this->db->where('status_enginer !=', '1');
-		$belum_engineer = $this->db->count_all_results('magnet_trap');
+		// =====================================================
+		// VERIFIKASI SPV
+		// =====================================================
+		if ($jenis_verifikasi === 'spv') {
 
-		// Hitung data yang siap diverifikasi SPV
+			// Hitung seluruh data
+			$filter_data();
+			$total = $this->db->count_all_results('magnet_trap');
+
+			// Hitung yang belum diverifikasi Engineering
+			$filter_data();
+			$this->db->where('status_enginer !=', '1');
+			$belum_engineer = $this->db->count_all_results('magnet_trap');
+
+			// Hitung yang siap diverifikasi SPV
+			$filter_data();
+			$this->db
+				->where('status_enginer', '1')
+				->where_in('status_spv', ['0', '2']);
+
+			$siap_verifikasi = $this->db->count_all_results('magnet_trap');
+
+			if ($siap_verifikasi == 0) {
+				return [
+					'success' => true,
+					'total' => $total,
+					'updated' => 0,
+					'belum_engineer' => $belum_engineer,
+					'message' => 'Tidak ada data yang siap diverifikasi SPV.'
+				];
+			}
+
+			$this->db->trans_begin();
+
+			$filter_data();
+			$this->db
+				->where('status_enginer', '1')
+				->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('magnet_trap', [
+				'nama_spv'       => $username,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+
+			if ($this->db->trans_status() === false) {
+				$this->db->trans_rollback();
+
+				return [
+					'success' => false,
+					'message' => 'Verifikasi massal SPV gagal disimpan.'
+				];
+			}
+
+			$this->db->trans_commit();
+
+			return [
+				'success' => true,
+				'total' => $total,
+				'updated' => $siap_verifikasi,
+				'belum_engineer' => $belum_engineer,
+				'message' => 'Verifikasi massal SPV berhasil diproses.'
+			];
+		}
+
+		// =====================================================
+		// VERIFIKASI PRODUKSI
+		// =====================================================
+
 		$filter_data();
-		$this->db
-			->where('status_enginer', '1')
-			->where_in('status_spv', ['0', '2']);
+		$this->db->where('status_produksi', '0');
 
 		$siap_verifikasi = $this->db->count_all_results('magnet_trap');
 
 		if ($siap_verifikasi == 0) {
 			return [
 				'success' => true,
-				'total' => $total,
+				'total' => 0,
 				'updated' => 0,
-				'belum_engineer' => $belum_engineer,
-				'message' => 'Tidak ada data yang siap diverifikasi SPV.'
+				'message' => 'Tidak ada data Magnet Trap yang menunggu verifikasi Produksi.'
 			];
 		}
 
-		$data = [
-			'nama_spv' => $nama_spv,
-			'status_spv' => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		];
-
 		$this->db->trans_begin();
 
-		// Update hanya data yang sudah diverifikasi Engineering
-		// dan belum selesai diverifikasi SPV
 		$filter_data();
-		$this->db
-			->where('status_enginer', '1')
-			->where_in('status_spv', ['0', '2']);
+		$this->db->where('status_produksi', '0');
 
-		$this->db->update('magnet_trap', $data);
+		$this->db->update('magnet_trap', [
+			'status_produksi' => '1'
+		]);
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
 
 			return [
 				'success' => false,
-				'message' => 'Verifikasi massal gagal disimpan.'
+				'message' => 'Verifikasi massal Produksi gagal disimpan.'
 			];
 		}
 
@@ -329,10 +396,9 @@ class Magnettrap_model extends CI_Model
 
 		return [
 			'success' => true,
-			'total' => $total,
+			'total' => $siap_verifikasi,
 			'updated' => $siap_verifikasi,
-			'belum_engineer' => $belum_engineer,
-			'message' => 'Verifikasi massal berhasil diproses.'
+			'message' => 'Verifikasi massal Produksi berhasil diproses.'
 		];
 	}
 
@@ -577,7 +643,7 @@ class Magnettrap_model extends CI_Model
 
 		return $this->db->get('magnet_trap')->row();
 	}
-	
+
 	public function get_by_month($tahun, $bulan, $plant)
 	{
 		return $this->db

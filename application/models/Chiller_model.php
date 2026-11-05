@@ -236,11 +236,10 @@ class Chiller_model extends CI_Model
 	}
 
 
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis = 'spv')
 	{
 		$plant = $this->session->userdata('plant');
-		$tipe_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
 		if (empty($tanggal)) {
 			return [
@@ -249,13 +248,60 @@ class Chiller_model extends CI_Model
 			];
 		}
 
-		// Filter data QC berdasarkan tanggal dan plant
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return [
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+		}
+
+		// Validasi hak akses
+		if (
+			$jenis === 'spv' &&
+			!in_array($tipe_user, [0, 1, 2, 9], true)
+		) {
+			return [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+			];
+		}
+
+		if (
+			$jenis === 'produksi' &&
+			!in_array($tipe_user, [0, 1, 3, 9], true)
+		) {
+			return [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi Produksi.'
+			];
+		}
+
+		// Identitas petugas
+		$nama_petugas = $this->session->userdata('username');
+
+		if (empty($nama_petugas)) {
+			return [
+				'success' => false,
+				'message' => 'Identitas pengguna tidak ditemukan.'
+			];
+		}
+
+		if (empty($plant) && !in_array($tipe_user, [1, 9], true)) {
+			return [
+				'success' => false,
+				'message' => 'Plant pengguna tidak ditemukan.'
+			];
+		}
+
+		// Filter dasar data QC
 		$filter_data = function () use ($tanggal, $plant, $tipe_user) {
+
 			$this->db
 				->where('DATE(date)', $tanggal)
 				->where('is_audit', 0);
 
-			if ($tipe_user != 1 && $tipe_user != 9) {
+			// User 1 dan 9 dapat melihat lintas plant
+			if (!in_array($tipe_user, [1, 9], true)) {
 				$this->db->where('plant', $plant);
 			}
 		};
@@ -264,37 +310,71 @@ class Chiller_model extends CI_Model
 		$filter_data();
 		$total = $this->db->count_all_results('chiller');
 
-		// Hitung data yang siap diverifikasi SPV
-		$filter_data();
-		$this->db
-			->where('status_produksi', '1')
-			->where_in('status_spv', ['0', '2']);
+		// Tentukan kondisi dan data update
+		if ($jenis === 'produksi') {
 
-		$siap_verifikasi = $this->db->count_all_results('chiller');
+			// Produksi: hanya data Created
+			$filter_data();
+			$this->db->where('status_produksi', '0');
 
-		if ($siap_verifikasi == 0) {
-			return [
-				'success' => true,
-				'total' => $total,
-				'updated' => 0,
-				'message' => 'Tidak ada data yang siap diverifikasi SPV.'
+			$siap_verifikasi = $this->db->count_all_results('chiller');
+
+			if ($siap_verifikasi == 0) {
+				return [
+					'success' => true,
+					'total' => $total,
+					'updated' => 0,
+					'message' => 'Tidak ada data Chiller dengan status Produksi Created.'
+				];
+			}
+
+			$data_update = [
+				'nama_produksi' => $nama_petugas,
+				'status_produksi' => '1',
+				'tgl_update_produksi' => date('Y-m-d H:i:s')
+			];
+		} else {
+
+			// SPV: produksi harus sudah Verified
+			$filter_data();
+			$this->db
+				->where('status_produksi', '1')
+				->where_in('status_spv', ['0', '2']);
+
+			$siap_verifikasi = $this->db->count_all_results('chiller');
+
+			if ($siap_verifikasi == 0) {
+				return [
+					'success' => true,
+					'total' => $total,
+					'updated' => 0,
+					'message' => 'Tidak ada data yang siap diverifikasi SPV.'
+				];
+			}
+
+			$data_update = [
+				'nama_spv' => $nama_petugas,
+				'status_spv' => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
 			];
 		}
 
-		$data = [
-			'nama_spv' => $nama_spv,
-			'status_spv' => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		];
-
+		// Proses update
 		$this->db->trans_begin();
 
 		$filter_data();
-		$this->db
-			->where('status_produksi', '1')
-			->where_in('status_spv', ['0', '2']);
 
-		$this->db->update('chiller', $data);
+		if ($jenis === 'produksi') {
+			$this->db->where('status_produksi', '0');
+		} else {
+			$this->db
+				->where('status_produksi', '1')
+				->where_in('status_spv', ['0', '2']);
+		}
+
+		$this->db->update('chiller', $data_update);
+
+		$jumlah_update = $this->db->affected_rows();
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
@@ -310,8 +390,10 @@ class Chiller_model extends CI_Model
 		return [
 			'success' => true,
 			'total' => $total,
-			'updated' => $siap_verifikasi,
-			'message' => 'Verifikasi massal berhasil diproses.'
+			'updated' => $jumlah_update,
+			'message' => $jenis === 'produksi'
+				? 'Verifikasi massal Produksi berhasil diproses.'
+				: 'Verifikasi massal SPV berhasil diproses.'
 		];
 	}
 

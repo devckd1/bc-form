@@ -29,8 +29,13 @@
 			<!-- FILTER DAN TOMBOL -->
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if ($boleh_verifikasi): ?>
+				<?php
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9]);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9]);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
+
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<input
@@ -38,25 +43,44 @@
 							id="filterTanggal"
 							class="form-control mr-2 mb-2"
 							style="width: 170px;"
-							value="<?= html_escape($filter_tanggal) ?>">
+							value="<?= html_escape($filter_tanggal ?? '') ?>">
 
-						<button
-							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+						<?php if ($boleh_verifikasi_spv): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btn-verifikasi-massal"
+								data-jenis="spv">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+
+							</button>
+						<?php endif; ?>
+
+						<?php if ($boleh_verifikasi_produksi): ?>
+							<button
+								type="button"
+								class="btn btn-primary mb-2 btn-verifikasi-massal"
+								data-jenis="produksi">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+
+							</button>
+						<?php endif; ?>
 
 						<button
 							type="button"
 							id="resetFilterKekuatanMagnet"
 							class="btn btn-secondary ml-2 mb-2">
+
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
+
 						</button>
 
 					</div>
+
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
@@ -334,6 +358,7 @@
 
 			// FILTER OTOMATIS SAAT TANGGAL BERUBAH
 			$('#filterTanggal').on('change', function() {
+
 				const tanggal = $(this).val();
 
 				let url = baseUrl;
@@ -346,15 +371,20 @@
 				window.location.href = url;
 			});
 
+
 			// RESET FILTER
 			$('#resetFilterKekuatanMagnet').on('click', function() {
+
 				$('#pageLoading').css('display', 'flex');
 				window.location.href = baseUrl;
 			});
 
-			// VERIFIKASI MASSAL SPV
-			$('#btnVerifikasiMassal').on('click', function() {
 
+			// VERIFIKASI MASSAL SPV DAN PRODUKSI
+			$('.btn-verifikasi-massal').on('click', function() {
+
+				const tombol = $(this);
+				const jenis = tombol.data('jenis');
 				const tanggal = $('#filterTanggal').val();
 
 				if (!tanggal) {
@@ -366,60 +396,113 @@
 					return;
 				}
 
+				const namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
+
+				const pesanKonfirmasi = jenis === 'spv' ?
+					'Data Kekuatan Magnet pada tanggal ' + tanggal +
+					' yang sudah diverifikasi Produksi dan berstatus SPV Created atau Revision akan diverifikasi.' :
+					'Data Kekuatan Magnet pada tanggal ' + tanggal +
+					' yang belum diverifikasi Produksi akan diproses.';
+
 				Swal.fire({
-					title: 'Verifikasi semua data?',
-					text: 'Data Kekuatan Magnet pada tanggal ' + tanggal +
-						' dengan status produksi sudah disetujui dan status SPV Created atau Revision akan diverifikasi.',
+
+					title: 'Verifikasi semua data ' + namaJenis + '?',
+
+					text: pesanKonfirmasi,
+
 					icon: 'question',
+
 					showCancelButton: true,
+
 					confirmButtonText: 'Ya, verifikasi',
+
 					cancelButtonText: 'Batal'
+
 				}).then((result) => {
 
 					if (!result.isConfirmed) {
 						return;
 					}
 
+					const semuaTombol = $('.btn-verifikasi-massal');
+
+					semuaTombol.prop('disabled', true);
+
+					tombol.html(
+						'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+					);
+
 					$.ajax({
+
 						url: '<?= base_url('kekuatanmagnet/verifikasi_massal'); ?>',
+
 						type: 'POST',
+
 						dataType: 'json',
+
 						data: {
-							tanggal: tanggal
+							tanggal: tanggal,
+							jenis_verifikasi: jenis
 						},
-						beforeSend: function() {
-							$('#btnVerifikasiMassal')
-								.prop('disabled', true)
-								.html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
-						},
+
 						success: function(response) {
+
 							Swal.fire({
+
 								icon: response.status ? 'success' : 'info',
+
 								title: response.status ? 'Berhasil' : 'Informasi',
+
 								text: response.message
+
 							}).then(() => {
+
 								if (response.status) {
+
 									$('#pageLoading').css('display', 'flex');
+
 									window.location.href = baseUrl +
 										'?tanggal=' + encodeURIComponent(tanggal);
+
 								}
+
 							});
+
 						},
-						error: function() {
+
+						error: function(xhr) {
+
+							let pesan = 'Terjadi kesalahan saat memproses verifikasi massal.';
+
+							if (xhr.responseJSON && xhr.responseJSON.message) {
+								pesan = xhr.responseJSON.message;
+							}
+
 							Swal.fire({
 								icon: 'error',
 								title: 'Gagal',
-								text: 'Terjadi kesalahan saat memproses verifikasi massal.'
+								text: pesan
 							});
+
 						},
+
 						complete: function() {
-							$('#btnVerifikasiMassal')
-								.prop('disabled', false)
-								.html('<i class="fas fa-check-double"></i> Verifikasi');
+
+							semuaTombol.prop('disabled', false);
+
+							tombol.html(
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal ' +
+								namaJenis
+							);
+
 						}
+
 					});
+
 				});
+
 			});
+
 
 			// LOADING SAAT PINDAH HALAMAN PAGINATION
 			$('.pagination a').on('click', function() {

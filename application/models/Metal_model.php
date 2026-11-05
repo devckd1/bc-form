@@ -616,32 +616,58 @@ class Metal_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv  = $this->session->userdata('username');
 
-		if (empty($tanggal)) {
-			return 0;
+		if (empty($tanggal) || !in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
 		}
 
+		$this->db->trans_begin();
+
+		// Filter dasar
 		$this->db->where('is_audit', 0);
 		$this->db->where('date_metal', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
-		if (!in_array($type_user, [9, 1])) {
+		// Role 1 dan 9 dapat memproses lintas plant
+		if (!in_array($type_user, [1, 9], true)) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->update('metal', [
-			'nama_spv_metal'       => $nama_spv,
-			'status_spv'           => '1',
-			'tgl_update_spv_metal' => date('Y-m-d H:i:s')
-		]);
+		if ($jenis === 'produksi') {
 
-		return $this->db->affected_rows();
+			// Produksi: Created menjadi Verified
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('metal', [
+				'status_produksi' => '1'
+			]);
+		} else {
+
+			// SPV hanya memproses data yang sudah diverifikasi Produksi
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('metal', [
+				'nama_spv_metal'       => $nama_spv,
+				'status_spv'           => '1',
+				'tgl_update_spv_metal' => date('Y-m-d H:i:s')
+			]);
+		}
+
+		$jumlah = $this->db->affected_rows();
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$this->db->trans_commit();
+
+		return $jumlah;
 	}
 
 	public function delete_by_uuid($uuid)

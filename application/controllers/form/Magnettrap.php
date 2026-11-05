@@ -282,20 +282,79 @@ class Magnettrap extends MY_Controller
 	// ======================= Verifikasi Massal SPV =======================
 	public function verifikasi_massal()
 	{
-		if ($this->input->method() !== 'post') {
-			show_404();
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
 			return;
 		}
 
-		$tanggal = $this->input->post('tanggal');
-		$shift = $this->input->post('shift');
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
-		$result = $this->magnettrap_model->verifikasi_massal_spv(
-			$tanggal,
-			$shift
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
 		);
 
-		$this->output
+		// Hak akses
+		$role_spv = [0, 1, 2, 9];
+		$role_produksi = [0, 1, 3, 9];
+
+		if (
+			($jenis_verifikasi === 'spv' && !in_array($tipe_user, $role_spv)) ||
+			($jenis_verifikasi === 'produksi' && !in_array($tipe_user, $role_produksi))
+		) {
+			$result = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki hak akses untuk verifikasi ini.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			$result = [
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (!$date || $date->format('Y-m-d') !== $tanggal) {
+			$result = [
+				'success' => false,
+				'message' => 'Format tanggal tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+			$result = [
+				'success' => false,
+				'message' => 'Shift tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		$result = $this->magnettrap_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
+
+		return $this->output
 			->set_content_type('application/json')
 			->set_output(json_encode($result));
 	}
@@ -551,9 +610,6 @@ class Magnettrap extends MY_Controller
 
 		$data['magnettrap'] = $magnettrap_data_verif;
 
-		// =====================================================
-		// AMBIL MASTER DOKUMEN BERDASARKAN UUID
-		// =====================================================
 		// =====================================================
 		// AMBIL MASTER DOKUMEN BERDASARKAN UUID DAN PLANT
 		// =====================================================

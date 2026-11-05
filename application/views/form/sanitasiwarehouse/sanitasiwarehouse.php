@@ -31,8 +31,14 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if ($boleh_verifikasi): ?>
+				<?php
+				$tipe_user = (int) $this->session->userdata('tipe_user');
+
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<input
@@ -40,19 +46,31 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 							id="filterTanggal"
 							class="form-control mr-2 mb-2"
 							style="width: 170px;"
-							value="<?= html_escape($filter_tanggal) ?>">
+							value="<?= html_escape($filter_tanggal ?? '') ?>">
 
-						<button
-							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+						<?php if ($boleh_verifikasi_spv): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+								data-jenis="spv">
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal SPV
+							</button>
+						<?php endif; ?>
+
+						<?php if ($boleh_verifikasi_produksi): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+								data-jenis="produksi">
+								<i class="fas fa-industry mr-1"></i>
+								Verifikasi Massal
+							</button>
+						<?php endif; ?>
 
 						<a
 							href="<?= base_url('sanitasiwarehouse') ?>"
-							class="btn btn-secondary ml-2 mb-2">
+							class="btn btn-secondary mb-2">
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</a>
@@ -268,7 +286,7 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 	<script>
 		$(document).ready(function() {
 
-			// Filter otomatis berdasarkan tanggal
+			// Filter tanggal
 			$('#filterTanggal').on('change', function() {
 				const tanggal = $(this).val();
 				let url = '<?= base_url('sanitasiwarehouse') ?>';
@@ -280,10 +298,14 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 				window.location.href = url;
 			});
 
-			// Verifikasi massal
-			$('#btnVerifikasiMassal').on('click', function() {
+			// Verifikasi massal SPV dan Produksi
+			$('.btnVerifikasiMassal').on('click', function() {
 
+				const tombol = $(this);
+				const jenis = tombol.data('jenis');
 				const tanggal = $('#filterTanggal').val();
+
+				const namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
 
 				if (!tanggal) {
 					Swal.fire({
@@ -294,34 +316,53 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 					return;
 				}
 
+				const keterangan = jenis === 'spv' ?
+					'Data Sanitasi Warehouse pada tanggal ' + tanggal +
+					' yang memenuhi status Warehouse dan berstatus SPV Created atau Revision akan diverifikasi.' :
+					'Data Sanitasi Warehouse berstatus Produksi Created pada tanggal ' +
+					tanggal + ' akan diverifikasi.';
+
 				Swal.fire({
-					title: 'Verifikasi Massal?',
-					text: 'Data Sanitasi Warehouse pada tanggal ' + tanggal +
-						' yang memenuhi status Warehouse dan berstatus SPV Created atau Revision akan diverifikasi.',
+					title: 'Verifikasi Massal ' + namaJenis + '?',
+					text: keterangan,
 					icon: 'question',
 					showCancelButton: true,
-					confirmButtonColor: '#28a745',
+					confirmButtonColor: jenis === 'spv' ? '#007bff' : '#28a745',
 					cancelButtonColor: '#6c757d',
 					confirmButtonText: 'Ya, Verifikasi',
 					cancelButtonText: 'Batal'
-				}).then((result) => {
+				}).then(function(result) {
 
 					if (!result.isConfirmed) {
 						return;
 					}
+
+					const teksAwal = tombol.html();
 
 					$.ajax({
 						url: '<?= base_url('sanitasiwarehouse/verifikasi_massal'); ?>',
 						type: 'POST',
 						dataType: 'json',
 						data: {
-							tanggal: tanggal
+							tanggal: tanggal,
+							jenis_verifikasi: jenis
 						},
 
 						beforeSend: function() {
-							$('#btnVerifikasiMassal')
+							tombol
 								.prop('disabled', true)
-								.html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
+								.html(
+									'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+								);
+
+							Swal.fire({
+								title: 'Memproses...',
+								text: 'Sedang melakukan verifikasi Sanitasi Warehouse oleh ' + namaJenis + '.',
+								allowOutsideClick: false,
+								didOpen: function() {
+									Swal.showLoading();
+								}
+							});
 						},
 
 						success: function(response) {
@@ -329,11 +370,16 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 								icon: response.status ? 'success' : 'info',
 								title: response.status ? 'Berhasil' : 'Informasi',
 								text: response.message
-							}).then(() => {
+							}).then(function() {
+
 								if (response.status) {
-									window.location.href =
-										'<?= base_url('sanitasiwarehouse') ?>?tanggal=' +
-										encodeURIComponent(tanggal);
+									let url = '<?= base_url('sanitasiwarehouse') ?>';
+
+									if (tanggal) {
+										url += '?tanggal=' + encodeURIComponent(tanggal);
+									}
+
+									window.location.href = url;
 								}
 							});
 						},
@@ -348,9 +394,9 @@ $filter_tanggal = $filter_tanggal ?? $tanggal ?? '';
 						},
 
 						complete: function() {
-							$('#btnVerifikasiMassal')
+							tombol
 								.prop('disabled', false)
-								.html('<i class="fas fa-check-double"></i> Verifikasi');
+								.html(teksAwal);
 						}
 					});
 				});

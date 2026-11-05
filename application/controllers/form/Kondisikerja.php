@@ -71,27 +71,27 @@ class Kondisikerja extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $kondisikerja = $this->kondisikerja_model->get_by_uuid($uuid);
+	{
+		$kondisikerja = $this->kondisikerja_model->get_by_uuid($uuid);
 
-    if (!$kondisikerja) {
-        show_404();
-        return;
-    }
+		if (!$kondisikerja) {
+			show_404();
+			return;
+		}
 
-    $data = array(
-        'kondisikerja' => $kondisikerja,
-        'is_popup' => $this->input->get('popup') == '1'
-    );
+		$data = array(
+			'kondisikerja' => $kondisikerja,
+			'is_popup' => $this->input->get('popup') == '1'
+		);
 
-    $this->active_nav = 'kondisikerja';
+		$this->active_nav = 'kondisikerja';
 
-    if ($data['is_popup']) {
-        $this->load->view('form/kondisikerja/kondisikerja-detail', $data);
-    } else {
-        $this->render('form/kondisikerja/kondisikerja-detail', $data);
-    }
-}
+		if ($data['is_popup']) {
+			$this->load->view('form/kondisikerja/kondisikerja-detail', $data);
+		} else {
+			$this->render('form/kondisikerja/kondisikerja-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -219,8 +219,24 @@ class Kondisikerja extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
-		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		if ($this->input->method() !== 'post') {
+			show_404();
+			return;
+		}
+
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		$shift = trim(
+			$this->input->post('shift', TRUE) ?? ''
+		);
+
+		$jenis = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
+		);
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
 		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
@@ -228,34 +244,76 @@ class Kondisikerja extends MY_Controller
 			!$tanggal_obj ||
 			$tanggal_obj->format('Y-m-d') !== $tanggal
 		) {
-			return $this->output
-				->set_content_type('application/json')
-				->set_output(json_encode([
-					'success' => false,
-					'message' => 'Tanggal tidak valid.'
-				]));
-		}
-
-		$updated = $this->kondisikerja_model
-			->verifikasi_massal_spv($tanggal, $shift);
-
-		if ($updated === false) {
 			$response = [
 				'success' => false,
-				'message' => 'Verifikasi massal Kondisi Kerja gagal diproses.'
+				'message' => 'Tanggal tidak valid.'
 			];
-		} elseif ($updated > 0) {
+		} elseif (!in_array($jenis, ['spv', 'produksi'], true)) {
+
 			$response = [
-				'success' => true,
-				'updated' => $updated,
-				'message' => 'Verifikasi massal Kondisi Kerja berhasil.'
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+		} elseif (
+			$jenis === 'spv' &&
+			!in_array($tipe_user, [0, 1, 2, 9], true)
+		) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+			];
+		} elseif (
+			$jenis === 'produksi' &&
+			!in_array($tipe_user, [0, 1, 3, 9], true)
+		) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi Produksi.'
+			];
+		} elseif (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Shift tidak valid.'
 			];
 		} else {
-			$response = [
-				'success' => false,
-				'updated' => 0,
-				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
-			];
+
+			$updated = $this->kondisikerja_model->verifikasi_massal(
+				$tanggal,
+				$shift,
+				$jenis
+			);
+
+			if ($updated === false) {
+
+				$response = [
+					'success' => false,
+					'message' => 'Verifikasi massal Kondisi Kerja gagal diproses.'
+				];
+			} elseif ($updated > 0) {
+
+				$nama_jenis = $jenis === 'produksi'
+					? 'Produksi'
+					: 'SPV';
+
+				$response = [
+					'success' => true,
+					'updated' => $updated,
+					'message' => 'Verifikasi massal Kondisi Kerja ' .
+						$nama_jenis . ' berhasil.'
+				];
+			} else {
+
+				$response = [
+					'success' => false,
+					'updated' => 0,
+					'message' => $jenis === 'produksi'
+						? 'Tidak ada data Produksi dengan status Created pada tanggal dan shift tersebut.'
+						: 'Tidak ada data SPV dengan status Created atau Revision yang memenuhi syarat pada tanggal dan shift tersebut.'
+				];
+			}
 		}
 
 		return $this->output

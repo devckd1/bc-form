@@ -207,11 +207,81 @@ class Chiller extends MY_Controller
 			return;
 		}
 
-		$tanggal = $this->input->post('tanggal', TRUE);
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
 
-		$result = $this->chiller_model->verifikasi_massal_spv($tanggal);
+		$jenis = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
+		);
 
-		$this->output
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$tanggal_obj ||
+			$tanggal_obj->format('Y-m-d') !== $tanggal
+		) {
+			$result = [
+				'success' => false,
+				'message' => 'Tanggal tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		// Validasi jenis verifikasi
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			$result = [
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		// Hak akses SPV
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		if (
+			$jenis === 'spv' &&
+			!in_array($tipe_user, [0, 1, 2, 9], true)
+		) {
+			$result = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		// Hak akses Produksi
+		if (
+			$jenis === 'produksi' &&
+			!in_array($tipe_user, [0, 1, 3, 9], true)
+		) {
+			$result = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi Produksi.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($result));
+		}
+
+		$result = $this->chiller_model->verifikasi_massal(
+			$tanggal,
+			$jenis
+		);
+
+		return $this->output
 			->set_content_type('application/json')
 			->set_output(json_encode($result));
 	}

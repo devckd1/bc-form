@@ -1259,7 +1259,7 @@ class Produksi_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis_verifikasi = 'spv')
 	{
 		$plant = $this->session->userdata('plant');
 		$username = $this->session->userdata('username');
@@ -1268,19 +1268,74 @@ class Produksi_model extends CI_Model
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
-		$this->db->from('mixing');
-		$this->db->where('plant', $plant);
-		$this->db->where('is_audit', 0);
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
-
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return false;
 		}
 
-		$jumlah_data = $this->db->count_all_results();
+		// Filter data utama
+		$filter_data = function () use ($plant, $tanggal, $shift) {
+			$this->db
+				->where('plant', $plant)
+				->where('is_audit', 0)
+				->where('DATE(date)', $tanggal);
+
+			if (!empty($shift) && $shift !== 'semua') {
+				$this->db->where('shift', $shift);
+			}
+		};
+
+		// =====================================================
+		// VERIFIKASI SPV
+		// =====================================================
+		if ($jenis_verifikasi === 'spv') {
+
+			$filter_data();
+
+			$this->db
+				->where('status_produksi', '1')
+				->where_in('status_spv', ['0', '2']);
+
+			$jumlah_data = $this->db->count_all_results('mixing');
+
+			if ($jumlah_data == 0) {
+				return 0;
+			}
+
+			$this->db->trans_begin();
+
+			$filter_data();
+
+			$this->db
+				->where('status_produksi', '1')
+				->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('mixing', [
+				'nama_spv'   => $username,
+				'status_spv' => '1',
+				'tgl_update' => date('Y-m-d H:i:s')
+			]);
+
+			if ($this->db->trans_status() === false) {
+				$this->db->trans_rollback();
+				return false;
+			}
+
+			$updated = $this->db->affected_rows();
+
+			$this->db->trans_commit();
+
+			return $updated;
+		}
+
+		// =====================================================
+		// VERIFIKASI PRODUKSI
+		// =====================================================
+
+		$filter_data();
+
+		$this->db->where('status_produksi', '0');
+
+		$jumlah_data = $this->db->count_all_results('mixing');
 
 		if ($jumlah_data == 0) {
 			return 0;
@@ -1288,21 +1343,12 @@ class Produksi_model extends CI_Model
 
 		$this->db->trans_begin();
 
-		// Update data utama saja
-		$this->db->where('plant', $plant);
-		$this->db->where('is_audit', 0);
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
+		$filter_data();
 
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
-		}
+		$this->db->where('status_produksi', '0');
 
 		$this->db->update('mixing', [
-			'nama_spv'   => $username,
-			'status_spv' => '1',
-			'tgl_update' => date('Y-m-d H:i:s')
+			'status_produksi' => '1'
 		]);
 
 		if ($this->db->trans_status() === false) {

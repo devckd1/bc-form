@@ -29,35 +29,54 @@
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
 				<!-- Filter tanggal dan verifikasi massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 
-					<div class="d-flex align-items-center flex-wrap mb-2">
-						<form id="formVerifikasiMassal"
-							action="<?= base_url('suhu/verifikasi_massal'); ?>"
-							method="post"
-							class="d-flex align-items-center flex-wrap">
-							<input type="date"
-								id="filter_tanggal"
-								name="tanggal"
-								class="form-control mr-2 mb-2"
-								style="width: 170px;"
-								value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-								required>
+
+				<div class="d-flex align-items-center flex-wrap mb-2">
+					<form id="formVerifikasiMassal"
+						action="<?= base_url('suhu/verifikasi_massal'); ?>"
+						method="post"
+						class="d-flex align-items-center flex-wrap">
+
+						<input type="date"
+							id="filter_tanggal"
+							name="tanggal"
+							class="form-control mr-2 mb-2"
+							style="width: 170px;"
+							value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+							required>
+						<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+							<!-- Tombol Verifikasi SPV -->
 							<button type="submit"
-								id="btnVerifikasiMassal"
-								class="btn btn-primary mb-2">
+								name="jenis_verifikasi"
+								value="spv"
+								class="btn btn-primary mb-2 mr-1">
 								<i class="fas fa-check-double mr-1"></i>
 								Verifikasi Massal
 							</button>
-						</form>
-						<a href="<?= base_url('suhu'); ?>"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
-						</a>
-					</div>
+						<?php endif; ?>
+						<!-- Tombol Verifikasi Produksi -->
+						<?php
+						$tipe_user = $this->session->userdata('tipe_user');
+						?>
 
-				<?php endif; ?>
+						<?php if (in_array($tipe_user, [0, 1, 3, 9])): ?>
+							<button type="submit"
+								name="jenis_verifikasi"
+								value="produksi"
+								class="btn btn-primary mb-2">
+								<i class="fas fa-industry mr-1"></i>
+								Verifikasi Massal
+							</button>
+						<?php endif; ?>
+
+					</form>
+
+					<a href="<?= base_url('suhu'); ?>"
+						class="btn btn-secondary ml-2 mb-2">
+						<i class="fas fa-sync-alt mr-1"></i>
+						Reset
+					</a>
+				</div>
 
 				<!-- Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -281,50 +300,62 @@
 
 		// Filter tanggal otomatis
 		$('#filter_tanggal').on('change', function() {
-
 			var tanggal = $(this).val();
 
 			if (tanggal) {
 				window.location.href =
 					"<?= base_url('suhu'); ?>?tanggal=" + tanggal;
 			}
-
 		});
 
-
-		// Verifikasi massal SPV
+		// Verifikasi massal SPV dan Produksi
 		$('#formVerifikasiMassal').on('submit', function(e) {
 
 			e.preventDefault();
 
 			var form = $(this);
-			var tombol = $('#btnVerifikasiMassal');
 
-			if (!form.find('[name="tanggal"]').val()) {
+			// Ambil tombol yang diklik
+			var submitter = e.originalEvent ?
+				e.originalEvent.submitter :
+				null;
 
+			var jenis = submitter ?
+				$(submitter).val() :
+				'spv';
+
+			var tombol = $(submitter);
+
+			var tanggal = form.find('[name="tanggal"]').val();
+
+			if (!tanggal) {
 				Swal.fire(
 					'Perhatian',
 					'Silakan pilih tanggal terlebih dahulu.',
 					'warning'
 				);
-
 				return;
 			}
 
+			var judul = jenis === 'produksi' ?
+				'Verifikasi Massal Produksi?' :
+				'Verifikasi Massal SPV?';
+
+			var keterangan = jenis === 'produksi' ?
+				'Data Suhu Ruang QC dengan status Created pada tanggal tersebut akan diproses.' :
+				'Data Suhu Ruang QC dengan status Approved pada tanggal tersebut akan diproses.';
+
+			var teksTombol = jenis === 'produksi' ?
+				'Verifikasi Massal Produksi' :
+				'Verifikasi Massal SPV';
+
 			Swal.fire({
-
-				title: 'Verifikasi Massal?',
-
-				text: 'Data Suhu Ruang QC dengan status Produksi Checked dan status SPV Created atau Revision pada tanggal tersebut akan diproses.',
-
+				title: judul,
+				text: keterangan,
 				icon: 'question',
-
 				showCancelButton: true,
-
 				confirmButtonText: 'Ya, Verifikasi',
-
 				cancelButtonText: 'Batal'
-
 			}).then(function(result) {
 
 				if (!result.isConfirmed) {
@@ -337,14 +368,15 @@
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
 				);
 
+				var dataForm = form.serialize();
+
+				// Tambahkan jenis verifikasi ke data AJAX
+				dataForm += '&jenis_verifikasi=' + encodeURIComponent(jenis);
+
 				$.ajax({
-
 					url: form.attr('action'),
-
 					type: 'POST',
-
-					data: form.serialize(),
-
+					data: dataForm,
 					dataType: 'json',
 
 					success: function(response) {
@@ -352,19 +384,13 @@
 						if (response.success) {
 
 							Swal.fire({
-
 								title: 'Berhasil',
-
 								text: response.message +
 									' Jumlah data: ' +
 									response.updated,
-
 								icon: 'success'
-
 							}).then(function() {
-
 								window.location.reload();
-
 							});
 
 						} else {
@@ -378,11 +404,10 @@
 							tombol.prop('disabled', false);
 
 							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+								'<i class="fas fa-check-double mr-1"></i> ' +
+								teksTombol
 							);
-
 						}
-
 					},
 
 					error: function(xhr) {
@@ -396,15 +421,13 @@
 						tombol.prop('disabled', false);
 
 						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							'<i class="fas fa-check-double mr-1"></i> ' +
+							teksTombol
 						);
-
 					}
-
 				});
 
 			});
-
 		});
 
 	});

@@ -27,49 +27,59 @@
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
-					<div class="d-flex align-items-center flex-wrap mb-2">
+				<!-- FILTER DAN VERIFIKASI MASSAL -->
+				<div class="d-flex align-items-center flex-wrap mb-2">
 
-						<input
-							type="date"
-							id="filter_tanggal"
-							class="form-control mr-2 mb-2"
-							style="width: 170px;"
-							value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+					<input
+						type="date"
+						id="filter_tanggal"
+						class="form-control mr-2 mb-2"
+						style="width: 170px;"
+						value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 
-						<select
-							id="filter_shift"
-							class="form-control mr-2 mb-2"
-							style="width: 140px;">
+					<select
+						id="filter_shift"
+						class="form-control mr-2 mb-2"
+						style="width: 140px;">
 
-							<option value="">Semua Shift</option>
+						<option value="">Semua Shift</option>
 
-							<?php foreach (['1', '2', '3'] as $shift): ?>
-								<option value="<?= $shift; ?>"
-									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
-									Shift <?= $shift; ?>
-								</option>
-							<?php endforeach; ?>
+						<?php foreach (['1', '2', '3'] as $shift): ?>
+							<option value="<?= $shift; ?>"
+								<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
+								Shift <?= $shift; ?>
+							</option>
+						<?php endforeach; ?>
 
-						</select>
+					</select>
 
+					<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 						<button
 							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
+							class="btn btn-primary btn-verifikasi-massal mr-1 mb-2"
+							data-jenis="spv">
+							<i class="fas fa-check-double mr-1"></i>
+							Verifikasi Massal 
+						</button>
+					<?php endif; ?>
+
+					<?php if (in_array($tipe_user, [0, 1, 3, 9])): ?>
+						<button
+							type="button"
+							class="btn btn-primary btn-verifikasi-massal mb-2"
+							data-jenis="produksi">
 							<i class="fas fa-check-double mr-1"></i>
 							Verifikasi Massal
 						</button>
+					<?php endif; ?>
 
-						<a href="<?= base_url('thermometer'); ?>"
-							class="btn btn-secondary ml-2 mb-2">
-							<i class="fas fa-sync-alt mr-1"></i>
-							Reset
-						</a>
+					<a href="<?= base_url('thermometer'); ?>"
+						class="btn btn-secondary ml-2 mb-2">
+						<i class="fas fa-sync-alt mr-1"></i>
+						Reset
+					</a>
 
-					</div>
-				<?php endif; ?>
+				</div>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -319,12 +329,15 @@
 			filterThermometer();
 		});
 
-		// Verifikasi massal SPV
-		$('#btnVerifikasiMassal').on('click', function() {
+		// Verifikasi massal SPV dan Produksi
+		$('.btn-verifikasi-massal').on('click', function() {
 
 			var tanggal = $('#filter_tanggal').val();
 			var shift = $('#filter_shift').val();
+			var jenis = $(this).data('jenis');
 			var tombol = $(this);
+
+			var namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
 
 			if (!tanggal) {
 				Swal.fire(
@@ -336,8 +349,8 @@
 			}
 
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Data Thermometer dengan status SPV Created atau Revision pada tanggal dan shift terpilih akan diverifikasi.',
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+				text: 'Data Thermometer yang memenuhi syarat pada tanggal dan shift terpilih akan diverifikasi oleh ' + namaJenis + '.',
 				icon: 'question',
 				showCancelButton: true,
 				confirmButtonText: 'Ya, Verifikasi',
@@ -348,10 +361,15 @@
 					return;
 				}
 
+				var htmlAwal = tombol.html();
+
 				tombol.prop('disabled', true);
 				tombol.html(
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
 				);
+
+				// Nonaktifkan tombol lainnya selama proses
+				$('.btn-verifikasi-massal').prop('disabled', true);
 
 				$.ajax({
 					url: "<?= base_url('thermometer/verifikasi_massal'); ?>",
@@ -359,7 +377,8 @@
 					dataType: 'json',
 					data: {
 						tanggal: tanggal,
-						shift: shift || 'semua'
+						shift: shift || 'semua',
+						jenis_verifikasi: jenis
 					},
 
 					success: function(response) {
@@ -381,9 +400,8 @@
 							);
 
 							tombol.prop('disabled', false);
-							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
-							);
+							tombol.html(htmlAwal);
+							$('.btn-verifikasi-massal').prop('disabled', false);
 						}
 					},
 
@@ -395,9 +413,8 @@
 						);
 
 						tombol.prop('disabled', false);
-						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
-						);
+						tombol.html(htmlAwal);
+						$('.btn-verifikasi-massal').prop('disabled', false);
 					}
 				});
 			});

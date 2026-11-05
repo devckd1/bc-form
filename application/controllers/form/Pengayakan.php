@@ -178,9 +178,59 @@ class Pengayakan extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
-		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
+			return;
+		}
 
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		$shift = trim(
+			$this->input->post('shift', TRUE) ?? ''
+		);
+
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
+		);
+
+		// Validasi role
+		if ($jenis_verifikasi === 'spv') {
+
+			if (!in_array($tipe_user, [0, 1, 2, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
+						'success' => false,
+						'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+					]));
+			}
+		} elseif ($jenis_verifikasi === 'produksi') {
+
+			if (!in_array($tipe_user, [0, 1, 3, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
+						'success' => false,
+						'message' => 'Anda tidak memiliki akses verifikasi Produksi.'
+					]));
+			}
+		} else {
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Jenis verifikasi tidak valid.'
+				]));
+		}
+
+		// Validasi tanggal
 		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
 		if (
@@ -195,25 +245,49 @@ class Pengayakan extends MY_Controller
 				]));
 		}
 
-		$updated = $this->pengayakan_model
-			->verifikasi_massal_spv($tanggal, $shift);
+		// Validasi shift
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
+		$updated = $this->pengayakan_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
+
+		$nama_jenis = ($jenis_verifikasi === 'spv')
+			? 'SPV'
+			: 'Produksi';
 
 		if ($updated === false) {
+
 			$response = [
 				'success' => false,
-				'message' => 'Verifikasi massal Pengayakan gagal diproses.'
+				'message' => 'Verifikasi massal Pengayakan ' .
+					$nama_jenis . ' gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Pengayakan berhasil.'
+				'message' => 'Verifikasi massal Pengayakan ' .
+					$nama_jenis . ' berhasil.'
 			];
 		} else {
+
 			$response = [
 				'success' => false,
 				'updated' => 0,
-				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
+				'message' => 'Tidak ada data Pengayakan yang memenuhi ' .
+					'syarat verifikasi ' . $nama_jenis .
+					' pada tanggal dan shift tersebut.'
 			];
 		}
 

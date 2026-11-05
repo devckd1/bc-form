@@ -200,56 +200,103 @@ class Kekuatanmagnet extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tipe_user = $this->session->userdata('tipe_user');
-
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
-			show_error(
-				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
-				403
-			);
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
 			return;
 		}
 
-		$tanggal = $this->input->post('tanggal', true);
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
-		if (empty($tanggal)) {
-			$response = [
-				'status' => false,
-				'message' => 'Tanggal harus dipilih.'
-			];
-		} else {
-			$date = DateTime::createFromFormat('Y-m-d', $tanggal);
-			$shift = $this->input->post('shift', true);
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
 
-			if (!$date || $date->format('Y-m-d') !== $tanggal) {
-				$response = [
-					'status' => false,
-					'message' => 'Format tanggal tidak valid.'
-				];
-			} else {
-				$jumlah = $this->kekuatanmagnet_model
-					->verifikasi_massal_spv($tanggal, $shift);
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
+		);
 
-				if ($jumlah === false) {
-					$response = [
+		// Validasi hak akses
+		if ($jenis_verifikasi === 'spv') {
+
+			if (!in_array($tipe_user, [0, 1, 2, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
 						'status' => false,
-						'message' => 'Verifikasi massal gagal diproses.'
-					];
-				} elseif ($jumlah == 0) {
-					$response = [
-						'status' => false,
-						'message' => 'Tidak ada data Kekuatan Magnet dengan status produksi 1 dan status SPV Created atau Revision pada tanggal tersebut.'
-					];
-				} else {
-					$response = [
-						'status' => true,
-						'message' => $jumlah . ' data Kekuatan Magnet berhasil diverifikasi.'
-					];
-				}
+						'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+					]));
 			}
+		} elseif ($jenis_verifikasi === 'produksi') {
+
+			if (!in_array($tipe_user, [0, 1, 3, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
+						'status' => false,
+						'message' => 'Anda tidak memiliki akses verifikasi Produksi.'
+					]));
+			}
+		} else {
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Jenis verifikasi tidak valid.'
+				]));
 		}
 
-		$this->output
+		// Validasi tanggal
+		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+
+		if (
+			!$date ||
+			$date->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Format tanggal tidak valid.'
+				]));
+		}
+
+		$jumlah = $this->kekuatanmagnet_model
+			->verifikasi_massal($tanggal, $jenis_verifikasi);
+
+		$nama_jenis = ($jenis_verifikasi === 'spv')
+			? 'SPV'
+			: 'Produksi';
+
+		if ($jumlah === false) {
+
+			$response = [
+				'status' => false,
+				'message' => 'Verifikasi massal Kekuatan Magnet ' .
+					$nama_jenis . ' gagal diproses.'
+			];
+		} elseif ($jumlah == 0) {
+
+			$response = [
+				'status' => false,
+				'message' => 'Tidak ada data Kekuatan Magnet yang memenuhi ' .
+					'syarat verifikasi ' . $nama_jenis .
+					' pada tanggal tersebut.'
+			];
+		} else {
+
+			$response = [
+				'status' => true,
+				'updated' => $jumlah,
+				'message' => $jumlah .
+					' data Kekuatan Magnet berhasil diverifikasi ' .
+					$nama_jenis . '.'
+			];
+		}
+
+		return $this->output
 			->set_content_type('application/json')
 			->set_output(json_encode($response));
 	}

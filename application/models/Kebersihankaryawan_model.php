@@ -535,30 +535,40 @@ class Kebersihankaryawan_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$plant     = $this->session->userdata('plant');
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+		$nama_spv  = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($nama_spv)) {
+		if (empty($tanggal) || !in_array($jenis, ['spv', 'produksi'], true)) {
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
+		if ($jenis === 'spv' && empty($nama_spv)) {
+			return false;
+		}
+
+		// Kondisi dasar untuk kedua jenis verifikasi
 		$this->db->from('kebersihan_karyawan');
 		$this->db->where('is_audit', 0);
 		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
 		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
-		if ($type_user != 9 && $type_user != 1) {
+		// User tipe 1 dan 9 dapat melihat seluruh plant
+		if (!in_array($tipe_user, [1, 9], true)) {
 			$this->db->where('plant', $plant);
+		}
+
+		// Kondisi khusus berdasarkan jenis verifikasi
+		if ($jenis === 'produksi') {
+			$this->db->where('status_produksi', '0');
+		} else {
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
 		}
 
 		$total_data = $this->db->count_all_results();
@@ -569,25 +579,34 @@ class Kebersihankaryawan_model extends CI_Model
 
 		$this->db->trans_begin();
 
-		// Update hanya data QC utama yang memenuhi syarat
+		// Kondisi update
 		$this->db->where('is_audit', 0);
 		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
 		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
-		if ($type_user != 9 && $type_user != 1) {
+		if (!in_array($tipe_user, [1, 9], true)) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->update('kebersihan_karyawan', [
-			'nama_spv' => $nama_spv,
-			'status_spv' => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+		if ($jenis === 'produksi') {
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('kebersihan_karyawan', [
+				'status_produksi' => '1'
+			]);
+		} else {
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('kebersihan_karyawan', [
+				'nama_spv'      => $nama_spv,
+				'status_spv'    => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		}
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

@@ -206,43 +206,105 @@ class Sanitasi extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
-		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		if ($this->input->method() !== 'post') {
+			show_404();
+			return;
+		}
 
+		$tanggal = trim(
+			$this->input->post('tanggal', TRUE) ?? ''
+		);
+
+		$shift = trim(
+			$this->input->post('shift', TRUE) ?? ''
+		);
+
+		$jenis = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
+		);
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		// Validasi tanggal
 		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
 			$tanggal_obj->format('Y-m-d') !== $tanggal
 		) {
-			return $this->output
-				->set_content_type('application/json')
-				->set_output(json_encode([
-					'success' => false,
-					'message' => 'Tanggal tidak valid.'
-				]));
-		}
-
-		$updated = $this->sanitasi_model
-			->verifikasi_massal_spv($tanggal, $shift);
-
-		if ($updated === false) {
 			$response = [
 				'success' => false,
-				'message' => 'Verifikasi massal Sanitasi gagal diproses.'
+				'message' => 'Tanggal tidak valid.'
 			];
-		} elseif ($updated > 0) {
+		} elseif (!in_array($jenis, ['spv', 'produksi'], true)) {
+
 			$response = [
-				'success' => true,
-				'updated' => $updated,
-				'message' => 'Verifikasi massal Sanitasi berhasil.'
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+		} elseif (
+			$jenis === 'produksi' &&
+			!in_array($tipe_user, [0, 1, 3, 9], true)
+		) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi produksi.'
+			];
+		} elseif (
+			$jenis === 'spv' &&
+			!in_array($tipe_user, [0, 1, 2, 9], true)
+		) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+			];
+		} elseif (
+			!in_array($shift, ['', 'semua', '1', '2', '3'], true)
+		) {
+
+			$response = [
+				'success' => false,
+				'message' => 'Shift tidak valid.'
 			];
 		} else {
-			$response = [
-				'success' => false,
-				'updated' => 0,
-				'message' => 'Tidak ada data yang memenuhi syarat verifikasi pada tanggal dan shift tersebut.'
-			];
+
+			$updated = $this->sanitasi_model->verifikasi_massal(
+				$tanggal,
+				$shift,
+				$jenis
+			);
+
+			if ($updated === false) {
+
+				$response = [
+					'success' => false,
+					'message' => 'Verifikasi massal Sanitasi gagal diproses.'
+				];
+			} elseif ($updated > 0) {
+
+				$nama_verifikasi = $jenis === 'produksi'
+					? 'Produksi'
+					: 'SPV';
+
+				$response = [
+					'success' => true,
+					'updated' => $updated,
+					'message' => 'Verifikasi massal Sanitasi ' .
+						$nama_verifikasi .
+						' berhasil.'
+				];
+			} else {
+
+				$response = [
+					'success' => false,
+					'updated' => 0,
+					'message' => $jenis === 'produksi'
+						? 'Tidak ada data Sanitasi dengan status Produksi Created pada tanggal dan shift tersebut.'
+						: 'Tidak ada data Sanitasi dengan status SPV Created atau Revision pada tanggal dan shift tersebut.'
+				];
+			}
 		}
 
 		return $this->output

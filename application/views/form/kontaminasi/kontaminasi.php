@@ -28,8 +28,12 @@
 
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- Filter tanggal dan verifikasi massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<?php
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9]);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9]);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
 
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
@@ -46,14 +50,27 @@
 								value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 								required>
 
-							<button type="submit"
-								id="btnVerifikasiMassal"
-								class="btn btn-primary mb-2">
+							<?php if ($boleh_verifikasi_spv): ?>
+								<button type="submit"
+									class="btn btn-primary mr-1 mb-2 btn-verifikasi-massal"
+									data-jenis="spv">
 
-								<i class="fas fa-check-double mr-1"></i>
-								Verifikasi Massal
+									<i class="fas fa-check-double mr-1"></i>
+									Verifikasi Massal
 
-							</button>
+								</button>
+							<?php endif; ?>
+
+							<?php if ($boleh_verifikasi_produksi): ?>
+								<button type="submit"
+									class="btn btn-primary mb-2 btn-verifikasi-massal"
+									data-jenis="produksi">
+
+									<i class="fas fa-check-double mr-1"></i>
+									Verifikasi Massal
+
+								</button>
+							<?php endif; ?>
 
 						</form>
 
@@ -68,7 +85,6 @@
 					</div>
 
 				<?php endif; ?>
-
 
 				<!-- Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -190,10 +206,10 @@
 									<?php endif; ?>
 
 									<a href="<?= base_url('kontaminasi/detail/' . $val->uuid); ?>"
-    data-url="<?= base_url('kontaminasi/detail/' . $val->uuid . '?popup=1'); ?>"
-    class="btn btn-success btn-icon-split mb-1 btn-detail-kontaminasi">
-    <span class="text">Detail</span>
-</a>
+										data-url="<?= base_url('kontaminasi/detail/' . $val->uuid . '?popup=1'); ?>"
+										class="btn btn-success btn-icon-split mb-1 btn-detail-kontaminasi">
+										<span class="text">Detail</span>
+									</a>
 
 									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 										<a href="<?= base_url('kontaminasi/verifikasi_produksi/' . $val->uuid); ?>"
@@ -258,30 +274,30 @@
 </div>
 <!-- Modal Detail Kontaminasi -->
 <div class="modal fade" id="modalDetailKontaminasi" tabindex="-1"
-    role="dialog" aria-labelledby="modalDetailKontaminasiLabel" aria-hidden="true">
+	role="dialog" aria-labelledby="modalDetailKontaminasiLabel" aria-hidden="true">
 
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalDetailKontaminasiLabel">
-                    Detail Kontaminasi Benda Asing
-                </h5>
+			<div class="modal-header">
+				<h5 class="modal-title" id="modalDetailKontaminasiLabel">
+					Detail Kontaminasi Benda Asing
+				</h5>
 
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
 
-            <div class="modal-body" id="contentDetailKontaminasi">
-                <div class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Memuat data...</p>
-                </div>
-            </div>
+			<div class="modal-body" id="contentDetailKontaminasi">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat data...</p>
+				</div>
+			</div>
 
-        </div>
-    </div>
+		</div>
+	</div>
 </div>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 <script>
@@ -291,53 +307,53 @@
 	})
 </script>
 <script>
-    $(document).ready(function() {
+	$(document).ready(function() {
 
-        const cacheDetailKontaminasi = {};
+		const cacheDetailKontaminasi = {};
 
-        $(document).on('click', '.btn-detail-kontaminasi', function(e) {
-            e.preventDefault();
+		$(document).on('click', '.btn-detail-kontaminasi', function(e) {
+			e.preventDefault();
 
-            const url = $(this).data('url');
+			const url = $(this).data('url');
 
-            $('#modalDetailKontaminasi').modal('show');
+			$('#modalDetailKontaminasi').modal('show');
 
-            if (cacheDetailKontaminasi[url]) {
-                $('#contentDetailKontaminasi').html(
-                    cacheDetailKontaminasi[url]
-                );
-                return;
-            }
+			if (cacheDetailKontaminasi[url]) {
+				$('#contentDetailKontaminasi').html(
+					cacheDetailKontaminasi[url]
+				);
+				return;
+			}
 
-            $('#contentDetailKontaminasi').html(`
+			$('#contentDetailKontaminasi').html(`
                 <div class="text-center py-5">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p class="mt-2">Memuat data...</p>
                 </div>
             `);
 
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'html',
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'html',
 
-                success: function(response) {
-                    cacheDetailKontaminasi[url] = response;
-                    $('#contentDetailKontaminasi').html(response);
-                },
+				success: function(response) {
+					cacheDetailKontaminasi[url] = response;
+					$('#contentDetailKontaminasi').html(response);
+				},
 
-                error: function() {
-                    $('#contentDetailKontaminasi').html(`
+				error: function() {
+					$('#contentDetailKontaminasi').html(`
                         <div class="alert alert-danger text-center">
                             Gagal memuat detail Kontaminasi.
                         </div>
                     `);
-                }
-            });
+				}
+			});
 
-        });
+		});
 
-    });
+	});
 </script>
 <style>
 	th {
@@ -360,16 +376,23 @@
 
 		});
 
-
-		// Verifikasi massal SPV
+		// Verifikasi massal SPV dan Produksi
 		$('#formVerifikasiMassal').on('submit', function(e) {
 
 			e.preventDefault();
 
 			var form = $(this);
-			var tombol = $('#btnVerifikasiMassal');
+			var tombol = $(document.activeElement);
 
-			if (!form.find('[name="tanggal"]').val()) {
+			var jenis = tombol.data('jenis');
+
+			if (!jenis) {
+				return;
+			}
+
+			var tanggal = form.find('[name="tanggal"]').val();
+
+			if (!tanggal) {
 
 				Swal.fire(
 					'Perhatian',
@@ -380,11 +403,17 @@
 				return;
 			}
 
+			var namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
+
+			var pesanKonfirmasi = jenis === 'spv' ?
+				'Data Kontaminasi yang sudah diverifikasi Produksi pada tanggal tersebut akan diproses oleh SPV.' :
+				'Data Kontaminasi pada tanggal tersebut yang belum diverifikasi Produksi akan diproses.';
+
 			Swal.fire({
 
-				title: 'Verifikasi Massal?',
+				title: 'Verifikasi Massal ' + namaJenis + '?',
 
-				text: 'Data Kontaminasi yang sudah diverifikasi Produksi pada tanggal tersebut akan diproses.',
+				text: pesanKonfirmasi,
 
 				icon: 'question',
 
@@ -400,7 +429,9 @@
 					return;
 				}
 
-				tombol.prop('disabled', true);
+				var semuaTombol = $('.btn-verifikasi-massal');
+
+				semuaTombol.prop('disabled', true);
 
 				tombol.html(
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
@@ -412,7 +443,10 @@
 
 					type: 'POST',
 
-					data: form.serialize(),
+					data: {
+						tanggal: tanggal,
+						jenis_verifikasi: jenis
+					},
 
 					dataType: 'json',
 
@@ -444,10 +478,11 @@
 								'info'
 							);
 
-							tombol.prop('disabled', false);
+							semuaTombol.prop('disabled', false);
 
 							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal ' +
+								namaJenis
 							);
 
 						}
@@ -456,16 +491,23 @@
 
 					error: function(xhr) {
 
+						var pesan = 'Terjadi kesalahan saat memproses verifikasi massal.';
+
+						if (xhr.responseJSON && xhr.responseJSON.message) {
+							pesan = xhr.responseJSON.message;
+						}
+
 						Swal.fire(
 							'Error',
-							'Terjadi kesalahan saat memproses verifikasi massal.',
+							pesan,
 							'error'
 						);
 
-						tombol.prop('disabled', false);
+						semuaTombol.prop('disabled', false);
 
 						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal ' +
+							namaJenis
 						);
 
 					}

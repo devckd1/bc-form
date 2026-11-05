@@ -148,10 +148,12 @@
 									</td>
 
 									<td class="text-center align-middle">
-										<a href="<?= base_url('larutan/edit/' . $val->uuid); ?>"
-											class="btn btn-warning btn-sm">
-											Edit
-										</a>
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+											<a href="<?= base_url('larutan/edit/' . $val->uuid); ?>"
+												class="btn btn-warning btn-sm">
+												Edit
+											</a>
+										<?php endif; ?>
 
 										<a href="<?= base_url('larutan/detail/' . $val->uuid); ?>"
 											data-url="<?= base_url('larutan/detail/' . $val->uuid . '?popup=1'); ?>"
@@ -159,11 +161,13 @@
 											Detail
 										</a>
 
-										<a href="<?= base_url('larutan/delete/' . $val->uuid); ?>"
-											class="btn btn-danger btn-sm"
-											onclick="return confirm('Yakin ingin menghapus data ini?')">
-											Delete
-										</a>
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+											<a href="<?= base_url('larutan/delete/' . $val->uuid); ?>"
+												class="btn btn-danger btn-sm"
+												onclick="return confirm('Yakin ingin menghapus data ini?')">
+												Delete
+											</a>
+										<?php endif; ?>
 
 										<?php if ($boleh_verifikasi): ?>
 											<a href="<?= base_url('larutan/status/' . $val->uuid); ?>"

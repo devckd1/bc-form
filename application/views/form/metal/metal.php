@@ -31,8 +31,15 @@
 
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if ($boleh_verifikasi): ?>
+				<?php
+				$tipe_user = (int) $this->session->userdata('tipe_user');
+
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
+
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<input
@@ -40,23 +47,37 @@
 							id="filterTanggal"
 							class="form-control mr-2 mb-2"
 							style="width: 170px;"
-							value="<?= html_escape($tanggal); ?>">
+							value="<?= html_escape($tanggal ?? ''); ?>">
 
-						<button
-							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+						<?php if ($boleh_verifikasi_spv): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+								data-jenis="spv">
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+							</button>
+						<?php endif; ?>
 
-						<a href="<?= base_url('metal'); ?>"
-							class="btn btn-secondary ml-2 mb-2">
+						<?php if ($boleh_verifikasi_produksi): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+								data-jenis="produksi">
+								<i class="fas fa-industry mr-1"></i>
+								Verifikasi Massal
+							</button>
+						<?php endif; ?>
+
+						<a
+							href="<?= base_url('metal'); ?>"
+							class="btn btn-secondary mb-2">
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</a>
 
 					</div>
+
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
@@ -188,7 +209,7 @@
 
 									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 										<a href="<?= base_url('metal/verifikasi_produksi/' . $val->uuid); ?>"
-											class="btn btn-warning btn-icon-split"
+											class="btn btn-primary btn-icon-split"
 											onclick="return confirm('Apakah Anda yakin ingin menyetujui data ini?')">
 											<span class="text">Setujui</span>
 										</a>
@@ -306,17 +327,21 @@
 				const tanggal = $(this).val();
 
 				if (tanggal) {
-					window.location.href = baseUrl + '?tanggal=' + encodeURIComponent(tanggal);
+					window.location.href =
+						baseUrl + '?tanggal=' + encodeURIComponent(tanggal);
 				} else {
 					window.location.href = baseUrl;
 				}
-
 			});
 
-			// Verifikasi massal
-			$('#btnVerifikasiMassal').on('click', function() {
+			// Verifikasi massal SPV dan Produksi
+			$('.btnVerifikasiMassal').on('click', function() {
 
+				const tombol = $(this);
+				const jenis = tombol.data('jenis');
 				const tanggal = $('#filterTanggal').val();
+
+				const namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
 
 				if (!tanggal) {
 					Swal.fire({
@@ -328,36 +353,55 @@
 					return;
 				}
 
+				const keterangan = jenis === 'spv' ?
+					'Data Metal Detector tanggal ' + tanggal +
+					' yang sudah diverifikasi Produksi dan berstatus SPV Created atau Revision akan diverifikasi.' :
+					'Data Metal Detector tanggal ' + tanggal +
+					' yang berstatus Produksi Created akan diverifikasi.';
+
 				Swal.fire({
-					title: 'Verifikasi semua data?',
-					text: 'Semua data Metal Detector yang memenuhi syarat pada tanggal ' +
-						tanggal + ' akan diverifikasi.',
+					title: 'Verifikasi Massal ' + namaJenis + '?',
+					text: keterangan,
 					icon: 'question',
 					showCancelButton: true,
-					confirmButtonColor: '#4e73df',
+					confirmButtonColor: jenis === 'spv' ? '#4e73df' : '#28a745',
 					cancelButtonColor: '#858796',
 					confirmButtonText: 'Ya, verifikasi',
 					cancelButtonText: 'Batal'
-				}).then((result) => {
+				}).then(function(result) {
 
 					if (!result.isConfirmed) {
 						return;
 					}
 
+					const teksAwal = tombol.html();
+
 					$.ajax({
-						url: '<?= base_url('metal/verifikasi_massal') ?>',
+						url: '<?= base_url("metal/verifikasi_massal"); ?>',
 						type: 'POST',
 						dataType: 'json',
+
 						data: {
-							tanggal: tanggal
+							tanggal: tanggal,
+							jenis_verifikasi: jenis
 						},
 
 						beforeSend: function() {
 
-							$('#btnVerifikasiMassal')
+							tombol
 								.prop('disabled', true)
-								.html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
+								.html(
+									'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+								);
 
+							Swal.fire({
+								title: 'Memproses...',
+								text: 'Sedang melakukan verifikasi Metal Detector oleh ' + namaJenis + '.',
+								allowOutsideClick: false,
+								didOpen: function() {
+									Swal.showLoading();
+								}
+							});
 						},
 
 						success: function(response) {
@@ -368,7 +412,8 @@
 									icon: 'success',
 									title: 'Berhasil',
 									text: response.message
-								}).then(() => {
+								}).then(function() {
+
 									window.location.href = baseUrl +
 										'?tanggal=' + encodeURIComponent(tanggal);
 								});
@@ -380,9 +425,7 @@
 									title: 'Informasi',
 									text: response.message
 								});
-
 							}
-
 						},
 
 						error: function(xhr) {
@@ -393,22 +436,17 @@
 								text: xhr.responseJSON?.message ||
 									'Terjadi kesalahan saat melakukan verifikasi.'
 							});
-
 						},
 
 						complete: function() {
 
-							$('#btnVerifikasiMassal')
+							tombol
 								.prop('disabled', false)
-								.html('<i class="fas fa-check-double"></i> Verifikasi');
-
+								.html(teksAwal);
 						}
 					});
-
 				});
-
 			});
-
 		});
 	</script>
 

@@ -84,29 +84,29 @@ class Produksi extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $produksi = $this->produksi_model->get_by_uuid($uuid);
+	{
+		$produksi = $this->produksi_model->get_by_uuid($uuid);
 
-    if (!$produksi) {
-        show_404();
-        return;
-    }
+		if (!$produksi) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = array(
-        'produksi' => $produksi,
-        'is_popup' => $is_popup
-    );
+		$data = array(
+			'produksi' => $produksi,
+			'is_popup' => $is_popup
+		);
 
-    $this->active_nav = 'produksi';
+		$this->active_nav = 'produksi';
 
-    if ($is_popup) {
-        $this->load->view('form/produksi/produksi-detail', $data);
-    } else {
-        $this->render('form/produksi/produksi-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/produksi/produksi-detail', $data);
+		} else {
+			$this->render('form/produksi/produksi-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -606,8 +606,49 @@ class Produksi extends MY_Controller
 
 	public function verifikasi_massal()
 	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
 		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
 		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
+		);
+
+		// Hak akses SPV
+		$role_spv = [0, 1, 2, 9];
+
+		// Hak akses Produksi
+		$role_produksi = [0, 1, 3, 9];
+
+		if (
+			($jenis_verifikasi === 'spv' && !in_array($tipe_user, $role_spv)) ||
+			($jenis_verifikasi === 'produksi' && !in_array($tipe_user, $role_produksi))
+		) {
+			$response = [
+				'success' => false,
+				'message' => 'Anda tidak memiliki hak akses untuk verifikasi ini.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+		}
+
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			$response = [
+				'success' => false,
+				'message' => 'Jenis verifikasi tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+		}
 
 		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
@@ -615,16 +656,32 @@ class Produksi extends MY_Controller
 			!$tanggal_obj ||
 			$tanggal_obj->format('Y-m-d') !== $tanggal
 		) {
+			$response = [
+				'success' => false,
+				'message' => 'Tanggal tidak valid.'
+			];
+
 			return $this->output
 				->set_content_type('application/json')
-				->set_output(json_encode([
-					'success' => false,
-					'message' => 'Tanggal tidak valid.'
-				]));
+				->set_output(json_encode($response));
 		}
 
-		$updated = $this->produksi_model
-			->verifikasi_massal_spv($tanggal, $shift);
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+			$response = [
+				'success' => false,
+				'message' => 'Shift tidak valid.'
+			];
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+		}
+
+		$updated = $this->produksi_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
 
 		if ($updated === false) {
 			$response = [
@@ -632,10 +689,14 @@ class Produksi extends MY_Controller
 				'message' => 'Verifikasi massal Produksi gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+			$nama_verifikasi = $jenis_verifikasi === 'spv'
+				? 'SPV'
+				: 'Produksi';
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Produksi berhasil.'
+				'message' => 'Verifikasi massal ' . $nama_verifikasi . ' berhasil.'
 			];
 		} else {
 			$response = [

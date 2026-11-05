@@ -56,30 +56,30 @@ class Disposisi extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $disposisi = $this->disposisi_model->get_qc_by_uuid($uuid);
+	{
+		$disposisi = $this->disposisi_model->get_qc_by_uuid($uuid);
 
-    if (!$disposisi) {
-        show_404();
-        return;
-    }
+		if (!$disposisi) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'disposisi' => $disposisi,
-        'mode'      => 'qc',
-        'is_popup'  => $is_popup
-    ];
+		$data = [
+			'disposisi' => $disposisi,
+			'mode'      => 'qc',
+			'is_popup'  => $is_popup
+		];
 
-    $this->active_nav = 'disposisi';
+		$this->active_nav = 'disposisi';
 
-    if ($is_popup) {
-        $this->load->view('form/disposisi/disposisi-detail', $data);
-    } else {
-        $this->render('form/disposisi/disposisi-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/disposisi/disposisi-detail', $data);
+		} else {
+			$this->render('form/disposisi/disposisi-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -195,10 +195,32 @@ class Disposisi extends MY_Controller
 
 	public function verifikasi_massal()
 	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
 		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$jenis_verifikasi = trim($this->input->post('jenis_verifikasi', TRUE) ?? '');
+
+		// Validasi jenis verifikasi dan hak akses
+		if (
+			($jenis_verifikasi === 'spv' && !in_array($tipe_user, [0, 1, 2, 9], true)) ||
+			($jenis_verifikasi === 'produksi' && !in_array($tipe_user, [0, 1, 3, 9], true)) ||
+			!in_array($jenis_verifikasi, ['spv', 'produksi'], true)
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Anda tidak memiliki hak untuk melakukan verifikasi ini.'
+				]));
+		}
 
 		// Validasi tanggal
-		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+		$tanggal_obj = DateTime::createFromFormat('!Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
@@ -212,7 +234,10 @@ class Disposisi extends MY_Controller
 				]));
 		}
 
-		$updated = $this->disposisi_model->verifikasi_massal_spv($tanggal);
+		$updated = $this->disposisi_model->verifikasi_massal(
+			$tanggal,
+			$jenis_verifikasi
+		);
 
 		if ($updated === false) {
 			$response = [
@@ -220,10 +245,12 @@ class Disposisi extends MY_Controller
 				'message' => 'Verifikasi massal gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+			$nama_verifikasi = $jenis_verifikasi === 'spv' ? 'SPV' : 'Produksi';
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Disposisi berhasil.'
+				'message' => 'Verifikasi massal Disposisi oleh ' . $nama_verifikasi . ' berhasil.'
 			];
 		} else {
 			$response = [

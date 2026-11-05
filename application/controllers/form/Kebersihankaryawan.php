@@ -262,9 +262,40 @@ class Kebersihankaryawan extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
-		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
+		if ($this->input->method(TRUE) !== 'POST') {
+			return $this->output
+				->set_status_header(405)
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Metode request tidak diizinkan.'
+				]));
+		}
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift   = trim($this->input->post('shift', TRUE) ?? 'semua');
+		$jenis   = trim($this->input->post('jenis_verifikasi', TRUE) ?? '');
+
+		// Validasi hak akses
+		$akses_spv = [0, 1, 2, 9];
+		$akses_produksi = [0, 1, 3, 9];
+
+		if (
+			($jenis === 'spv' && !in_array($tipe_user, $akses_spv, true)) ||
+			($jenis === 'produksi' && !in_array($tipe_user, $akses_produksi, true)) ||
+			!in_array($jenis, ['spv', 'produksi'], true)
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Anda tidak memiliki akses untuk melakukan verifikasi ini.'
+				]));
+		}
+
+		// Validasi tanggal
 		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
 		if (
@@ -279,8 +310,18 @@ class Kebersihankaryawan extends MY_Controller
 				]));
 		}
 
+		// Validasi shift
+		if (!in_array($shift, ['semua', '1', '2', '3'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
 		$updated = $this->kebersihankaryawan_model
-			->verifikasi_massal_spv($tanggal, $shift);
+			->verifikasi_massal($tanggal, $shift, $jenis);
 
 		if ($updated === false) {
 			$response = [
@@ -288,10 +329,12 @@ class Kebersihankaryawan extends MY_Controller
 				'message' => 'Verifikasi massal Kebersihan Karyawan gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+			$nama_jenis = $jenis === 'spv' ? 'SPV' : 'Produksi';
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Kebersihan Karyawan berhasil.'
+				'message' => 'Verifikasi massal ' . $nama_jenis . ' Kebersihan Karyawan berhasil.'
 			];
 		} else {
 			$response = [

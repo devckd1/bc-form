@@ -75,33 +75,33 @@ class Kebersihanruang extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $kebersihanruang = $this->kebersihanruang_model->get_by_uuid($uuid);
+	{
+		$kebersihanruang = $this->kebersihanruang_model->get_by_uuid($uuid);
 
-    if (!$kebersihanruang) {
-        show_404();
-        return;
-    }
+		if (!$kebersihanruang) {
+			show_404();
+			return;
+		}
 
-    $data = array(
-        'kebersihanruang' => $kebersihanruang,
-        'is_popup' => $this->input->get('popup') == '1'
-    );
+		$data = array(
+			'kebersihanruang' => $kebersihanruang,
+			'is_popup' => $this->input->get('popup') == '1'
+		);
 
-    $this->active_nav = 'kebersihanruang';
+		$this->active_nav = 'kebersihanruang';
 
-    if ($data['is_popup']) {
-        $this->load->view(
-            'form/kebersihanruang/kebersihanruang-detail',
-            $data
-        );
-    } else {
-        $this->render(
-            'form/kebersihanruang/kebersihanruang-detail',
-            $data
-        );
-    }
-}
+		if ($data['is_popup']) {
+			$this->load->view(
+				'form/kebersihanruang/kebersihanruang-detail',
+				$data
+			);
+		} else {
+			$this->render(
+				'form/kebersihanruang/kebersihanruang-detail',
+				$data
+			);
+		}
+	}
 
 	public function get_bagian_ajax()
 	{
@@ -390,14 +390,40 @@ class Kebersihanruang extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = trim(
-			$this->input->post('tanggal', TRUE) ?? ''
-		);
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
-		$tanggal_obj = DateTime::createFromFormat(
-			'Y-m-d',
-			$tanggal
-		);
+		if ($this->input->method(TRUE) !== 'POST') {
+			return $this->output
+				->set_status_header(405)
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Metode request tidak diizinkan.'
+				]));
+		}
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$jenis   = trim($this->input->post('jenis_verifikasi', TRUE) ?? '');
+
+		// Hak akses
+		$akses_spv      = [0, 1, 2, 9];
+		$akses_produksi = [0, 1, 3, 9];
+
+		if (
+			!in_array($jenis, ['spv', 'produksi'], true) ||
+			($jenis === 'spv' && !in_array($tipe_user, $akses_spv, true)) ||
+			($jenis === 'produksi' && !in_array($tipe_user, $akses_produksi, true))
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Anda tidak memiliki akses untuk melakukan verifikasi ini.'
+				]));
+		}
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
@@ -411,31 +437,30 @@ class Kebersihanruang extends MY_Controller
 				]));
 		}
 
-		$updated =
-			$this->kebersihanruang_model
-			->verifikasi_massal_spv($tanggal);
+		$updated = $this->kebersihanruang_model
+			->verifikasi_massal($tanggal, $jenis);
 
 		if ($updated === false) {
 
 			$response = [
 				'success' => false,
-				'message' => 'Verifikasi massal gagal diproses.'
+				'message' => 'Verifikasi massal Kebersihan Ruang gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+
+			$nama_jenis = $jenis === 'spv' ? 'SPV' : 'Produksi';
 
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' =>
-				'Verifikasi massal Kebersihan Ruang berhasil.'
+				'message' => 'Verifikasi massal ' . $nama_jenis . ' Kebersihan Ruang berhasil.'
 			];
 		} else {
 
 			$response = [
 				'success' => false,
 				'updated' => 0,
-				'message' =>
-				'Tidak ada data Kebersihan Ruang yang memenuhi syarat verifikasi pada tanggal tersebut.'
+				'message' => 'Tidak ada data Kebersihan Ruang yang memenuhi syarat verifikasi pada tanggal tersebut.'
 			];
 		}
 

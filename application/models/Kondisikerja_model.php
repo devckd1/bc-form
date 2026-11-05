@@ -551,58 +551,78 @@ class Kondisikerja_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis = 'spv')
 	{
 		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$username = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($nama_spv)) {
+		if (empty($tanggal) || empty($username)) {
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
-		$this->db->from('kondisi_kerja');
-		$this->db->where('is_audit', 0);
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
-
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
 		}
 
-		if (!in_array($type_user, [1, 9])) {
-			$this->db->where('plant', $plant);
+		// Filter dasar data
+		$filter_data = function () use ($tanggal, $shift, $plant, $type_user) {
+
+			$this->db
+				->where('is_audit', 0)
+				->where('DATE(date)', $tanggal);
+
+			if (!in_array($type_user, [1, 9], true)) {
+				$this->db->where('plant', $plant);
+			}
+
+			if (!empty($shift) && $shift !== 'semua') {
+				$this->db->where('shift', $shift);
+			}
+		};
+
+		// Tentukan data yang akan diverifikasi
+		$filter_data();
+
+		if ($jenis === 'produksi') {
+			$this->db->where('status_produksi', '0');
+		} else {
+			$this->db
+				->where('status_produksi', '1')
+				->where_in('status_spv', ['0', '2']);
 		}
 
-		$total_data = $this->db->count_all_results();
+		$total = $this->db->count_all_results('kondisi_kerja');
 
-		if ($total_data == 0) {
+		if ($total == 0) {
 			return 0;
 		}
 
 		$this->db->trans_begin();
 
-		// Update hanya data QC utama yang memenuhi syarat
-		$this->db->where('is_audit', 0);
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
+		// Update status Produksi
+		if ($jenis === 'produksi') {
 
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+			$filter_data();
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('kondisi_kerja', [
+				'status_produksi' => '1'
+			]);
+		} else {
+
+			// Update status SPV
+			$filter_data();
+			$this->db
+				->where('status_produksi', '1')
+				->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('kondisi_kerja', [
+				'nama_spv'       => $username,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
 		}
-
-		if (!in_array($type_user, [1, 9])) {
-			$this->db->where('plant', $plant);
-		}
-
-		$this->db->update('kondisi_kerja', [
-			'nama_spv' => $nama_spv,
-			'status_spv' => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

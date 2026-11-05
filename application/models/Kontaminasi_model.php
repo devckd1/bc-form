@@ -365,29 +365,42 @@ class Kontaminasi_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis_verifikasi = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
+		$plant     = $this->session->userdata('plant');
 		$type_user = (int) $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$nama_spv  = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($nama_spv)) {
+		if (empty($tanggal)) {
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
-		$this->db->from('kontaminasi');
+		if ($jenis_verifikasi === 'spv' && empty($nama_spv)) {
+			return false;
+		}
+
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return false;
+		}
+
+		// Kondisi dasar
 		$this->db->where('is_audit', 0);
 		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
+		// Pembatasan plant sesuai role
 		if (!in_array($type_user, [9, 1])) {
 			$this->db->where('plant', $plant);
 		}
 
-		$total_data = $this->db->count_all_results();
+		// Syarat verifikasi sesuai jenis
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+		} else {
+			$this->db->where('status_produksi', '0');
+		}
+
+		$total_data = $this->db->count_all_results('kontaminasi');
 
 		if ($total_data == 0) {
 			return 0;
@@ -395,21 +408,32 @@ class Kontaminasi_model extends CI_Model
 
 		$this->db->trans_begin();
 
-		// Update data QC yang siap diverifikasi
+		// Kondisi update harus sama dengan kondisi hitung
 		$this->db->where('is_audit', 0);
 		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
 		if (!in_array($type_user, [9, 1])) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->update('kontaminasi', [
-			'nama_spv'       => $nama_spv,
-			'status_spv'     => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$data_update = [
+				'nama_spv'       => $nama_spv,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			];
+		} else {
+			$this->db->where('status_produksi', '0');
+
+			$data_update = [
+				'status_produksi' => '1'
+			];
+		}
+
+		$this->db->update('kontaminasi', $data_update);
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

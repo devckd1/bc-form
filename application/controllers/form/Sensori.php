@@ -63,31 +63,31 @@ class Sensori extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $sensori = $this->sensori_model->get_qc_by_uuid($uuid);
+	{
+		$sensori = $this->sensori_model->get_qc_by_uuid($uuid);
 
-    if (!$sensori) {
-        show_404();
-        return;
-    }
+		if (!$sensori) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'sensori' => $sensori,
-        'bagian_list' => $this->sensori_model->get_bagian_by_uuid($uuid),
-        'mode' => 'qc',
-        'is_popup' => $is_popup
-    ];
+		$data = [
+			'sensori' => $sensori,
+			'bagian_list' => $this->sensori_model->get_bagian_by_uuid($uuid),
+			'mode' => 'qc',
+			'is_popup' => $is_popup
+		];
 
-    $this->active_nav = 'sensori';
+		$this->active_nav = 'sensori';
 
-    if ($is_popup) {
-        $this->load->view('form/sensori/sensori-detail', $data);
-    } else {
-        $this->render('form/sensori/sensori-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/sensori/sensori-detail', $data);
+		} else {
+			$this->render('form/sensori/sensori-detail', $data);
+		}
+	}
 
 	public function detail_audit($uuid)
 	{
@@ -263,15 +263,56 @@ class Sensori extends MY_Controller
 
 	public function verifikasi_massal()
 	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_404();
+			return;
+		}
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
 		$tanggal = trim(
 			$this->input->post('tanggal', TRUE) ?? ''
 		);
 
-		// Validasi tanggal
-		$tanggal_obj = DateTime::createFromFormat(
-			'Y-m-d',
-			$tanggal
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? 'spv'
 		);
+
+		// Validasi hak akses
+		if ($jenis_verifikasi === 'spv') {
+
+			if (!in_array($tipe_user, [0, 1, 2, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
+						'success' => false,
+						'message' => 'Anda tidak memiliki akses verifikasi SPV.'
+					]));
+			}
+		} elseif ($jenis_verifikasi === 'produksi') {
+
+			if (!in_array($tipe_user, [0, 1, 3, 9])) {
+				return $this->output
+					->set_status_header(403)
+					->set_content_type('application/json')
+					->set_output(json_encode([
+						'success' => false,
+						'message' => 'Anda tidak memiliki akses verifikasi Produksi.'
+					]));
+			}
+		} else {
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Jenis verifikasi tidak valid.'
+				]));
+		}
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
@@ -286,27 +327,34 @@ class Sensori extends MY_Controller
 		}
 
 		$updated = $this->sensori_model
-			->verifikasi_massal_spv($tanggal);
+			->verifikasi_massal($tanggal, $jenis_verifikasi);
+
+		$nama_jenis = ($jenis_verifikasi === 'spv')
+			? 'SPV'
+			: 'Produksi';
 
 		if ($updated === false) {
 
 			$response = [
 				'success' => false,
-				'message' => 'Verifikasi massal Sensori gagal diproses.'
+				'message' => 'Verifikasi massal Sensori Finish Good gagal diproses.'
 			];
 		} elseif ($updated > 0) {
 
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Sensori Finish Good berhasil.'
+				'message' => 'Verifikasi massal Sensori Finish Good ' .
+					$nama_jenis . ' berhasil.'
 			];
 		} else {
 
 			$response = [
 				'success' => false,
 				'updated' => 0,
-				'message' => 'Tidak ada data Sensori yang memenuhi syarat verifikasi pada tanggal tersebut.'
+				'message' => 'Tidak ada data Sensori Finish Good yang memenuhi ' .
+					'syarat verifikasi ' . $nama_jenis .
+					' pada tanggal tersebut.'
 			];
 		}
 

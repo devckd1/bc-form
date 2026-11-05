@@ -29,10 +29,17 @@ $filter_shift = $filter_shift ?? '';
 		<div class="card-body">
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- Filter tanggal, shift, dan verifikasi massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<?php
+				$tipe_user = (int) $this->session->userdata('tipe_user');
+
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
 
 					<div class="d-flex align-items-center flex-wrap mb-2">
+
 						<form
 							id="formFilterLoading"
 							action="<?= base_url('loading'); ?>"
@@ -52,19 +59,44 @@ $filter_shift = $filter_shift ?? '';
 								id="filterShift"
 								class="form-control mr-2 mb-2"
 								style="width: 140px;">
-								<option value="semua" <?= $filter_shift == 'semua' ? 'selected' : ''; ?>>Semua Shift</option>
-								<option value="1" <?= $filter_shift == '1' ? 'selected' : ''; ?>>Shift 1</option>
-								<option value="2" <?= $filter_shift == '2' ? 'selected' : ''; ?>>Shift 2</option>
-								<option value="3" <?= $filter_shift == '3' ? 'selected' : ''; ?>>Shift 3</option>
+
+								<option value="semua" <?= ($filter_shift ?? 'semua') == 'semua' ? 'selected' : ''; ?>>
+									Semua Shift
+								</option>
+
+								<option value="1" <?= ($filter_shift ?? '') == '1' ? 'selected' : ''; ?>>
+									Shift 1
+								</option>
+
+								<option value="2" <?= ($filter_shift ?? '') == '2' ? 'selected' : ''; ?>>
+									Shift 2
+								</option>
+
+								<option value="3" <?= ($filter_shift ?? '') == '3' ? 'selected' : ''; ?>>
+									Shift 3
+								</option>
 							</select>
 
-							<button
-								type="button"
-								class="btn btn-primary mb-2"
-								id="btnVerifikasiMassal">
-								<i class="fas fa-check-double mr-1"></i>
-								Verifikasi Massal
-							</button>
+							<?php if ($boleh_verifikasi_spv): ?>
+								<button
+									type="button"
+									class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+									data-jenis="spv">
+									<i class="fas fa-check-double mr-1"></i>
+									Verifikasi Massal
+								</button>
+							<?php endif; ?>
+
+							<?php if ($boleh_verifikasi_produksi): ?>
+								<button
+									type="button"
+									class="btn btn-primary mb-2 btnVerifikasiMassal"
+									data-jenis="produksi">
+									<i class="fas fa-industry mr-1"></i>
+									Verifikasi Massal
+								</button>
+							<?php endif; ?>
+
 						</form>
 
 						<a
@@ -73,6 +105,7 @@ $filter_shift = $filter_shift ?? '';
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</a>
+
 					</div>
 
 				<?php endif; ?>
@@ -366,10 +399,20 @@ $filter_shift = $filter_shift ?? '';
 	<script>
 		$(document).ready(function() {
 
-			$('#btnVerifikasiMassal').on('click', function() {
+			// Filter otomatis berdasarkan tanggal dan shift
+			$('#filterTanggal, #filterShift').on('change', function() {
+				$('#formFilterLoading').submit();
+			});
 
-				let tanggal = $('#filterTanggal').val();
-				let shift = $('#filterShift').val();
+			// Verifikasi massal SPV dan Produksi
+			$('.btnVerifikasiMassal').on('click', function() {
+
+				const tombol = $(this);
+				const jenis = tombol.data('jenis');
+				const tanggal = $('#filterTanggal').val();
+				const shift = $('#filterShift').val() || 'semua';
+
+				const namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
 
 				if (!tanggal) {
 					Swal.fire({
@@ -380,71 +423,99 @@ $filter_shift = $filter_shift ?? '';
 					return;
 				}
 
+				const keterangan = jenis === 'spv' ?
+					'Data Loading tanggal ' + tanggal +
+					' shift ' + shift +
+					' yang sudah diverifikasi Warehouse dan berstatus SPV Created atau Revision akan diverifikasi.' :
+					'Data Loading tanggal ' + tanggal +
+					' shift ' + shift +
+					' yang berstatus Produksi Created akan diverifikasi.';
+
 				Swal.fire({
-					title: 'Verifikasi Massal?',
-					text: 'Data Loading tanggal ' + tanggal +
-						' dengan filter shift ' + shift +
-						' yang sudah diverifikasi Warehouse dan berstatus SPV Created atau Revision akan diverifikasi.',
+					title: 'Verifikasi Massal ' + namaJenis + '?',
+					text: keterangan,
 					icon: 'question',
 					showCancelButton: true,
-					confirmButtonColor: '#28a745',
+					confirmButtonColor: jenis === 'spv' ? '#007bff' : '#28a745',
 					cancelButtonColor: '#6c757d',
 					confirmButtonText: 'Ya, Verifikasi',
 					cancelButtonText: 'Batal'
-				}).then((result) => {
+				}).then(function(result) {
 
-					if (result.isConfirmed) {
+					if (!result.isConfirmed) {
+						return;
+					}
 
-						$.ajax({
-							url: "<?= base_url('loading/verifikasi_massal'); ?>",
-							type: "POST",
-							dataType: "json",
-							data: {
-								tanggal: tanggal,
-								shift: shift
-							},
-							beforeSend: function() {
-								Swal.fire({
-									title: 'Memproses...',
-									text: 'Sedang melakukan verifikasi data Loading.',
-									allowOutsideClick: false,
-									didOpen: () => {
-										Swal.showLoading();
-									}
-								});
-							},
-							success: function(response) {
+					const teksAwal = tombol.html();
 
-								if (response.status) {
-									Swal.fire({
-										icon: 'success',
-										title: 'Berhasil',
-										text: response.message
-									}).then(() => {
-										let url = "<?= base_url('loading'); ?>" +
-											"?tanggal=" + encodeURIComponent(tanggal) +
-											"&shift=" + encodeURIComponent(shift);
+					$.ajax({
+						url: '<?= base_url("loading/verifikasi_massal"); ?>',
+						type: 'POST',
+						dataType: 'json',
 
-										window.location.href = url;
-									});
-								} else {
-									Swal.fire({
-										icon: 'info',
-										title: 'Informasi',
-										text: response.message
-									});
+						data: {
+							tanggal: tanggal,
+							shift: shift,
+							jenis_verifikasi: jenis
+						},
+
+						beforeSend: function() {
+							tombol
+								.prop('disabled', true)
+								.html(
+									'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+								);
+
+							Swal.fire({
+								title: 'Memproses...',
+								text: 'Sedang melakukan verifikasi Loading oleh ' + namaJenis + '.',
+								allowOutsideClick: false,
+								didOpen: function() {
+									Swal.showLoading();
 								}
-							},
-							error: function() {
+							});
+						},
+
+						success: function(response) {
+
+							if (response.status) {
 								Swal.fire({
-									icon: 'error',
-									title: 'Gagal',
-									text: 'Terjadi kesalahan saat memproses verifikasi massal.'
+									icon: 'success',
+									title: 'Berhasil',
+									text: response.message
+								}).then(function() {
+
+									let url = '<?= base_url("loading"); ?>' +
+										'?tanggal=' + encodeURIComponent(tanggal) +
+										'&shift=' + encodeURIComponent(shift);
+
+									window.location.href = url;
+								});
+
+							} else {
+								Swal.fire({
+									icon: 'info',
+									title: 'Informasi',
+									text: response.message
 								});
 							}
-						});
+						},
 
-					}
+						error: function(xhr) {
+							Swal.fire({
+								icon: 'error',
+								title: 'Gagal',
+								text: xhr.responseJSON?.message ||
+									'Terjadi kesalahan saat memproses verifikasi massal.'
+							});
+						},
+
+						complete: function() {
+							tombol
+								.prop('disabled', false)
+								.html(teksAwal);
+						}
+					});
 				});
 			});
 		});

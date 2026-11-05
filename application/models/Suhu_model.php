@@ -413,43 +413,74 @@ class Suhu_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
-	public function verifikasi_massal_spv($tanggal)
+	public function verifikasi_massal($tanggal, $jenis = 'spv')
 	{
 		$plant = $this->session->userdata('plant');
 		$nama_spv = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($nama_spv) || empty($plant)) {
+		if (empty($tanggal) || empty($plant) || empty($nama_spv)) {
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
-		$this->db->from('suhu');
-		$this->db->where('plant', $plant);
-		$this->db->where('is_audit', 0);
-		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
-
-		$total_data = $this->db->count_all_results();
-
-		if ($total_data == 0) {
-			return 0;
+		if (!in_array($jenis, ['spv', 'produksi'], true)) {
+			return false;
 		}
 
 		$this->db->trans_begin();
 
-		// Update hanya data QC yang memenuhi syarat
-		$this->db->where('plant', $plant);
-		$this->db->where('is_audit', 0);
-		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
+		if ($jenis === 'produksi') {
 
-		$this->db->update('suhu', [
-			'nama_spv'       => $nama_spv,
-			'status_spv'     => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+			// Verifikasi status produksi Created
+			$this->db->from('suhu');
+			$this->db->where('plant', $plant);
+			$this->db->where('is_audit', 0);
+			$this->db->where('date', $tanggal);
+			$this->db->where('status_produksi', '0');
+
+			$total_data = $this->db->count_all_results();
+
+			if ($total_data == 0) {
+				$this->db->trans_rollback();
+				return 0;
+			}
+
+			$this->db->where('plant', $plant);
+			$this->db->where('is_audit', 0);
+			$this->db->where('date', $tanggal);
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('suhu', [
+				'status_produksi' => '1'
+			]);
+		} else {
+
+			// Verifikasi status SPV
+			$this->db->from('suhu');
+			$this->db->where('plant', $plant);
+			$this->db->where('is_audit', 0);
+			$this->db->where('date', $tanggal);
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$total_data = $this->db->count_all_results();
+
+			if ($total_data == 0) {
+				$this->db->trans_rollback();
+				return 0;
+			}
+
+			$this->db->where('plant', $plant);
+			$this->db->where('is_audit', 0);
+			$this->db->where('date', $tanggal);
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('suhu', [
+				'nama_spv'       => $nama_spv,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		}
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

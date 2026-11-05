@@ -269,23 +269,34 @@ class Thermometer_model extends CI_Model
 		return $this->db->affected_rows() > 0;
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis_verifikasi = 'spv')
 	{
-		$plant = $this->session->userdata('plant');
-		$tipe_user = $this->session->userdata('tipe_user');
-		$username = $this->session->userdata('username');
+		$plant      = $this->session->userdata('plant');
+		$tipe_user  = (int) $this->session->userdata('tipe_user');
+		$username   = $this->session->userdata('username');
 
 		if (empty($tanggal) || empty($username)) {
 			return false;
 		}
 
-		// Filter data yang memenuhi syarat
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return false;
+		}
+
+		// Filter utama
 		$this->db
 			->from('thermometer')
 			->where('is_audit', 0)
-			->where('DATE(date)', $tanggal)
-			->where_in('status_spv', ['0', '2']);
+			->where('DATE(date)', $tanggal);
 
+		// Filter berdasarkan jenis verifikasi
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where_in('status_spv', ['0', '2']);
+		} else {
+			$this->db->where('status_produksi', '0');
+		}
+
+		// Filter plant: role 1 dan 9 dapat melihat semua plant
 		if ($tipe_user != 9 && $tipe_user != 1) {
 			if (empty($plant)) {
 				return false;
@@ -294,6 +305,7 @@ class Thermometer_model extends CI_Model
 			$this->db->where('plant', $plant);
 		}
 
+		// Filter shift
 		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
@@ -304,13 +316,18 @@ class Thermometer_model extends CI_Model
 			return 0;
 		}
 
-		// Update data
+		// Proses update
 		$this->db->trans_begin();
 
 		$this->db
 			->where('is_audit', 0)
-			->where('DATE(date)', $tanggal)
-			->where_in('status_spv', ['0', '2']);
+			->where('DATE(date)', $tanggal);
+
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where_in('status_spv', ['0', '2']);
+		} else {
+			$this->db->where('status_produksi', '0');
+		}
 
 		if ($tipe_user != 9 && $tipe_user != 1) {
 			$this->db->where('plant', $plant);
@@ -320,11 +337,17 @@ class Thermometer_model extends CI_Model
 			$this->db->where('shift', $shift);
 		}
 
-		$this->db->update('thermometer', [
-			'nama_spv' => $username,
-			'status_spv' => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->update('thermometer', [
+				'nama_spv'      => $username,
+				'status_spv'    => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		} else {
+			$this->db->update('thermometer', [
+				'status_produksi' => '1'
+			]);
+		}
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

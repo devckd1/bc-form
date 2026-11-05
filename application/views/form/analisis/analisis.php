@@ -47,8 +47,15 @@ function tampilkan_analisis($kode)
 
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
-				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if ($boleh_verifikasi): ?>
+				<?php
+				$tipe_user = (int) $this->session->userdata('tipe_user');
+
+				$boleh_verifikasi_spv = in_array($tipe_user, [0, 1, 2, 9], true);
+				$boleh_verifikasi_produksi = in_array($tipe_user, [0, 1, 3, 9], true);
+				?>
+
+				<?php if ($boleh_verifikasi_spv || $boleh_verifikasi_produksi): ?>
+
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<input
@@ -56,24 +63,37 @@ function tampilkan_analisis($kode)
 							id="filterTanggal"
 							class="form-control mr-2 mb-2"
 							style="width: 170px;"
-							value="<?= html_escape($filter_tanggal) ?>">
+							value="<?= html_escape($filter_tanggal ?? '') ?>">
 
-						<button
-							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+						<?php if ($boleh_verifikasi_spv): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+								data-jenis="spv">
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal SPV
+							</button>
+						<?php endif; ?>
+
+						<?php if ($boleh_verifikasi_produksi): ?>
+							<button
+								type="button"
+								class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
+								data-jenis="produksi">
+								<i class="fas fa-industry mr-1"></i>
+								Verifikasi Massal
+							</button>
+						<?php endif; ?>
 
 						<a
 							href="<?= base_url('analisis') ?>"
-							class="btn btn-secondary ml-2 mb-2">
+							class="btn btn-secondary mb-2">
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
 						</a>
 
 					</div>
+
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
@@ -341,78 +361,130 @@ function tampilkan_analisis($kode)
 
 		<?php if ($boleh_verifikasi): ?>
 
-			// Verifikasi massal
-			$('#btnVerifikasiMassal').on('click', function() {
+			$(document).ready(function() {
 
-				const tanggal = $('#filterTanggal').val();
+				// Filter otomatis berdasarkan tanggal
+				$('#filterTanggal').on('change', function() {
+					const tanggal = $(this).val();
+					let url = '<?= base_url("analisis"); ?>';
 
-				if (!tanggal) {
-					Swal.fire({
-						icon: 'warning',
-						title: 'Tanggal belum dipilih',
-						text: 'Silakan pilih tanggal terlebih dahulu.'
-					});
-					return;
-				}
+					if (tanggal) {
+						url += '?tanggal=' + encodeURIComponent(tanggal);
+					}
 
-				Swal.fire({
-					title: 'Verifikasi Massal?',
-					text: 'Data Analisis pada tanggal ' + tanggal +
-						' yang sudah Accepted oleh LAB dan berstatus SPV Created atau Revision akan diverifikasi.',
-					icon: 'question',
-					showCancelButton: true,
-					confirmButtonColor: '#28a745',
-					cancelButtonColor: '#6c757d',
-					confirmButtonText: 'Ya, Verifikasi',
-					cancelButtonText: 'Batal'
-				}).then((result) => {
+					window.location.href = url;
+				});
 
-					if (!result.isConfirmed) {
+				// Verifikasi massal SPV dan Produksi
+				$('.btnVerifikasiMassal').on('click', function() {
+
+					const tombol = $(this);
+					const jenis = tombol.data('jenis');
+					const tanggal = $('#filterTanggal').val();
+
+					const namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
+
+					if (!tanggal) {
+						Swal.fire({
+							icon: 'warning',
+							title: 'Tanggal belum dipilih',
+							text: 'Silakan pilih tanggal terlebih dahulu.'
+						});
 						return;
 					}
 
-					$.ajax({
-						url: '<?= base_url('analisis/verifikasi_massal'); ?>',
-						type: 'POST',
-						dataType: 'json',
-						data: {
-							tanggal: tanggal
-						},
+					const keterangan = jenis === 'spv' ?
+						'Data Analisis pada tanggal ' + tanggal +
+						' yang sudah Accepted oleh LAB dan berstatus SPV Created atau Revision akan diverifikasi.' :
+						'Data Analisis pada tanggal ' + tanggal +
+						' yang berstatus Produksi Created akan diverifikasi.';
 
-						beforeSend: function() {
-							$('#btnVerifikasiMassal')
-								.prop('disabled', true)
-								.html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
-						},
+					Swal.fire({
+						title: 'Verifikasi Massal ' + namaJenis + '?',
+						text: keterangan,
+						icon: 'question',
+						showCancelButton: true,
+						confirmButtonColor: jenis === 'spv' ? '#007bff' : '#28a745',
+						cancelButtonColor: '#6c757d',
+						confirmButtonText: 'Ya, Verifikasi',
+						cancelButtonText: 'Batal'
+					}).then(function(result) {
 
-						success: function(response) {
-							Swal.fire({
-								icon: response.status ? 'success' : 'info',
-								title: response.status ? 'Berhasil' : 'Informasi',
-								text: response.message
-							}).then(() => {
-								if (response.status) {
-									window.location.href =
-										'<?= base_url('analisis') ?>?tanggal=' +
-										encodeURIComponent(tanggal);
-								}
-							});
-						},
-
-						error: function(xhr) {
-							Swal.fire({
-								icon: 'error',
-								title: 'Gagal',
-								text: xhr.responseJSON?.message ||
-									'Terjadi kesalahan saat memproses verifikasi massal.'
-							});
-						},
-
-						complete: function() {
-							$('#btnVerifikasiMassal')
-								.prop('disabled', false)
-								.html('<i class="fas fa-check-double"></i> Verifikasi');
+						if (!result.isConfirmed) {
+							return;
 						}
+
+						const teksAwal = tombol.html();
+
+						$.ajax({
+							url: '<?= base_url("analisis/verifikasi_massal"); ?>',
+							type: 'POST',
+							dataType: 'json',
+
+							data: {
+								tanggal: tanggal,
+								jenis_verifikasi: jenis
+							},
+
+							beforeSend: function() {
+								tombol
+									.prop('disabled', true)
+									.html(
+										'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+									);
+
+								Swal.fire({
+									title: 'Memproses...',
+									text: 'Sedang melakukan verifikasi Analisis oleh ' + namaJenis + '.',
+									allowOutsideClick: false,
+									didOpen: function() {
+										Swal.showLoading();
+									}
+								});
+							},
+
+							success: function(response) {
+
+								if (response.status) {
+									Swal.fire({
+										icon: 'success',
+										title: 'Berhasil',
+										text: response.message
+									}).then(function() {
+
+										let url = '<?= base_url("analisis"); ?>';
+
+										if (tanggal) {
+											url += '?tanggal=' + encodeURIComponent(tanggal);
+										}
+
+										window.location.href = url;
+									});
+
+								} else {
+									Swal.fire({
+										icon: 'info',
+										title: 'Informasi',
+										text: response.message
+									});
+								}
+							},
+
+							error: function(xhr) {
+								Swal.fire({
+									icon: 'error',
+									title: 'Gagal',
+									text: xhr.responseJSON?.message ||
+										'Terjadi kesalahan saat memproses verifikasi massal.'
+								});
+							},
+
+							complete: function() {
+								tombol
+									.prop('disabled', false)
+									.html(teksAwal);
+							}
+						});
 					});
 				});
 			});

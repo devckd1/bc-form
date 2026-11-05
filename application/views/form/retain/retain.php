@@ -162,10 +162,10 @@
 											</a>
 										<?php endif; ?>
 										<a href="<?= base_url('retain/detail/' . $val->uuid); ?>"
-    data-url="<?= base_url('retain/detail/' . $val->uuid . '?popup=1'); ?>"
-    class="btn btn-success btn-icon-split btn-detail-retain">
-    <span class="text">Detail</span>
-</a>
+											data-url="<?= base_url('retain/detail/' . $val->uuid . '?popup=1'); ?>"
+											class="btn btn-success btn-icon-split btn-detail-retain">
+											<span class="text">Detail</span>
+										</a>
 										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 											<a href="<?= base_url('retain/status/' . $val->uuid); ?>" class="btn btn-info btn-icon-split">
 												<span class="text">Verifikasi</span>
@@ -201,23 +201,23 @@
 </div>
 </div>
 <div class="modal fade" id="modalDetailRetain" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Detail Retain Sample</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Detail Retain Sample</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
 
-            <div class="modal-body" id="contentDetailRetain">
-                <div class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Memuat detail...</p>
-                </div>
-            </div>
-        </div>
-    </div>
+			<div class="modal-body" id="contentDetailRetain">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat detail...</p>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 <style>
 	th {
@@ -225,51 +225,51 @@
 	}
 </style>
 <script>
-    $(document).ready(function() {
+	$(document).ready(function() {
 
-        let cacheDetailRetain = {};
+		let cacheDetailRetain = {};
 
-        $(document).on('click', '.btn-detail-retain', function(e) {
-            e.preventDefault();
+		$(document).on('click', '.btn-detail-retain', function(e) {
+			e.preventDefault();
 
-            let url = $(this).data('url');
-            let content = $('#contentDetailRetain');
+			let url = $(this).data('url');
+			let content = $('#contentDetailRetain');
 
-            $('#modalDetailRetain').modal('show');
+			$('#modalDetailRetain').modal('show');
 
-            if (cacheDetailRetain[url]) {
-                content.html(cacheDetailRetain[url]);
-                return;
-            }
+			if (cacheDetailRetain[url]) {
+				content.html(cacheDetailRetain[url]);
+				return;
+			}
 
-            content.html(`
+			content.html(`
                 <div class="text-center py-5">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p class="mt-2">Memuat detail...</p>
                 </div>
             `);
 
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'html',
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'html',
 
-                success: function(response) {
-                    cacheDetailRetain[url] = response;
-                    content.html(response);
-                },
+				success: function(response) {
+					cacheDetailRetain[url] = response;
+					content.html(response);
+				},
 
-                error: function() {
-                    content.html(`
+				error: function() {
+					content.html(`
                         <div class="alert alert-danger text-center">
                             Gagal memuat detail Retain.
                         </div>
                     `);
-                }
-            });
-        });
+				}
+			});
+		});
 
-    });
+	});
 </script>
 <script>
 	document.getElementById('select_all').addEventListener('change', function() {
