@@ -287,7 +287,7 @@ class Pemeriksaanpengiriman extends MY_Controller
 		foreach ($pemeriksaanpengiriman_data as $pemeriksaanpengiriman) {
 			$tanggal = $pemeriksaanpengiriman->date;
 			$date = new DateTime($tanggal);
-			$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
+			$formatted_date = $datetime->format('l, d F Y');
 
 			$time = $pemeriksaanpengiriman->jam_datang;
 			$time2 = new DateTime($time);

@@ -567,8 +567,8 @@ class Kebersihankaryawan extends MY_Controller
 		setlocale(LC_TIME, 'IND');
 		$tanggal = $data['kebersihankaryawan']->date;
 		$datetime = new DateTime($tanggal);
-		$formatted_date = strftime('%A, %d %B %Y', $datetime->getTimestamp());
-		$formatted_date2 = strftime('%d %B %Y', $datetime->getTimestamp());
+		$formatted_date = $datetime->format('l, d F Y');
+		$formatted_date2 = $datetime->format('d F Y');
 
 		$pdf->SetFont('times', '', 9);
 		$pdf->SetX(10);

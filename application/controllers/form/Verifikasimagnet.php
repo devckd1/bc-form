@@ -428,7 +428,7 @@ class Verifikasimagnet extends MY_Controller
 
 			$tanggal = $verifikasimagnet->date;
 			$date = new DateTime($tanggal);
-			$formatted_date = strftime('%A, %d %B %Y', $date->getTimestamp());
+			$formatted_date = $datetime->format('l, d F Y');
 
 			$keterangan = !empty($verifikasimagnet->keterangan)
 				? $verifikasimagnet->keterangan
