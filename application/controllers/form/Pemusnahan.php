@@ -80,30 +80,30 @@ class Pemusnahan extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $pemusnahan = $this->pemusnahan_model->get_qc_by_uuid($uuid);
+	{
+		$pemusnahan = $this->pemusnahan_model->get_qc_by_uuid($uuid);
 
-    if (!$pemusnahan) {
-        show_404();
-        return;
-    }
+		if (!$pemusnahan) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'pemusnahan' => $pemusnahan,
-        'mode'       => 'qc',
-        'is_popup'   => $is_popup
-    ];
+		$data = [
+			'pemusnahan' => $pemusnahan,
+			'mode'       => 'qc',
+			'is_popup'   => $is_popup
+		];
 
-    $this->active_nav = 'pemusnahan';
+		$this->active_nav = 'pemusnahan';
 
-    if ($is_popup) {
-        $this->load->view('form/pemusnahan/pemusnahan-detail', $data);
-    } else {
-        $this->render('form/pemusnahan/pemusnahan-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/pemusnahan/pemusnahan-detail', $data);
+		} else {
+			$this->render('form/pemusnahan/pemusnahan-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -422,9 +422,9 @@ class Pemusnahan extends MY_Controller
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['pemusnahan']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = $datetime->format('l, d F Y');
+		$formatted_date = $date->format('l, d F Y');
 
-		$formatted_date2 = $datetime->format('d F Y');
+		$formatted_date2 = $date->format('d F Y');
 
 		$pdf->SetFont('times', '', 10);
 		$pdf->SetX(17);
@@ -440,11 +440,22 @@ class Pemusnahan extends MY_Controller
 		$pdf->Cell(90, 10, 'Analisa', 1, 0, 'C');
 		$pdf->Cell(40, 10, 'Keterangan', 1, 1, 'C');
 
+		$formatter = new IntlDateFormatter(
+			'id_ID',
+			IntlDateFormatter::NONE,
+			IntlDateFormatter::NONE,
+			'Asia/Jakarta',
+			IntlDateFormatter::GREGORIAN,
+			'dd MMMM yyyy'
+		);
+
+		$no = 1;
+
 		foreach ($pemusnahan_data as $pemusnahan) {
 			$bb = $pemusnahan->best_before;
 			$best_before = new DateTime($bb);
-			$formatted_bb = strftime('%d %B %Y', $best_before->getTimestamp());
-			$no = 1;
+			$formatted_bb = $formatter->format($best_before);
+
 			$pdf->SetFont('times', '', 10);
 			$pdf->Cell(15, 8, $no, 1, 0, 'C');
 			$pdf->Cell(60, 8, $pemusnahan->nama_produk, 1, 0, 'C');
@@ -453,6 +464,7 @@ class Pemusnahan extends MY_Controller
 			$pdf->Cell(90, 8, $pemusnahan->analisa, 1, 0, 'C');
 			$pdf->Cell(40, 8, !empty($pemusnahan->keterangan) ? $pemusnahan->keterangan : '-', 1, 0, 'C');
 			$pdf->Ln();
+
 			$no++;
 		}
 

@@ -57,30 +57,30 @@ class Releasepacking extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-	$releasepacking = $this->releasepacking_model->get_by_uuid($uuid);
+	{
+		$releasepacking = $this->releasepacking_model->get_by_uuid($uuid);
 
-	if (!$releasepacking) {
-		show_404();
-		return;
+		if (!$releasepacking) {
+			show_404();
+			return;
+		}
+
+		$is_popup = $this->input->get('popup') == '1';
+
+		$data = [
+			'releasepacking' => $releasepacking,
+			'mode' => 'qc',
+			'is_popup' => $is_popup
+		];
+
+		$this->active_nav = 'releasepacking';
+
+		if ($is_popup) {
+			$this->load->view('form/releasepacking/releasepacking-detail', $data);
+		} else {
+			$this->render('form/releasepacking/releasepacking-detail', $data);
+		}
 	}
-
-	$is_popup = $this->input->get('popup') == '1';
-
-	$data = [
-		'releasepacking' => $releasepacking,
-		'mode' => 'qc',
-		'is_popup' => $is_popup
-	];
-
-	$this->active_nav = 'releasepacking';
-
-	if ($is_popup) {
-		$this->load->view('form/releasepacking/releasepacking-detail', $data);
-	} else {
-		$this->render('form/releasepacking/releasepacking-detail', $data);
-	}
-}
 
 	public function tambah()
 	{
@@ -396,9 +396,9 @@ class Releasepacking extends MY_Controller
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['releasepacking']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = $datetime->format('l, d F Y');
+		$formatted_date = $date->format('l, d F Y');
 
-		$formatted_date2 = $datetime->format('d F Y');
+		$formatted_date2 = $date->format('d F Y');
 
 		$pdf->SetFont('times', '', 10);
 		$pdf->SetX(17);
@@ -419,7 +419,18 @@ class Releasepacking extends MY_Controller
 		foreach ($releasepacking_data as $releasepacking) {
 			$bb = $releasepacking->best_before;
 			$best_before = new DateTime($bb);
-			$formatted_bb = strftime('%d %B %Y', $best_before->getTimestamp());
+
+			$formatter = new IntlDateFormatter(
+				'id_ID',
+				IntlDateFormatter::NONE,
+				IntlDateFormatter::NONE,
+				'Asia/Jakarta',
+				IntlDateFormatter::GREGORIAN,
+				'dd MMMM yyyy'
+			);
+
+			$formatted_bb = $formatter->format($best_before);
+
 			$pdf->SetFont('times', '', 10);
 			$pdf->Cell(10, 8, $no, 1, 0, 'C');
 			$pdf->Cell(80, 8, $releasepacking->nama_produk, 1, 0, 'C');

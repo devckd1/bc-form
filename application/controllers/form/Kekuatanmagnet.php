@@ -535,7 +535,7 @@ class Kekuatanmagnet extends MY_Controller
 
 			$tanggal = $kekuatanmagnet->date;
 			$date = new DateTime($tanggal);
-			$formatted_date = $datetime->format('l, d F Y');
+			$formatted_date = $date->format('l, d F Y');
 
 			// Simpan posisi awal
 			$x = $pdf->GetX();
