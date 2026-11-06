@@ -28,7 +28,8 @@
 			<div class="d-flex justify-content-between align-items-center flex-wrap">
 
 				<!-- Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<?php if (in_array($tipe_user, [0, 1, 2, 3, 9])): ?>
+
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<input
@@ -44,6 +45,7 @@
 							style="width: 140px;">
 
 							<option value="">Semua Shift</option>
+
 							<?php foreach (['1', '2', '3'] as $shift): ?>
 								<option value="<?= $shift; ?>"
 									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
@@ -53,14 +55,31 @@
 
 						</select>
 
-						<button
-							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
+						<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+							<button
+								type="button"
+								class="btn btn-primary btn-verifikasi-massal mr-1 mb-2"
+								data-jenis="spv">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi Massal
+							</button>
+
+						<?php endif; ?>
+
+						<?php if (in_array($tipe_user, [0, 1, 3, 9])): ?>
+
+							<button
+								type="button"
+								class="btn btn-primary btn-verifikasi-massal mb-2"
+								data-jenis="produksi">
+
+								<i class="fas fa-industry mr-1"></i>
+								Verifikasi Massal
+							</button>
+
+						<?php endif; ?>
 
 						<a
 							href="<?= base_url('pecahbelah'); ?>"
@@ -71,6 +90,7 @@
 						</a>
 
 					</div>
+
 				<?php endif; ?>
 
 				<!-- Tombol Tambah dan Audit -->
@@ -230,10 +250,10 @@
 									<?php endif; ?>
 
 									<a href="<?= base_url('pecahbelah/detail/' . $val->uuid); ?>"
-    data-url="<?= base_url('pecahbelah/detail/' . $val->uuid . '?popup=1'); ?>"
-    class="btn btn-success btn-icon-split btn-detail-pecahbelah">
-    <span class="text">Detail</span>
-</a>
+										data-url="<?= base_url('pecahbelah/detail/' . $val->uuid . '?popup=1'); ?>"
+										class="btn btn-success btn-icon-split btn-detail-pecahbelah">
+										<span class="text">Detail</span>
+									</a>
 
 									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
 										<a href="<?= base_url('pecahbelah/delete/' . $val->uuid); ?>"
@@ -307,30 +327,30 @@
 </div>
 <!-- Modal Detail Benda Mudah Pecah -->
 <div class="modal fade" id="modalDetailPecahbelah" tabindex="-1" role="dialog"
-    aria-labelledby="modalDetailPecahbelahLabel" aria-hidden="true">
+	aria-labelledby="modalDetailPecahbelahLabel" aria-hidden="true">
 
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+		<div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalDetailPecahbelahLabel">
-                    Detail Benda Mudah Pecah
-                </h5>
+			<div class="modal-header">
+				<h5 class="modal-title" id="modalDetailPecahbelahLabel">
+					Detail Benda Mudah Pecah
+				</h5>
 
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
 
-            <div class="modal-body" id="contentDetailPecahbelah">
-                <div class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Memuat detail...</p>
-                </div>
-            </div>
+			<div class="modal-body" id="contentDetailPecahbelah">
+				<div class="text-center py-5">
+					<i class="fas fa-spinner fa-spin fa-2x"></i>
+					<p class="mt-2">Memuat detail...</p>
+				</div>
+			</div>
 
-        </div>
-    </div>
+		</div>
+	</div>
 </div>
 <style>
 	th {
@@ -340,12 +360,18 @@
 <script>
 	$(document).ready(function() {
 
-		// Filter tanggal dan shift
-		function filterPecahbelah() {
-			var tanggal = $('#filter_tanggal').val();
-			var shift = $('#filter_shift').val();
+		const baseUrl = "<?= base_url('pecahbelah'); ?>";
+		const verifikasiUrl = "<?= base_url('pecahbelah/verifikasi_massal'); ?>";
 
-			var params = new URLSearchParams();
+		// ==========================================
+		// FILTER TANGGAL DAN SHIFT
+		// ==========================================
+		function filterPecahbelah() {
+
+			const tanggal = $('#filter_tanggal').val();
+			const shift = $('#filter_shift').val();
+
+			const params = new URLSearchParams();
 
 			if (tanggal) {
 				params.set('tanggal', tanggal);
@@ -355,22 +381,28 @@
 				params.set('shift', shift);
 			}
 
-			var query = params.toString();
+			const query = params.toString();
 
-			window.location.href = "<?= base_url('pecahbelah'); ?>" +
-				(query ? '?' + query : '');
+			window.location.href = baseUrl + (query ? '?' + query : '');
 		}
 
 		$('#filter_tanggal, #filter_shift').on('change', function() {
 			filterPecahbelah();
 		});
 
-		// Verifikasi massal SPV
-		$('#btnVerifikasiMassal').on('click', function() {
 
-			var tanggal = $('#filter_tanggal').val();
-			var shift = $('#filter_shift').val();
-			var tombol = $(this);
+		// ==========================================
+		// VERIFIKASI MASSAL SPV DAN PRODUKSI
+		// ==========================================
+		$('.btn-verifikasi-massal').on('click', function() {
+
+			const tombol = $(this);
+			const jenis = tombol.data('jenis');
+
+			const tanggal = $('#filter_tanggal').val();
+			const shift = $('#filter_shift').val();
+
+			const namaJenis = jenis === 'spv' ? 'SPV' : 'Produksi';
 
 			if (!tanggal) {
 				Swal.fire(
@@ -381,9 +413,19 @@
 				return;
 			}
 
+			const keteranganShift = shift ?
+				'Shift ' + shift :
+				'Semua Shift';
+
+			const pesan = jenis === 'spv' ?
+				'Data Benda Mudah Pecah yang sudah diverifikasi Produksi pada tanggal ' +
+				tanggal + ' (' + keteranganShift + ') akan diverifikasi oleh SPV.' :
+				'Data Benda Mudah Pecah yang belum diverifikasi Produksi pada tanggal ' +
+				tanggal + ' (' + keteranganShift + ') akan diverifikasi oleh Produksi.';
+
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Data Benda Mudah Pecah yang sudah diverifikasi Produksi pada tanggal dan shift terpilih akan diproses.',
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+				text: pesan,
 				icon: 'question',
 				showCancelButton: true,
 				confirmButtonText: 'Ya, Verifikasi',
@@ -394,32 +436,62 @@
 					return;
 				}
 
-				tombol.prop('disabled', true);
-				tombol.html(
-					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
-				);
-
 				$.ajax({
-					url: "<?= base_url('pecahbelah/verifikasi_massal'); ?>",
+
+					url: verifikasiUrl,
 					type: 'POST',
 					dataType: 'json',
+
 					data: {
 						tanggal: tanggal,
-						shift: shift || 'semua'
+						shift: shift || 'semua',
+						jenis_verifikasi: jenis
+					},
+
+					beforeSend: function() {
+
+						tombol.prop('disabled', true);
+
+						tombol.html(
+							'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
+						);
+
+						Swal.fire({
+							title: 'Memproses...',
+							text: 'Sedang melakukan verifikasi oleh ' + namaJenis + '.',
+							allowOutsideClick: false,
+							didOpen: function() {
+								Swal.showLoading();
+							}
+						});
 					},
 
 					success: function(response) {
 
 						if (response.success) {
+
 							Swal.fire({
 								title: 'Berhasil',
 								text: response.message +
 									' Jumlah data: ' + response.updated,
 								icon: 'success'
 							}).then(function() {
-								window.location.reload();
+
+								// Pertahankan filter tanggal dan shift
+								const params = new URLSearchParams();
+
+								params.set('tanggal', tanggal);
+
+								if (shift) {
+									params.set('shift', shift);
+								}
+
+								window.location.href =
+									baseUrl + '?' + params.toString();
 							});
+
 						} else {
+
 							Swal.fire(
 								'Informasi',
 								response.message,
@@ -427,13 +499,17 @@
 							);
 
 							tombol.prop('disabled', false);
+
 							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+								jenis === 'spv' ?
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi SPV' :
+								'<i class="fas fa-check-circle mr-1"></i> Verifikasi Produksi'
 							);
 						}
 					},
 
 					error: function() {
+
 						Swal.fire(
 							'Error',
 							'Terjadi kesalahan saat memproses verifikasi massal.',
@@ -441,10 +517,14 @@
 						);
 
 						tombol.prop('disabled', false);
+
 						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							jenis === 'spv' ?
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi SPV' :
+							'<i class="fas fa-check-circle mr-1"></i> Verifikasi Produksi'
 						);
 					}
+
 				});
 			});
 		});
@@ -452,48 +532,48 @@
 	});
 </script>
 <script>
-    $(document).ready(function() {
+	$(document).ready(function() {
 
-        let cacheDetailPecahbelah = {};
+		let cacheDetailPecahbelah = {};
 
-        $(document).on('click', '.btn-detail-pecahbelah', function(e) {
-            e.preventDefault();
+		$(document).on('click', '.btn-detail-pecahbelah', function(e) {
+			e.preventDefault();
 
-            let url = $(this).data('url');
+			let url = $(this).data('url');
 
-            $('#modalDetailPecahbelah').modal('show');
+			$('#modalDetailPecahbelah').modal('show');
 
-            if (cacheDetailPecahbelah[url]) {
-                $('#contentDetailPecahbelah').html(cacheDetailPecahbelah[url]);
-                return;
-            }
+			if (cacheDetailPecahbelah[url]) {
+				$('#contentDetailPecahbelah').html(cacheDetailPecahbelah[url]);
+				return;
+			}
 
-            $('#contentDetailPecahbelah').html(`
+			$('#contentDetailPecahbelah').html(`
                 <div class="text-center py-5">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p class="mt-2">Memuat detail...</p>
                 </div>
             `);
 
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'html',
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: 'html',
 
-                success: function(response) {
-                    cacheDetailPecahbelah[url] = response;
-                    $('#contentDetailPecahbelah').html(response);
-                },
+				success: function(response) {
+					cacheDetailPecahbelah[url] = response;
+					$('#contentDetailPecahbelah').html(response);
+				},
 
-                error: function() {
-                    $('#contentDetailPecahbelah').html(`
+				error: function() {
+					$('#contentDetailPecahbelah').html(`
                         <div class="alert alert-danger text-center">
                             Gagal memuat detail benda mudah pecah.
                         </div>
                     `);
-                }
-            });
-        });
+				}
+			});
+		});
 
-    });
+	});
 </script>

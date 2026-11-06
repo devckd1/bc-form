@@ -77,7 +77,7 @@
 								class="btn btn-primary mb-2 btn-verifikasi-massal"
 								data-jenis="produksi">
 
-								<i class="fas fa-check-double mr-1"></i>
+								<i class="fas fa-industry mr-1"></i>
 								Verifikasi Massal
 
 							</button>

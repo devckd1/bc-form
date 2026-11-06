@@ -63,29 +63,29 @@ class Pecahbelah extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $pecahbelah = $this->pecahbelah_model->get_by_uuid($uuid);
+	{
+		$pecahbelah = $this->pecahbelah_model->get_by_uuid($uuid);
 
-    if (!$pecahbelah) {
-        show_404();
-        return;
-    }
+		if (!$pecahbelah) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = array(
-        'pecahbelah' => $pecahbelah,
-        'is_popup' => $is_popup
-    );
+		$data = array(
+			'pecahbelah' => $pecahbelah,
+			'is_popup' => $is_popup
+		);
 
-    $this->active_nav = 'pecahbelah';
+		$this->active_nav = 'pecahbelah';
 
-    if ($is_popup) {
-        $this->load->view('form/pecahbelah/pecahbelah-detail', $data);
-    } else {
-        $this->render('form/pecahbelah/pecahbelah-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/pecahbelah/pecahbelah-detail', $data);
+		} else {
+			$this->render('form/pecahbelah/pecahbelah-detail', $data);
+		}
+	}
 	public function tambah()
 	{
 		$rules = $this->pecahbelah_model->rules();
@@ -213,10 +213,33 @@ class Pecahbelah extends MY_Controller
 
 	public function verifikasi_massal()
 	{
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
+
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
 		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
 		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		$jenis_verifikasi = trim($this->input->post('jenis_verifikasi', TRUE) ?? '');
 
-		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+		// Validasi jenis verifikasi dan hak akses
+		if (
+			($jenis_verifikasi === 'spv' && !in_array($tipe_user, [0, 1, 2, 9])) ||
+			($jenis_verifikasi === 'produksi' && !in_array($tipe_user, [0, 1, 3, 9])) ||
+			!in_array($jenis_verifikasi, ['spv', 'produksi'])
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Anda tidak memiliki hak akses untuk verifikasi ini.'
+				]));
+		}
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('!Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
@@ -230,8 +253,21 @@ class Pecahbelah extends MY_Controller
 				]));
 		}
 
-		$updated = $this->pecahbelah_model
-			->verifikasi_massal_spv($tanggal, $shift);
+		// Validasi shift
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'])) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
+		$updated = $this->pecahbelah_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
 
 		if ($updated === false) {
 			$response = [
@@ -239,10 +275,15 @@ class Pecahbelah extends MY_Controller
 				'message' => 'Verifikasi massal Benda Mudah Pecah gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+			$nama_verifikasi = $jenis_verifikasi === 'spv'
+				? 'SPV'
+				: 'Produksi';
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Benda Mudah Pecah berhasil.'
+				'message' => 'Verifikasi massal Benda Mudah Pecah oleh ' .
+					$nama_verifikasi . ' berhasil.'
 			];
 		} else {
 			$response = [

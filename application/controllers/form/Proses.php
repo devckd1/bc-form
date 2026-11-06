@@ -67,33 +67,33 @@ class Proses extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $proses = $this->proses_model->get_by_uuid($uuid);
+	{
+		$proses = $this->proses_model->get_by_uuid($uuid);
 
-    if (!$proses) {
-        show_404();
-        return;
-    }
+		if (!$proses) {
+			show_404();
+			return;
+		}
 
-    if (isset($proses->proses_produksi)) {
-        $proses->proses_produksi = json_decode($proses->proses_produksi, true);
-    }
+		if (isset($proses->proses_produksi)) {
+			$proses->proses_produksi = json_decode($proses->proses_produksi, true);
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = array(
-        'proses' => $proses,
-        'is_popup' => $is_popup
-    );
+		$data = array(
+			'proses' => $proses,
+			'is_popup' => $is_popup
+		);
 
-    $this->active_nav = 'proses';
+		$this->active_nav = 'proses';
 
-    if ($is_popup) {
-        $this->load->view('form/proses/proses-detail', $data);
-    } else {
-        $this->render('form/proses/proses-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/proses/proses-detail', $data);
+		} else {
+			$this->render('form/proses/proses-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -289,10 +289,43 @@ class Proses extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
-		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
 
-		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift   = trim($this->input->post('shift', TRUE) ?? '');
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', TRUE) ?? ''
+		);
+
+		/*
+     * VALIDASI HAK AKSES
+     */
+		if (
+			($jenis_verifikasi === 'spv' &&
+				!in_array($tipe_user, [0, 1, 2, 9], true)) ||
+
+			($jenis_verifikasi === 'produksi' &&
+				!in_array($tipe_user, [0, 1, 3, 9], true)) ||
+
+			!in_array($jenis_verifikasi, ['spv', 'produksi'], true)
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Anda tidak memiliki hak untuk melakukan verifikasi ini.'
+				]));
+		}
+
+		/*
+     * VALIDASI TANGGAL
+     */
+		$tanggal_obj = DateTime::createFromFormat('!Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
@@ -306,21 +339,44 @@ class Proses extends MY_Controller
 				]));
 		}
 
-		$updated = $this->proses_model
-			->verifikasi_massal_spv($tanggal, $shift);
+		/*
+     * VALIDASI SHIFT
+     */
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
+		$updated = $this->proses_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
 
 		if ($updated === false) {
+
 			$response = [
 				'success' => false,
 				'message' => 'Verifikasi massal Proses gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+
+			$nama_verifikasi = $jenis_verifikasi === 'spv'
+				? 'SPV'
+				: 'Produksi';
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Proses berhasil.'
+				'message' => 'Verifikasi massal Proses oleh ' .
+					$nama_verifikasi . ' berhasil.'
 			];
 		} else {
+
 			$response = [
 				'success' => false,
 				'updated' => 0,

@@ -28,7 +28,8 @@
 			<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
 
 				<!-- KIRI: Filter dan Verifikasi Massal -->
-				<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<?php if (in_array($tipe_user, [0, 1, 2, 3, 9])): ?>
+
 					<div class="d-flex align-items-center flex-wrap mb-2">
 
 						<input
@@ -36,7 +37,11 @@
 							id="filter_tanggal"
 							class="form-control mr-2 mb-2"
 							style="width: 170px;"
-							value="<?= htmlspecialchars($filter_tanggal ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+							value="<?= htmlspecialchars(
+										$filter_tanggal ?? '',
+										ENT_QUOTES,
+										'UTF-8'
+									); ?>">
 
 						<select
 							id="filter_shift"
@@ -46,30 +51,58 @@
 							<option value="">Semua Shift</option>
 
 							<?php foreach (['1', '2', '3'] as $shift): ?>
-								<option value="<?= $shift; ?>"
-									<?= (($filter_shift ?? '') === $shift) ? 'selected' : ''; ?>>
+								<option
+									value="<?= $shift; ?>"
+									<?= (($filter_shift ?? '') === $shift)
+										? 'selected'
+										: ''; ?>>
+
 									Shift <?= $shift; ?>
+
 								</option>
 							<?php endforeach; ?>
 
 						</select>
 
-						<button
-							type="button"
-							id="btnVerifikasiMassal"
-							class="btn btn-primary mb-2">
-							<i class="fas fa-check-double mr-1"></i>
-							Verifikasi Massal
-						</button>
+						<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+
+							<button
+								type="button"
+								class="btn btn-primary btn-verifikasi-massal mr-1 mb-2"
+								data-jenis="spv">
+
+								<i class="fas fa-check-double mr-1"></i>
+								Verifikasi SPV
+
+							</button>
+
+						<?php endif; ?>
+
+						<?php if (in_array($tipe_user, [0, 1, 3, 9])): ?>
+
+							<button
+								type="button"
+								class="btn btn-primary btn-verifikasi-massal mb-2"
+								data-jenis="produksi">
+
+								<i class="fas fa-industry mr-1"></i>
+								Verifikasi Massal
+
+							</button>
+
+						<?php endif; ?>
 
 						<a
 							href="<?= base_url('proses'); ?>"
 							class="btn btn-secondary ml-2 mb-2">
+
 							<i class="fas fa-sync-alt mr-1"></i>
 							Reset
+
 						</a>
 
 					</div>
+
 				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
@@ -197,7 +230,7 @@
 
 									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 										<a href="<?= base_url('proses/verifikasi_produksi/' . $val->uuid); ?>"
-											class="btn btn-warning btn-icon-split"
+											class="btn btn-primary btn-icon-split"
 											onclick="return confirm('Apakah Anda yakin ingin menyetujui data ini?')">
 											<span class="text">Setujui</span>
 										</a>
@@ -333,8 +366,11 @@
 <script>
 	$(document).ready(function() {
 
-		// Filter tanggal dan shift
+		/*
+		 * FILTER TANGGAL DAN SHIFT
+		 */
 		function filterProses() {
+
 			var tanggal = $('#filter_tanggal').val();
 			var shift = $('#filter_shift').val();
 
@@ -358,12 +394,21 @@
 			filterProses();
 		});
 
-		// Verifikasi massal SPV
-		$('#btnVerifikasiMassal').on('click', function() {
+
+		/*
+		 * VERIFIKASI MASSAL SPV DAN PRODUKSI
+		 */
+		$('.btn-verifikasi-massal').on('click', function() {
+
+			var tombol = $(this);
+			var jenis = tombol.data('jenis');
 
 			var tanggal = $('#filter_tanggal').val();
 			var shift = $('#filter_shift').val();
-			var tombol = $(this);
+
+			var namaJenis = jenis === 'spv' ?
+				'SPV' :
+				'Produksi';
 
 			if (!tanggal) {
 				Swal.fire(
@@ -374,9 +419,13 @@
 				return;
 			}
 
+			var pesan = jenis === 'spv' ?
+				'Data Proses dengan status SPV Created atau Revision pada tanggal dan shift terpilih akan diverifikasi.' :
+				'Data Proses yang belum diverifikasi Produksi pada tanggal dan shift terpilih akan diproses.';
+
 			Swal.fire({
-				title: 'Verifikasi Massal?',
-				text: 'Data Proses pada tanggal dan shift terpilih dengan status SPV Created atau Revision akan diverifikasi.',
+				title: 'Verifikasi Massal ' + namaJenis + '?',
+				text: pesan,
 				icon: 'question',
 				showCancelButton: true,
 				confirmButtonText: 'Ya, Verifikasi',
@@ -388,6 +437,7 @@
 				}
 
 				tombol.prop('disabled', true);
+
 				tombol.html(
 					'<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...'
 				);
@@ -396,14 +446,17 @@
 					url: "<?= base_url('proses/verifikasi_massal'); ?>",
 					type: 'POST',
 					dataType: 'json',
+
 					data: {
 						tanggal: tanggal,
-						shift: shift || 'semua'
+						shift: shift || 'semua',
+						jenis_verifikasi: jenis
 					},
 
 					success: function(response) {
 
 						if (response.success) {
+
 							Swal.fire({
 								title: 'Berhasil',
 								text: response.message +
@@ -412,7 +465,9 @@
 							}).then(function() {
 								window.location.reload();
 							});
+
 						} else {
+
 							Swal.fire(
 								'Informasi',
 								response.message,
@@ -420,13 +475,17 @@
 							);
 
 							tombol.prop('disabled', false);
+
 							tombol.html(
-								'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+								jenis === 'spv' ?
+								'<i class="fas fa-check-double mr-1"></i> Verifikasi SPV' :
+								'<i class="fas fa-check-circle mr-1"></i> Verifikasi Produksi'
 							);
 						}
 					},
 
 					error: function() {
+
 						Swal.fire(
 							'Error',
 							'Terjadi kesalahan saat memproses verifikasi massal.',
@@ -434,8 +493,11 @@
 						);
 
 						tombol.prop('disabled', false);
+
 						tombol.html(
-							'<i class="fas fa-check-double mr-1"></i> Verifikasi Massal'
+							jenis === 'spv' ?
+							'<i class="fas fa-check-double mr-1"></i> Verifikasi SPV' :
+							'<i class="fas fa-check-circle mr-1"></i> Verifikasi Produksi'
 						);
 					}
 				});

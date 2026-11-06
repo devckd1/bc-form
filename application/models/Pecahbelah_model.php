@@ -382,57 +382,63 @@ class Pecahbelah_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis_verifikasi = 'spv')
 	{
 		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
+		$type_user = (int) $this->session->userdata('tipe_user');
 		$username = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($username)) {
+		if (empty($tanggal)) {
 			return false;
 		}
 
-		// Filter data yang memenuhi syarat
-		$this->db->where('is_audit', 0);
-		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
-
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'])) {
+			return false;
 		}
 
-		if ($type_user != 9 && $type_user != 1) {
-			$this->db->where('plant', $plant);
-		}
-
-		$jumlah_data = $this->db->count_all_results($this->table);
-
-		if ($jumlah_data == 0) {
-			return 0;
+		if ($jenis_verifikasi === 'spv' && empty($username)) {
+			return false;
 		}
 
 		$this->db->trans_begin();
 
-		// Update data SPV
+		// Filter utama
 		$this->db->where('is_audit', 0);
 		$this->db->where('DATE(date)', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
 		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
+		// Filter plant mengikuti pola model sebelumnya
 		if ($type_user != 9 && $type_user != 1) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->update($this->table, [
-			'nama_spv'      => $username,
-			'status_spv'    => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+		// ==========================================
+		// VERIFIKASI SPV
+		// ==========================================
+		if ($jenis_verifikasi === 'spv') {
+
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update($this->table, [
+				'nama_spv'       => $username,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		} else {
+
+			// ==========================================
+			// VERIFIKASI PRODUKSI
+			// ==========================================
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update($this->table, [
+				'status_produksi' => '1'
+			]);
+		}
 
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();

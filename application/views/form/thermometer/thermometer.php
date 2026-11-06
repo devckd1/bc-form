@@ -68,7 +68,7 @@
 							type="button"
 							class="btn btn-primary btn-verifikasi-massal mb-2"
 							data-jenis="produksi">
-							<i class="fas fa-check-double mr-1"></i>
+							<i class="fas fa-industry mr-1"></i>
 							Verifikasi Massal
 						</button>
 					<?php endif; ?>

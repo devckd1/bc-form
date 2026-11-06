@@ -239,64 +239,88 @@ class Inventaris_model extends CI_Model
 		return ($this->db->affected_rows() > 0) ? true : false;
 	}
 
-	public function verifikasi_massal()
+	public function verifikasi_massal($tanggal, $shift = '', $jenis_verifikasi = 'spv')
 	{
-		$tipe_user = $this->session->userdata('tipe_user');
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$username  = $this->session->userdata('username');
 
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
-			show_error(
-				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
-				403
-			);
-			return;
+		if (empty($tanggal) || empty($username)) {
+			return false;
 		}
 
-		$tanggal = $this->input->post('tanggal', true);
-
-		if (empty($tanggal)) {
-			$this->output
-				->set_content_type('application/json')
-				->set_output(json_encode([
-					'status' => false,
-					'message' => 'Tanggal harus dipilih.'
-				]));
-			return;
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'], true)) {
+			return false;
 		}
 
-		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+		// Kondisi dasar
+		$this->db->from($this->table);
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
 
-		if (!$date || $date->format('Y-m-d') !== $tanggal) {
-			$this->output
-				->set_content_type('application/json')
-				->set_output(json_encode([
-					'status' => false,
-					'message' => 'Format tanggal tidak valid.'
-				]));
-			return;
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
 		}
 
-		$jumlah = $this->inventaris_model->verifikasi_massal_spv($tanggal);
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
 
-		if ($jumlah === false) {
-			$response = [
-				'status' => false,
-				'message' => 'Verifikasi massal gagal diproses.'
-			];
-		} elseif ($jumlah == 0) {
-			$response = [
-				'status' => false,
-				'message' => 'Tidak ada data Inventaris dengan status Created atau Revision pada tanggal tersebut.'
-			];
+		// Kondisi berdasarkan jenis verifikasi
+		if ($jenis_verifikasi === 'spv') {
+			$this->db->where_in('status_spv', ['0', '2']);
 		} else {
-			$response = [
-				'status' => true,
-				'message' => $jumlah . ' data Inventaris berhasil diverifikasi.'
-			];
+			$this->db->where('status_produksi', '0');
 		}
 
-		$this->output
-			->set_content_type('application/json')
-			->set_output(json_encode($response));
+		$jumlah_data = $this->db->count_all_results();
+
+		if ($jumlah_data == 0) {
+			return 0;
+		}
+
+		$this->db->trans_begin();
+
+		// Kondisi update
+		$this->db->where('is_audit', 0);
+		$this->db->where('DATE(date)', $tanggal);
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
+		if ($type_user != 9 && $type_user != 1) {
+			$this->db->where('plant', $plant);
+		}
+
+		if ($jenis_verifikasi === 'spv') {
+
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update($this->table, [
+				'nama_spv'   => $username,
+				'status_spv' => '1',
+				'tgl_update' => date('Y-m-d H:i:s')
+			]);
+		} else {
+
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update($this->table, [
+				'status_produksi' => '1'
+			]);
+		}
+
+		if ($this->db->trans_status() === false) {
+			$this->db->trans_rollback();
+			return false;
+		}
+
+		$jumlah_update = $this->db->affected_rows();
+
+		$this->db->trans_commit();
+
+		return $jumlah_update;
 	}
 
 	public function get_all()

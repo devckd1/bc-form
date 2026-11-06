@@ -701,13 +701,39 @@ class Suhu_model extends CI_Model
 	{
 		$this->db->where('DATE(date)', $tanggal);
 		$this->db->where('plant', $plant_uuid);
+		$this->db->where('is_audit', 0);
+
+		$this->db->order_by('shift', 'ASC');
+		$this->db->order_by('pukul', 'ASC');
+
 		return $this->db->get('suhu')->result();
 	}
 
 	public function get_by_date_verif_and_plant($tanggal, $plant_uuid)
 	{
+		$this->db->select('
+		username,
+		nama_spv,
+		nama_produksi,
+		status_spv,
+		status_produksi,
+		tgl_update_spv,
+		tgl_update_produksi,
+		date,
+		created_at,
+		shift,
+		plant
+	');
+
 		$this->db->where('DATE(date)', $tanggal);
 		$this->db->where('plant', $plant_uuid);
+		$this->db->where('is_audit', 0);
+
+		$this->db->order_by('tgl_update_spv', 'DESC');
+		$this->db->order_by('tgl_update_produksi', 'DESC');
+		$this->db->order_by('date', 'DESC');
+		$this->db->limit(1);
+
 		return $this->db->get('suhu')->row();
 	}
 

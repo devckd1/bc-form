@@ -314,59 +314,66 @@ class Gosong_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-	public function verifikasi_massal_spv($tanggal, $shift = '')
+	public function verifikasi_massal($tanggal, $shift = '', $jenis_verifikasi = 'spv')
 	{
 		$plant = $this->session->userdata('plant');
-		$type_user = $this->session->userdata('tipe_user');
-		$nama_spv = $this->session->userdata('username');
+		$type_user = (int) $this->session->userdata('tipe_user');
+		$username = $this->session->userdata('username');
 
-		if (empty($tanggal) || empty($nama_spv)) {
+		if (empty($tanggal)) {
 			return false;
 		}
 
-		// Hitung data yang memenuhi syarat
-		$this->db->from('roti_gosong');
-		$this->db->where('is_audit', 0);
-		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
-
-		if (!empty($shift) && $shift !== 'semua') {
-			$this->db->where('shift', $shift);
+		if (!in_array($jenis_verifikasi, ['spv', 'produksi'])) {
+			return false;
 		}
 
-		if (!in_array($type_user, [1, 9])) {
-			$this->db->where('plant', $plant);
+		if ($jenis_verifikasi === 'spv' && empty($username)) {
+			return false;
 		}
 
-		$total_data = $this->db->count_all_results();
-
-		if ($total_data == 0) {
-			return 0;
-		}
-
-		// Proses verifikasi massal
+		// Mulai transaksi
 		$this->db->trans_begin();
 
+		// Filter utama
 		$this->db->where('is_audit', 0);
 		$this->db->where('date', $tanggal);
-		$this->db->where('status_produksi', '1');
-		$this->db->where_in('status_spv', ['0', '2']);
 
 		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
+		// Filter plant
 		if (!in_array($type_user, [1, 9])) {
 			$this->db->where('plant', $plant);
 		}
 
-		$this->db->update('roti_gosong', [
-			'nama_spv' => $nama_spv,
-			'status_spv' => '1',
-			'tgl_update_spv' => date('Y-m-d H:i:s')
-		]);
+		// ==========================================
+		// VERIFIKASI SPV
+		// ==========================================
+		if ($jenis_verifikasi === 'spv') {
 
+			$this->db->where('status_produksi', '1');
+			$this->db->where_in('status_spv', ['0', '2']);
+
+			$this->db->update('roti_gosong', [
+				'nama_spv'       => $username,
+				'status_spv'     => '1',
+				'tgl_update_spv' => date('Y-m-d H:i:s')
+			]);
+		} else {
+
+			// ==========================================
+			// VERIFIKASI PRODUKSI
+			// ==========================================
+			$this->db->where('status_produksi', '0');
+
+			$this->db->update('roti_gosong', [
+				'status_produksi' => '1'
+			]);
+		}
+
+		// Cek transaksi
 		if ($this->db->trans_status() === false) {
 			$this->db->trans_rollback();
 			return false;

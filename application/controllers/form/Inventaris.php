@@ -78,29 +78,29 @@ class Inventaris extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $inventaris = $this->inventaris_model->get_by_uuid($uuid);
+	{
+		$inventaris = $this->inventaris_model->get_by_uuid($uuid);
 
-    if (!$inventaris) {
-        show_404();
-        return;
-    }
+		if (!$inventaris) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = array(
-        'inventaris' => $inventaris,
-        'is_popup' => $is_popup
-    );
+		$data = array(
+			'inventaris' => $inventaris,
+			'is_popup' => $is_popup
+		);
 
-    $this->active_nav = 'inventaris';
+		$this->active_nav = 'inventaris';
 
-    if ($is_popup) {
-        $this->load->view('form/inventaris/inventaris-detail', $data);
-    } else {
-        $this->render('form/inventaris/inventaris-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/inventaris/inventaris-detail', $data);
+		} else {
+			$this->render('form/inventaris/inventaris-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -216,60 +216,102 @@ class Inventaris extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tipe_user = $this->session->userdata('tipe_user');
-
-		if (!in_array($tipe_user, [0, 1, 2, 9])) {
-			show_error(
-				'Anda tidak memiliki akses untuk melakukan verifikasi massal.',
-				403
-			);
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
 			return;
 		}
 
-		$tanggal = $this->input->post('tanggal', true);
+		$tipe_user = (int) $this->session->userdata('tipe_user');
 
-		if (empty($tanggal)) {
-			$this->output
+		$tanggal = trim($this->input->post('tanggal', true) ?? '');
+		$shift   = trim($this->input->post('shift', true) ?? '');
+		$jenis_verifikasi = trim(
+			$this->input->post('jenis_verifikasi', true) ?? ''
+		);
+
+		// Validasi hak akses
+		if (
+			($jenis_verifikasi === 'spv' &&
+				!in_array($tipe_user, [0, 1, 2, 9], true)) ||
+
+			($jenis_verifikasi === 'produksi' &&
+				!in_array($tipe_user, [0, 1, 3, 9], true)) ||
+
+			!in_array($jenis_verifikasi, ['spv', 'produksi'], true)
+		) {
+			return $this->output
 				->set_content_type('application/json')
 				->set_output(json_encode([
 					'status' => false,
-					'message' => 'Tanggal harus dipilih.'
+					'message' => 'Anda tidak memiliki hak untuk melakukan verifikasi ini.'
 				]));
-			return;
 		}
 
-		$date = DateTime::createFromFormat('Y-m-d', $tanggal);
+		// Validasi tanggal
+		$date = DateTime::createFromFormat('!Y-m-d', $tanggal);
 
-		if (!$date || $date->format('Y-m-d') !== $tanggal) {
-			$this->output
+		if (
+			!$date ||
+			$date->format('Y-m-d') !== $tanggal
+		) {
+			return $this->output
 				->set_content_type('application/json')
 				->set_output(json_encode([
 					'status' => false,
 					'message' => 'Format tanggal tidak valid.'
 				]));
-			return;
 		}
 
-		$jumlah = $this->inventaris_model->verifikasi_massal_spv($tanggal);
+		// Validasi shift
+		if (!in_array($shift, ['', 'semua', '1', '2', '3'], true)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'status' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
+		$jumlah = $this->inventaris_model->verifikasi_massal(
+			$tanggal,
+			$shift,
+			$jenis_verifikasi
+		);
 
 		if ($jumlah === false) {
+
 			$response = [
 				'status' => false,
 				'message' => 'Verifikasi massal gagal diproses.'
 			];
 		} elseif ($jumlah == 0) {
+
+			$nama_verifikasi = $jenis_verifikasi === 'spv'
+				? 'SPV'
+				: 'Produksi';
+
 			$response = [
 				'status' => false,
-				'message' => 'Tidak ada data Inventaris dengan status Created atau Revision pada tanggal tersebut.'
+				'jumlah' => 0,
+				'message' => 'Tidak ada data Inventaris yang memenuhi syarat verifikasi ' .
+					$nama_verifikasi . ' pada tanggal dan shift tersebut.'
 			];
 		} else {
+
+			$nama_verifikasi = $jenis_verifikasi === 'spv'
+				? 'SPV'
+				: 'Produksi';
+
 			$response = [
 				'status' => true,
-				'message' => $jumlah . ' data Inventaris berhasil diverifikasi.'
+				'jumlah' => $jumlah,
+				'message' => $jumlah .
+					' data Inventaris berhasil diverifikasi oleh ' .
+					$nama_verifikasi . '.'
 			];
 		}
 
-		$this->output
+		return $this->output
 			->set_content_type('application/json')
 			->set_output(json_encode($response));
 	}

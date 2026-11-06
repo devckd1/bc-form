@@ -64,29 +64,29 @@ class Gosong extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $gosong = $this->gosong_model->get_by_uuid($uuid);
+	{
+		$gosong = $this->gosong_model->get_by_uuid($uuid);
 
-    if (!$gosong) {
-        show_404();
-        return;
-    }
+		if (!$gosong) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'gosong'   => $gosong,
-        'is_popup' => $is_popup
-    ];
+		$data = [
+			'gosong'   => $gosong,
+			'is_popup' => $is_popup
+		];
 
-    $this->active_nav = 'gosong';
+		$this->active_nav = 'gosong';
 
-    if ($is_popup) {
-        $this->load->view('form/gosong/gosong-detail', $data);
-    } else {
-        $this->render('form/gosong/gosong-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/gosong/gosong-detail', $data);
+		} else {
+			$this->render('form/gosong/gosong-detail', $data);
+		}
+	}
 
 	public function tambah()
 	{
@@ -200,10 +200,33 @@ class Gosong extends MY_Controller
 
 	public function verifikasi_massal()
 	{
-		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
-		$shift   = trim($this->input->post('shift', TRUE) ?? '');
+		if ($this->input->method(TRUE) !== 'POST') {
+			show_error('Method tidak diizinkan.', 405);
+			return;
+		}
 
-		$tanggal_obj = DateTime::createFromFormat('Y-m-d', $tanggal);
+		$tipe_user = (int) $this->session->userdata('tipe_user');
+
+		$tanggal = trim($this->input->post('tanggal', TRUE) ?? '');
+		$shift = trim($this->input->post('shift', TRUE) ?? '');
+		$jenis_verifikasi = trim($this->input->post('jenis_verifikasi', TRUE) ?? '');
+
+		// Validasi hak akses
+		if (
+			!in_array($jenis_verifikasi, ['spv', 'produksi']) ||
+			($jenis_verifikasi === 'spv' && !in_array($tipe_user, [0, 1, 2, 9])) ||
+			($jenis_verifikasi === 'produksi' && !in_array($tipe_user, [0, 1, 3, 9]))
+		) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Anda tidak memiliki hak akses untuk verifikasi ini.'
+				]));
+		}
+
+		// Validasi tanggal
+		$tanggal_obj = DateTime::createFromFormat('!Y-m-d', $tanggal);
 
 		if (
 			!$tanggal_obj ||
@@ -217,9 +240,34 @@ class Gosong extends MY_Controller
 				]));
 		}
 
-		$updated = $this->gosong_model->verifikasi_massal_spv(
+		// Validasi shift Gosong
+		$daftar_shift = [
+			'',
+			'semua',
+			'1A',
+			'1B',
+			'1C',
+			'2A',
+			'2B',
+			'2C',
+			'3A',
+			'3B',
+			'3C'
+		];
+
+		if (!in_array($shift, $daftar_shift)) {
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode([
+					'success' => false,
+					'message' => 'Shift tidak valid.'
+				]));
+		}
+
+		$updated = $this->gosong_model->verifikasi_massal(
 			$tanggal,
-			$shift
+			$shift,
+			$jenis_verifikasi
 		);
 
 		if ($updated === false) {
@@ -228,10 +276,15 @@ class Gosong extends MY_Controller
 				'message' => 'Verifikasi massal Gosong gagal diproses.'
 			];
 		} elseif ($updated > 0) {
+			$nama_verifikasi = $jenis_verifikasi === 'spv'
+				? 'SPV'
+				: 'Produksi';
+
 			$response = [
 				'success' => true,
 				'updated' => $updated,
-				'message' => 'Verifikasi massal Gosong berhasil.'
+				'message' => 'Verifikasi massal Gosong oleh ' .
+					$nama_verifikasi . ' berhasil.'
 			];
 		} else {
 			$response = [
