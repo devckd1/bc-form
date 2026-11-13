@@ -165,7 +165,7 @@ class Disposisi extends MY_Controller
 		);
 
 		$this->active_nav = 'disposisi';
-		$this->render('form/disposisi/disposisi-verifikasi', $data);
+		$this->render('form/disposisi/disposisi', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -190,7 +190,7 @@ class Disposisi extends MY_Controller
 			);
 		}
 
-		redirect('disposisi/verifikasi');
+		redirect('disposisi');
 	}
 
 	public function verifikasi_massal()
@@ -285,7 +285,7 @@ class Disposisi extends MY_Controller
 		$data = array(
 			'disposisi' => $this->disposisi_model->get_by_uuid($uuid),
 		);
-		$this->active_nav = 'verifikasi-disposisi';
+		$this->active_nav = 'disposisi';
 		$this->render('form/disposisi/disposisi-status', $data);
 	}
 

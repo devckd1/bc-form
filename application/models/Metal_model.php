@@ -683,52 +683,75 @@ class Metal_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date_metal)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
 		}
 
-		if (!empty($shift)) {
+		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
-		// Urut berdasarkan jam pemeriksaan
-		//$this->db->order_by('time', 'ASC');
-		if ($shift == 3) {
+		// Shift 3: jam 23:00 ke atas ditampilkan lebih dahulu
+		if ((string) $shift === '3') {
 			$this->db->order_by("
-				CASE
-					WHEN TIME(time) >= '23:00:00' THEN 0
-					ELSE 1
-				END
-			", "", false);
-
-			$this->db->order_by('time', 'ASC');
-		} else {
-			$this->db->order_by('time', 'ASC');
+            CASE
+                WHEN TIME(time) >= '23:00:00' THEN 0
+                ELSE 1
+            END
+        ", '', false);
 		}
+
+		$this->db->order_by('time', 'ASC');
 
 		$query = $this->db->get('metal');
 
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
+		log_message('debug', 'Query get_by_date Metal: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return $query->num_rows() > 0
+			? $query->result()
+			: false;
 	}
 
-	public function get_last_verif_by_date($tanggal, $plant = null)
+	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
-		$this->db->select('nama_spv_metal, tgl_update_spv_metal, date_metal, shift, username_1, username_2, std_fe,std_nonfe,std_sus304, nama_produksi_metal, status_spv, nama_produksi_metal, tgl_update_produksi_metal');
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->select('
+        uuid,
+        nama_spv_metal,
+        tgl_update_spv_metal,
+        date_metal,
+        shift,
+        username_1,
+        username_2,
+        std_fe,
+        std_nonfe,
+        std_sus304,
+        nama_produksi_metal,
+        tgl_update_produksi_metal,
+        status_produksi,
+        status_spv
+    ');
+
 		$this->db->where('DATE(date_metal)', $tanggal);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
 		}
 
 		$this->db->order_by('tgl_update_spv_metal', 'DESC');
 		$this->db->limit(1);
+
 		$query = $this->db->get('metal');
 
 		return $query->row();

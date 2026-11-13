@@ -300,42 +300,69 @@ class Falserejection_model extends CI_Model
 		return $this->db->count_all_results();
 	}
 
-	public function get_by_date($tanggal, $plant = null)
+	public function get_by_date($tanggal)
 	{
 		if (empty($tanggal)) {
-			return false;
+			return [];
 		}
 
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->from('metal');
+		$this->db->where('is_audit', 0);
 		$this->db->where('DATE(date_false_rejection)', $tanggal);
 
-		if (!empty($plant)) {
+		// Tipe user 1 dan 9 dapat melihat lintas plant.
+		if ($type_user != 9 && $type_user != 1) {
 			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date_false_rejection', 'ASC');
-		$query = $this->db->get('metal');
+		$this->db->order_by('shift_monitoring', 'ASC');
 
-		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
+		$query = $this->db->get();
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
+		log_message('debug', 'Query cetak False Rejection: ' . $this->db->last_query());
 
-		return false;
+		return $query->result();
 	}
 
-	public function get_last_verif_by_date($tanggal, $plant = null)
+	public function get_last_verif_by_date($tanggal)
 	{
-		$this->db->select('nama_spv_false, tgl_update_spv_false, no_mesin, username_2, nama_produksi_false, tgl_update_produksi_false');
+		if (empty($tanggal)) {
+			return null;
+		}
+
+		$plant = $this->session->userdata('plant');
+		$type_user = $this->session->userdata('tipe_user');
+
+		$this->db->select('
+        nama_spv_false,
+        tgl_update_spv_false,
+        no_mesin,
+        username_2,
+        nama_produksi_false,
+        tgl_update_produksi_false
+    ');
+
+		$this->db->from('metal');
+		$this->db->where('is_audit', 0);
 		$this->db->where('DATE(date_false_rejection)', $tanggal);
 
-		if (!empty($plant)) {
+		if ($type_user != 9 && $type_user != 1) {
 			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('tgl_update_spv_false', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('metal');
+
+		$query = $this->db->get();
+
+		log_message(
+			'debug',
+			'Query verifikasi False Rejection: ' . $this->db->last_query()
+		);
 
 		return $query->row();
 	}

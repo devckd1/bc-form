@@ -576,8 +576,8 @@ class Produksi extends MY_Controller
 			'produksi' => $this->produksi_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-produksi';
-		$this->render('form/produksi/produksi-verifikasi', $data);
+		$this->active_nav = 'produksi';
+		$this->render('form/produksi/produksi', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -601,7 +601,7 @@ class Produksi extends MY_Controller
 			);
 		}
 
-		redirect('produksi/verifikasi');
+		redirect('produksi');
 	}
 
 	public function verifikasi_massal()
@@ -732,7 +732,7 @@ class Produksi extends MY_Controller
 			'produksi' => $this->produksi_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-produksi';
+		$this->active_nav = 'produksi';
 		$this->render('form/produksi/produksi-status', $data);
 	}
 

@@ -169,7 +169,7 @@
 											</a>
 										<?php endif; ?>
 
-										<?php if ($boleh_verifikasi): ?>
+										<?php if ($boleh_verifikasi && $val->status_spv != 1): ?>
 											<a href="<?= base_url('larutan/status/' . $val->uuid); ?>"
 												class="btn btn-info btn-sm">
 												Verifikasi

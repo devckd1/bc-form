@@ -190,8 +190,8 @@ class Sanitasiwarehouse extends MY_Controller
 			'sanitasiwarehouse' => $this->sanitasiwarehouse_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-sanitasiwarehouse';
-		$this->render('form/sanitasiwarehouse/sanitasiwarehouse-verifikasi', $data);
+		$this->active_nav = 'sanitasiwarehouse';
+		$this->render('form/sanitasiwarehouse/sanitasiwarehouse', $data);
 	}
 
 	public function verifikasi_massal()
@@ -292,7 +292,7 @@ class Sanitasiwarehouse extends MY_Controller
 			);
 		}
 
-		redirect('sanitasiwarehouse/verifikasi');
+		redirect('sanitasiwarehouse');
 	}
 
 	public function status($uuid)
@@ -316,7 +316,7 @@ class Sanitasiwarehouse extends MY_Controller
 			'sanitasiwarehouse' => $this->sanitasiwarehouse_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-sanitasiwarehouse';
+		$this->active_nav = 'sanitasiwarehouse';
 		$this->render('form/sanitasiwarehouse/sanitasiwarehouse-status', $data);
 	}
 
@@ -478,9 +478,9 @@ class Sanitasiwarehouse extends MY_Controller
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['sanitasiwarehouse']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = $datetime->format('l, d F Y');
+		$formatted_date = $date->format('l, d F Y');
 
-		$formatted_date2 = $datetime->format('d F Y');
+		$formatted_date2 = $date->format('d F Y');
 
 		$pdf->SetFont('times', '', 9);
 		$pdf->SetX(10);

@@ -289,8 +289,8 @@ class Metal extends MY_Controller
 			'start' => $start
 		);
 
-		$this->active_nav = 'verifikasi-metal';
-		$this->render('form/metal/metal-verifikasi', $data);
+		$this->active_nav = 'metal';
+		$this->render('form/metal/metal', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -314,7 +314,7 @@ class Metal extends MY_Controller
 			);
 		}
 
-		redirect('metal/verifikasi');
+		redirect('metal');
 	}
 
 	public function verifikasi_massal()
@@ -415,7 +415,7 @@ class Metal extends MY_Controller
 			'metal' => $this->metal_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-metal';
+		$this->active_nav = 'metal';
 		$this->render('form/metal/metal-status', $data);
 	}
 
@@ -910,20 +910,34 @@ class Metal extends MY_Controller
 					. $qc_tanggal;
 
 				/* ===============================
-           2️⃣ PRODUKSI
-           ================================ */
-				$prod_tanggal = !empty($data['metal']->tgl_update_produksi_metal)
-					? (new DateTime($data['metal']->tgl_update_produksi_metal))->format('d-m-Y | H:i')
-					: '-';
+   2. PRODUKSI
+   ================================ */
 
-				$nama_lengkap_prod = !empty($data['metal']->nama_produksi_metal)
-					? $this->pegawai_model->get_nama_lengkap($data['metal']->nama_produksi_metal)
-					: '-';
+				$qr_prod_text = null;
 
-				$qr_prod_text = "Diketahui secara digital oleh,\n"
-					. ($nama_lengkap_prod ?: $data['metal']->nama_produksi_metal) . "\n"
-					. "Foreman / Forelady Produksi\n"
-					. $prod_tanggal;
+				if ((string) $data['metal']->status_produksi === '1') {
+
+					$username_produksi = $data['metal']->nama_produksi_metal ?? '';
+
+					$nama_lengkap_prod = !empty($username_produksi)
+						? $this->Pegawai_model->get_nama_lengkap($username_produksi)
+						: '';
+
+					if (empty($nama_lengkap_prod)) {
+						$nama_lengkap_prod = !empty($username_produksi)
+							? $username_produksi
+							: 'Foreman / Forelady Produksi';
+					}
+
+					$prod_tanggal = !empty($data['metal']->tgl_update_produksi_metal)
+						? (new DateTime($data['metal']->tgl_update_produksi_metal))->format('d-m-Y | H:i')
+						: '-';
+
+					$qr_prod_text = "Diketahui secara digital oleh,\n"
+						. $nama_lengkap_prod . "\n"
+						. "Foreman / Forelady Produksi\n"
+						. $prod_tanggal;
+				}
 
 				/* ===============================
            3️⃣ SPV
@@ -960,7 +974,22 @@ class Metal extends MY_Controller
 
 				// QR
 				$pdf->write2DBarcode($qr_qc_text, 'QRCODE,L', 35, $y + 5, $qr_size, $qr_size, null, 'N');
-				$pdf->write2DBarcode($qr_prod_text, 'QRCODE,L', 100, $y + 5, $qr_size, $qr_size, null, 'N');
+				if (!empty($qr_prod_text)) {
+					$pdf->write2DBarcode(
+						$qr_prod_text,
+						'QRCODE,L',
+						100,
+						$y + 5,
+						$qr_size,
+						$qr_size,
+						null,
+						'N'
+					);
+				} else {
+					$pdf->SetFont('times', '', 7);
+					$pdf->SetXY(85, $y + 10);
+					$pdf->Cell(45, 8, 'Belum Diverifikasi Produksi', 0, 0, 'C');
+				}
 				$pdf->write2DBarcode($qr_spv_text, 'QRCODE,L', 165, $y + 5, $qr_size, $qr_size, null, 'N');
 
 				// Jabatan

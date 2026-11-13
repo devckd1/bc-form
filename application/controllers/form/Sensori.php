@@ -233,8 +233,8 @@ class Sensori extends MY_Controller
 			'sensori' => $this->sensori_model->get_data_verifikasi()
 		);
 
-		$this->active_nav = 'verifikasi-sensori';
-		$this->render('form/sensori/sensori-verifikasi', $data);
+		$this->active_nav = 'sensori';
+		$this->render('form/sensori/sensori', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -258,7 +258,7 @@ class Sensori extends MY_Controller
 			);
 		}
 
-		redirect('sensori/verifikasi');
+		redirect('sensori');
 	}
 
 	public function verifikasi_massal()
@@ -384,7 +384,7 @@ class Sensori extends MY_Controller
 			'sensori' => $this->sensori_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-sensori';
+		$this->active_nav = '-sensori';
 		$this->render('form/sensori/sensori-status', $data);
 	}
 
@@ -579,9 +579,18 @@ class Sensori extends MY_Controller
 		$pdf->MultiCell(0, 10, "✓ : Ok, tidak ditemukan ketidaksesuaian atau penyimpanan sensori produk\n✗ : Tidak Ok, ditemukan ketidaksesuaian atau penyimpanan sensori produk", 0, 'L');
 
 		$this->load->model('pegawai_model');
-		$data['sensori']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['sensori']->username);
-		$data['sensori']->nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap($data['sensori']->nama_spv);
-		$data['sensori']->nama_lengkap_produksi = $data['sensori']->nama_produksi;
+
+		$data['sensori']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap(
+			$data['sensori']->username
+		);
+
+		$data['sensori']->nama_lengkap_spv = !empty($data['sensori']->nama_spv)
+			? $this->pegawai_model->get_nama_lengkap($data['sensori']->nama_spv)
+			: '';
+
+		$data['sensori']->nama_lengkap_produksi = !empty($data['sensori']->nama_produksi)
+			? $this->pegawai_model->get_nama_lengkap($data['sensori']->nama_produksi)
+			: '';
 
 		$pdf->SetY($pdf->GetY());
 		$pdf->SetFont('times', '', 7);
@@ -711,12 +720,24 @@ class Sensori extends MY_Controller
 
 		$qr_produksi_text = null;
 
-		if (!empty($data['sensori']->nama_lengkap_produksi) && !empty($data['sensori']->tgl_update_produksi)) {
-			$prod_tanggal = (new DateTime($data['sensori']->tgl_update_produksi ?? $data['sensori']->tgl_update_produksi))
-				->format('d-m-Y | H:i');
+		if (
+			(string) $data['sensori']->status_produksi === '1' &&
+			!empty($data['sensori']->nama_produksi)
+		) {
+			$username_prod = $data['sensori']->nama_produksi;
+
+			$nama_lengkap_prod = $data['sensori']->nama_lengkap_produksi;
+
+			if (empty($nama_lengkap_prod)) {
+				$nama_lengkap_prod = $username_prod;
+			}
+
+			$prod_tanggal = !empty($data['sensori']->tgl_update_produksi)
+				? (new DateTime($data['sensori']->tgl_update_produksi))->format('d-m-Y | H:i')
+				: '-';
 
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $data['sensori']->nama_lengkap_produksi . "\n"
+				. $nama_lengkap_prod . "\n"
 				. "Foreman/Forelady Produksi\n"
 				. $prod_tanggal;
 		}
@@ -739,8 +760,21 @@ class Sensori extends MY_Controller
 			$pdf->SetXY(150, $y_ttd);
 			$pdf->Cell(45, 5, 'Disetujui Oleh,', 0, 1, 'C');
 			$pdf->write2DBarcode($qr_qc_text, 'QRCODE,L', 35, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
-			if ($qr_produksi_text) {
-				$pdf->write2DBarcode($qr_produksi_text, 'QRCODE,L', 100, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
+			if (!empty($qr_produksi_text)) {
+				$pdf->write2DBarcode(
+					$qr_produksi_text,
+					'QRCODE,L',
+					100,
+					$y_ttd + 5,
+					$qr_size,
+					$qr_size,
+					null,
+					'N'
+				);
+			} else {
+				$pdf->SetFont('times', '', 7);
+				$pdf->SetXY(85, $y_ttd + 10);
+				$pdf->Cell(45, 5, 'Belum Diverifikasi Produksi', 0, 0, 'C');
 			}
 			$pdf->write2DBarcode($qr_spv_text, 'QRCODE,L', 165, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
 			$pdf->SetXY(20, $y_ttd + 20);

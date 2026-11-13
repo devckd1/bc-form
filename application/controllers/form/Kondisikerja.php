@@ -189,8 +189,8 @@ class Kondisikerja extends MY_Controller
 			'start' => $start
 		);
 
-		$this->active_nav = 'verifikasi-kondisikerja';
-		$this->render('form/kondisikerja/kondisikerja-verifikasi', $data);
+		$this->active_nav = 'kondisikerja';
+		$this->render('form/kondisikerja/kondisikerja', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -342,7 +342,7 @@ class Kondisikerja extends MY_Controller
 			'kondisikerja' => $this->kondisikerja_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-kondisikerja';
+		$this->active_nav = 'kondisikerja';
 		$this->render('form/kondisikerja/kondisikerja-status', $data);
 	}
 
@@ -527,9 +527,9 @@ class Kondisikerja extends MY_Controller
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['kondisikerja']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = $datetime->format('l, d F Y');
+		$formatted_date = $date->format('l, d F Y');
 
-		$formatted_date2 = $datetime->format('d F Y');
+		$formatted_date2 = $date->format('d F Y');
 
 		$pdf->SetFont('times', '', 9);
 		$pdf->SetX(10);

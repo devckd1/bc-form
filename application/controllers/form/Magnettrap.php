@@ -171,10 +171,15 @@ class Magnettrap extends MY_Controller
 			redirect('magnettrap');
 		}
 
+		$this->load->model('Master_tahapan_magnettrap_model');
+
 		$data = array(
-			'magnettrap' => $this->magnettrap_model->get_data_by_plant()
+			'magnettrap' => $this->magnettrap_model->get_data_by_plant(),
+			'master_tahapan' => $this->Master_tahapan_magnettrap_model->get_all()
 		);
+
 		$this->active_nav = 'magnettrap';
+
 		$this->render('form/magnettrap/magnettrap-tambah', $data);
 	}
 
@@ -243,11 +248,15 @@ class Magnettrap extends MY_Controller
 			redirect('magnettrap');
 		}
 
+		$this->load->model('Master_tahapan_magnettrap_model');
+
 		$data = array(
-			'magnettrap' => $magnettrap
+			'magnettrap' => $magnettrap,
+			'master_tahapan' => $this->Master_tahapan_magnettrap_model->get_all()
 		);
 
 		$this->active_nav = 'magnettrap';
+
 		$this->render('form/magnettrap/magnettrap-edit', $data);
 	}
 
@@ -379,7 +388,7 @@ class Magnettrap extends MY_Controller
 			'magnettrap' => $this->magnettrap_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'verifikasi-magnettrap';
+		$this->active_nav = 'magnettrap';
 		$this->render('form/magnettrap/magnettrap-status', $data);
 	}
 
@@ -495,12 +504,16 @@ class Magnettrap extends MY_Controller
 			}
 		}
 
+		$this->load->model('Master_tahapan_magnettrap_model');
+
 		$data = [
 			'magnettrap' => $magnettrap,
+			'master_tahapan' => $this->Master_tahapan_magnettrap_model->get_all(),
 			'mode' => 'audit'
 		];
 
 		$this->active_nav = 'magnettrap';
+
 		$this->render('form/magnettrap/magnettrap-edit', $data);
 	}
 

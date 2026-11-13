@@ -140,8 +140,8 @@ class Pemeriksaanpengiriman extends MY_Controller
 			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pemeriksaanpengiriman';
-		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman-verifikasi', $data);
+		$this->active_nav = 'pemeriksaanpengiriman';
+		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman', $data);
 	}
 
 	public function verifikasi_massal()
@@ -210,7 +210,7 @@ class Pemeriksaanpengiriman extends MY_Controller
 			'pemeriksaanpengiriman' => $this->pemeriksaanpengiriman_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pemeriksaanpengiriman';
+		$this->active_nav = 'pemeriksaanpengiriman';
 		$this->render('form/pemeriksaanpengiriman/pemeriksaanpengiriman-status', $data);
 	}
 

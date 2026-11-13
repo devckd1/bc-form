@@ -435,8 +435,15 @@ class Pecahbelah_model extends CI_Model
 			// ==========================================
 			$this->db->where('status_produksi', '0');
 
+			if (empty($username)) {
+				$this->db->trans_rollback();
+				return false;
+			}
+
 			$this->db->update($this->table, [
-				'status_produksi' => '1'
+				'nama_produksi'       => $username,
+				'status_produksi'     => '1',
+				'tgl_update_produksi' => date('Y-m-d H:i:s')
 			]);
 		}
 
@@ -465,6 +472,7 @@ class Pecahbelah_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -476,7 +484,7 @@ class Pecahbelah_model extends CI_Model
 
 		$this->db->order_by('created_at', 'ASC');
 
-		return $this->db->get('benda_pecah')->result();
+		return $this->db->get($this->table)->result();
 	}
 
 	public function get_by_date_verif($tanggal, $plant = null, $shift = null)
@@ -485,9 +493,22 @@ class Pecahbelah_model extends CI_Model
 			return null;
 		}
 
-		$this->db->select('nama_spv, tgl_update_spv, username, date, qc_update, shift, created_at, modified_at, nama_produksi, status_produksi, tgl_update_produksi');
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        qc_update,
+        shift,
+        created_at,
+        modified_at,
+        nama_produksi,
+        status_produksi,
+        tgl_update_produksi
+    ');
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -500,7 +521,7 @@ class Pecahbelah_model extends CI_Model
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
 
-		return $this->db->get('benda_pecah')->row();
+		return $this->db->get($this->table)->row();
 	}
 
 	public function get_audit_by_plant()

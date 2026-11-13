@@ -243,8 +243,8 @@ class Timbangan extends MY_Controller
 			'timbangan' => $this->timbangan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-timbangan';
-		$this->render('form/timbangan/timbangan-verifikasi', $data);
+		$this->active_nav = 'timbangan';
+		$this->render('form/timbangan/timbangan', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -268,7 +268,7 @@ class Timbangan extends MY_Controller
 			);
 		}
 
-		redirect('timbangan/verifikasi');
+		redirect('timbangan');
 	}
 
 	public function verifikasi_massal()
@@ -389,7 +389,7 @@ class Timbangan extends MY_Controller
 			'timbangan' => $this->timbangan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-timbangan';
+		$this->active_nav = 'timbangan';
 		$this->render('form/timbangan/timbangan-status', $data);
 	}
 
@@ -748,12 +748,22 @@ class Timbangan extends MY_Controller
 
 		$qr_produksi_text = null;
 
-		if (!empty($data['timbangan']->nama_lengkap_produksi) && !empty($data['timbangan']->tgl_update_produksi)) {
-			$prod_tanggal = (new DateTime($data['timbangan']->tgl_update_produksi ?? $data['timbangan']->tgl_update_produksi))
-				->format('d-m-Y | H:i');
+		if ((string) $data['timbangan']->status_produksi === '1') {
+
+			$prod_tanggal = '-';
+
+			if (!empty($data['timbangan']->tgl_update_produksi)) {
+				$prod_tanggal = (new DateTime(
+					$data['timbangan']->tgl_update_produksi
+				))->format('d-m-Y | H:i');
+			}
+
+			$nama_produksi = !empty($data['timbangan']->nama_lengkap_produksi)
+				? $data['timbangan']->nama_lengkap_produksi
+				: 'Foreman/Forelady Produksi';
 
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $data['timbangan']->nama_lengkap_produksi . "\n"
+				. $nama_produksi . "\n"
 				. "Foreman/Forelady Produksi\n"
 				. $prod_tanggal;
 		}

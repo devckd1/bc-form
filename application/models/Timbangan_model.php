@@ -508,45 +508,56 @@ class Timbangan_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
 		}
 
-		if (!empty($shift)) {
+		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
 		$this->db->order_by('date', 'ASC');
+
 		$query = $this->db->get('timbangan');
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return $query->num_rows() > 0
+			? $query->result()
+			: false;
 	}
 
 	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, nama_produksi, tgl_update_produksi, status_produksi');
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        shift,
+        nama_produksi,
+        tgl_update_produksi,
+        status_produksi
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
 		}
 
-		if (!empty($shift)) {
+		if (!empty($shift) && $shift !== 'semua') {
 			$this->db->where('shift', $shift);
 		}
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('timbangan');
 
-		return $query->row();
+		return $this->db->get('timbangan')->row();
 	}
 
 	public function get_audit_by_plant()

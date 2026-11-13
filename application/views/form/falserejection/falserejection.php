@@ -171,12 +171,6 @@
 												class="btn btn-warning btn-icon-split mb-1">
 												<span class="text">Edit</span>
 											</a>
-
-											<a href="<?= base_url('falserejection/status/' . $val->uuid); ?>"
-												class="btn btn-info btn-icon-split">
-												<span class="text">Verifikasi</span>
-											</a>
-
 										<?php endif; ?>
 
 										<a href="<?= base_url('falserejection/detail/' . $val->uuid); ?>"
@@ -184,6 +178,19 @@
 											class="btn btn-success btn-icon-split mb-1 btn-detail-falserejection">
 											<span class="text">Detail</span>
 										</a>
+
+										<?php if (
+											$boleh_verifikasi &&
+											$val->status_spv_false != 1 &&
+											(int) $val->is_audit === 0
+										): ?>
+
+											<a href="<?= base_url('falserejection/status/' . $val->uuid); ?>"
+												class="btn btn-info btn-icon-split">
+												<span class="text">Verifikasi</span>
+											</a>
+
+										<?php endif; ?>
 
 									</td>
 

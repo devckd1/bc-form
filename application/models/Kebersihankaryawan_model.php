@@ -633,6 +633,7 @@ class Kebersihankaryawan_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -643,15 +644,12 @@ class Kebersihankaryawan_model extends CI_Model
 		}
 
 		$this->db->order_by('date', 'ASC');
+
 		$query = $this->db->get('kebersihan_karyawan');
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return $query->num_rows() > 0 ? $query->result() : false;
 	}
 
 	public function get_shift_by_date($tanggal, $plant = null)
@@ -672,8 +670,20 @@ class Kebersihankaryawan_model extends CI_Model
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, shift, nama_produksi, status_produksi, tgl_update_produksi');
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        shift,
+        status_spv,
+        nama_produksi,
+        status_produksi,
+        tgl_update_produksi
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -681,9 +691,8 @@ class Kebersihankaryawan_model extends CI_Model
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('kebersihan_karyawan');
 
-		return $query->row();
+		return $this->db->get('kebersihan_karyawan')->row();
 	}
 
 	public function get_audit_by_plant()

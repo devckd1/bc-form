@@ -196,7 +196,8 @@ $filter_shift = $filter_shift ?? '';
 											Detail
 										</a>
 
-										<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
+										<?php if (in_array($tipe_user, [0, 1, 2, 9], true)&&
+											$val->status_spv != 1): ?>
 											<a href="<?= base_url('pemeriksaanchemical/status/' . $val->uuid); ?>"
 												class="btn btn-info btn-sm mb-1">
 												Verifikasi

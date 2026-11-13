@@ -181,18 +181,18 @@ class Sanitasiwarehouse_model extends CI_Model
 		$plant = $this->session->userdata('plant');
 		$username = $this->session->userdata('username');
 
-		$data = array(
-			'nama_produksi' => $username,
-			'status_wh' => '1',
-			'tgl_update_produksi' => date('Y-m-d H:i:s')
-		);
+		$data = [
+			'nama_wh'      => $username,
+			'status_wh'    => '1',
+			'tgl_update_wh' => date('Y-m-d H:i:s')
+		];
 
 		$this->db->where('uuid', $uuid);
 		$this->db->where('plant', $plant);
 		$this->db->where('is_audit', 0);
 		$this->db->where('status_wh', '0');
 
-		$this->db->update('sanitasi_wh', $data);
+		$this->db->update($this->table, $data);
 
 		return $this->db->affected_rows() > 0;
 	}
@@ -220,11 +220,12 @@ class Sanitasiwarehouse_model extends CI_Model
 
 		if ($jenis === 'produksi') {
 
-			// Produksi: hanya data Created
-			$this->db->where('status_produksi', '0');
+			$this->db->where('status_wh', '0');
 
 			$this->db->update($this->table, [
-				'status_produksi' => '1'
+				'nama_wh'       => $nama_spv,
+				'status_wh'     => '1',
+				'tgl_update_wh' => date('Y-m-d H:i:s')
 			]);
 		} else {
 
@@ -399,27 +400,45 @@ class Sanitasiwarehouse_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
-		$query = $this->db->get('sanitasi_wh');
+
+		$query = $this->db->get($this->table);
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return $query->num_rows() > 0
+			? $query->result()
+			: false;
 	}
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_wh, status_wh, tgl_update_wh, created_at');
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->select('
+        uuid,
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        nama_wh,
+        status_wh,
+        tgl_update_wh,
+        created_at,
+        status_spv
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -427,9 +446,8 @@ class Sanitasiwarehouse_model extends CI_Model
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('sanitasi_wh');
 
-		return $query->row();
+		return $this->db->get($this->table)->row();
 	}
 
 	public function get_audit_by_plant()

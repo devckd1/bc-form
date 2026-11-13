@@ -78,7 +78,10 @@
 										Detail
 									</a>
 
-									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+									<?php if (
+										in_array($tipe_user, [0, 1, 2, 4, 9]) &&
+										(int) $row->belum_verifikasi > 0
+									): ?>
 										<button type="button"
 											class="btn btn-info btn-sm"
 											data-toggle="modal"
@@ -87,7 +90,9 @@
 											data-tahun="<?= $row->tahun ?>">
 											Verifikasi
 										</button>
+									<?php endif; ?>
 
+									<?php if (in_array($tipe_user, [0, 1, 2, 4, 9])): ?>
 										<a href="<?= base_url('reagen/cetak/' . $row->bulan . '/' . $row->tahun) ?>"
 											class="btn btn-danger btn-sm">
 											PDF

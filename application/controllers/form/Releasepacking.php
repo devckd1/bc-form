@@ -166,8 +166,8 @@ class Releasepacking extends MY_Controller
 			'releasepacking' => $this->releasepacking_model->get_data_verifikasi()
 		);
 
-		$this->active_nav = 'verifikasi-releasepacking';
-		$this->render('form/releasepacking/releasepacking-verifikasi', $data);
+		$this->active_nav = 'releasepacking';
+		$this->render('form/releasepacking/releasepacking', $data);
 	}
 
 	public function verifikasi_massal()
@@ -236,7 +236,7 @@ class Releasepacking extends MY_Controller
 			'releasepacking' => $this->releasepacking_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-releasepacking';
+		$this->active_nav = 'releasepacking';
 		$this->render('form/releasepacking/releasepacking-status', $data);
 	}
 

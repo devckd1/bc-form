@@ -166,11 +166,15 @@ class Gosong_model extends CI_Model
 		$plant = $this->session->userdata('plant');
 		$username = $this->session->userdata('username');
 
-		$data = array(
-			'nama_produksi' => $username,
-			'status_produksi' => '1',
+		if (empty($username)) {
+			return false;
+		}
+
+		$data = [
+			'nama_produksi'       => $username,
+			'status_produksi'     => '1',
 			'tgl_update_produksi' => date('Y-m-d H:i:s')
-		);
+		];
 
 		$this->db->where('uuid', $uuid);
 		$this->db->where('plant', $plant);
@@ -366,10 +370,17 @@ class Gosong_model extends CI_Model
 			// ==========================================
 			// VERIFIKASI PRODUKSI
 			// ==========================================
+			if (empty($username)) {
+				$this->db->trans_rollback();
+				return false;
+			}
+
 			$this->db->where('status_produksi', '0');
 
 			$this->db->update('roti_gosong', [
-				'status_produksi' => '1'
+				'nama_produksi'       => $username,
+				'status_produksi'     => '1',
+				'tgl_update_produksi' => date('Y-m-d H:i:s')
 			]);
 		}
 
@@ -399,27 +410,42 @@ class Gosong_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
+
 		$query = $this->db->get('roti_gosong');
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return ($query->num_rows() > 0) ? $query->result() : false;
 	}
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, nama_produksi, tgl_update_produksi, status_produksi, created_at');
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        nama_produksi,
+        tgl_update_produksi,
+        status_produksi,
+        created_at
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
+		$this->db->where('nama_spv IS NOT NULL', null, false);
+		$this->db->where('nama_spv !=', '');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -427,7 +453,10 @@ class Gosong_model extends CI_Model
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
+
 		$query = $this->db->get('roti_gosong');
+
+		log_message('debug', 'Query get_last_verif_by_date: ' . $this->db->last_query());
 
 		return $query->row();
 	}

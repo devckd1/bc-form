@@ -315,8 +315,8 @@ class Kontaminasi extends MY_Controller
 			'kontaminasi' => $this->kontaminasi_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-kontaminasi';
-		$this->render('form/kontaminasi/kontaminasi-verifikasi', $data);
+		$this->active_nav = 'kontaminasi';
+		$this->render('form/kontaminasi/kontaminasi', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -340,7 +340,7 @@ class Kontaminasi extends MY_Controller
 			);
 		}
 
-		redirect('kontaminasi/verifikasi');
+		redirect('kontaminasi');
 	}
 
 	public function verifikasi_massal()
@@ -463,7 +463,7 @@ class Kontaminasi extends MY_Controller
 			'kontaminasi' => $this->kontaminasi_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'verifikasi-kontaminasi';
+		$this->active_nav = 'kontaminasi';
 		$this->render('form/kontaminasi/kontaminasi-status', $data);
 	}
 
@@ -915,18 +915,29 @@ class Kontaminasi extends MY_Controller
 		/* ===========================
    PRODUKSI
    =========================== */
-		$nama_lengkap_prod = !empty($data['kontaminasi']->nama_produksi)
-			? $this->Pegawai_model->get_nama_lengkap($data['kontaminasi']->nama_produksi)
-			: '-';
+		$qr_produksi_text = null;
 
-		$prod_tanggal = !empty($data['kontaminasi']->tgl_update_produksi)
-			? (new DateTime($data['kontaminasi']->tgl_update_produksi))->format('d-m-Y | H:i')
-			: '-';
+		if (
+			(string) $data['kontaminasi']->status_produksi === '1' &&
+			!empty($data['kontaminasi']->nama_produksi)
+		) {
+			$username_prod = $data['kontaminasi']->nama_produksi;
 
-		$qr_produksi_text = "Diketahui secara digital oleh,\n"
-			. ($nama_lengkap_prod ?: $data['kontaminasi']->nama_produksi) . "\n"
-			. "Foreman/Forelady Produksi\n"
-			. $prod_tanggal;
+			$nama_lengkap_prod = $this->Pegawai_model->get_nama_lengkap($username_prod);
+
+			if (empty($nama_lengkap_prod)) {
+				$nama_lengkap_prod = $username_prod;
+			}
+
+			$prod_tanggal = !empty($data['kontaminasi']->tgl_update_produksi)
+				? (new DateTime($data['kontaminasi']->tgl_update_produksi))->format('d-m-Y | H:i')
+				: '-';
+
+			$qr_produksi_text = "Diketahui secara digital oleh,\n"
+				. $nama_lengkap_prod . "\n"
+				. "Foreman/Forelady Produksi\n"
+				. $prod_tanggal;
+		}
 
 
 		/* ===========================
@@ -954,8 +965,21 @@ class Kontaminasi extends MY_Controller
 			$pdf->SetXY(150, $y_ttd);
 			$pdf->Cell(220, 5, 'Disetujui Oleh,', 0, 1, 'C');
 			$pdf->write2DBarcode($qr_qc_text, 'QRCODE,L', 35, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
-			if ($qr_produksi_text) {
-				$pdf->write2DBarcode($qr_produksi_text, 'QRCODE,L', 143, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
+			if (!empty($qr_produksi_text)) {
+				$pdf->write2DBarcode(
+					$qr_produksi_text,
+					'QRCODE,L',
+					143,
+					$y_ttd + 5,
+					$qr_size,
+					$qr_size,
+					null,
+					'N'
+				);
+			} else {
+				$pdf->SetFont('times', '', 7);
+				$pdf->SetXY(125, $y_ttd + 10);
+				$pdf->Cell(50, 5, 'Belum Diverifikasi Produksi', 0, 0, 'C');
 			}
 			$pdf->write2DBarcode($qr_spv_text, 'QRCODE,L', 253, $y_ttd + 5, $qr_size, $qr_size, null, 'N');
 			$pdf->SetXY(20, $y_ttd + 20);

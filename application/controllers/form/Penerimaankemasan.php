@@ -231,8 +231,8 @@ class Penerimaankemasan extends MY_Controller
 			'penerimaankemasan' => $this->penerimaankemasan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-penerimaankemasan';
-		$this->render('form/penerimaankemasan/penerimaankemasan-verifikasi', $data);
+		$this->active_nav = 'penerimaankemasan';
+		$this->render('form/penerimaankemasan/penerimaankemasan', $data);
 	}
 
 	public function status($uuid)
@@ -256,7 +256,7 @@ class Penerimaankemasan extends MY_Controller
 			'penerimaankemasan' => $this->penerimaankemasan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-penerimaankemasan';
+		$this->active_nav = 'penerimaankemasan';
 		$this->render('form/penerimaankemasan/penerimaankemasan-status', $data);
 	}
 

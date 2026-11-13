@@ -754,6 +754,7 @@ $route['analisis/edit-audit/(:any)'] = 'form/analisis/edit_audit/$1';
 $route['analisis/detail-audit/(:any)'] = 'form/analisis/detail_audit/$1';
 $route['analisis/analis-audit/(:any)'] = 'form/analisis/analis_audit/$1';
 $route['analisis/ajax-detail-audit/(:any)'] = 'form/analisis/ajax_detail_audit/$1';
+$route['analisis/verifikasi_produksi/(:any)'] = 'form/analisis/verifikasi_produksi/$1';
 $route['analisis/verifikasi_massal'] = 'form/analisis/verifikasi_massal';
 
 $route['inventaris'] = 'form/inventaris';
@@ -855,3 +856,23 @@ $route['master-dokumen'] = 'master_dokumen/index';
 $route['master-dokumen/tambah'] = 'master_dokumen/tambah';
 $route['master-dokumen/edit/(:any)'] = 'master_dokumen/edit/$1';
 $route['master-dokumen/delete/(:any)'] = 'master_dokumen/delete/$1';
+
+//Master Tahapan
+$route['master_tahapan_magnettrap'] = 'master_tahapan_magnettrap/index';
+$route['master_tahapan_magnettrap/tambah'] = 'master_tahapan_magnettrap/tambah';
+$route['master_tahapan_magnettrap/edit/(:any)'] = 'master_tahapan_magnettrap/edit/$1';
+$route['master_tahapan_magnettrap/hapus/(:any)'] = 'master_tahapan_magnettrap/hapus/$1';
+
+//Formulasi 
+$route['master_formula'] = 'master_formula/index';
+$route['master_formula/tambah'] = 'master_formula/tambah';
+$route['master_formula/simpan'] = 'master_formula/simpan';
+$route['master_formula/edit/(:any)'] = 'master_formula/edit/$1';
+$route['master_formula/update/(:any)'] = 'master_formula/update/$1';
+$route['master_formula/hapus/(:any)'] = 'master_formula/hapus/$1';
+
+//keluhan pelanggan
+$route['form/keluhan_pelanggan'] = 'form/keluhan_pelanggan/index';
+$route['form/keluhan_pelanggan/tambah'] = 'form/keluhan_pelanggan/tambah';
+$route['form/keluhan_pelanggan/simpan'] = 'form/keluhan_pelanggan/simpan';
+$route['form/keluhan_pelanggan/detail/(:any)'] = 'form/keluhan_pelanggan/detail/$1';

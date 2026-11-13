@@ -59,7 +59,7 @@ $bb = (new DateTime($analisis->best_before))->format('d-m-Y');
                         </tr>
                         <tr>
                             <td colspan="2"><b>Permintaan Analisis</b></td>
-                            <td colspan="4"><?= htmlspecialchars($analisis->analisis); ?></td>
+                            <td colspan="4"><?= htmlspecialchars($analisis->analisis?? ''); ?></td>
                         </tr>
                         <tr>
                             <td colspan="2"><b>Catatan</b></td>

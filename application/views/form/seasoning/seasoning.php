@@ -151,7 +151,10 @@ $filter_tanggal = $filter_tanggal ?? '';
 											<span class="text">Detail</span>
 										</a>
 
-										<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
+										<?php if (
+											in_array($tipe_user, [0, 1, 2, 9], true) &&
+											$val->status_spv != 1
+										): ?>
 											<a href="<?= base_url('seasoning/status/' . $val->uuid); ?>"
 												class="btn btn-info btn-icon-split">
 												<span class="text">Verifikasi</span>

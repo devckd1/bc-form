@@ -209,7 +209,7 @@
 											<span class="text">Detail</span>
 										</a>
 
-										<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+										<?php if (in_array($tipe_user, [0, 1, 2, 9])&& $val->status_spv != 1): ?>
 											<a href="<?= base_url('inventaris/status/' . $val->uuid); ?>"
 												class="btn btn-info btn-icon-split">
 												<span class="text">Verifikasi</span>

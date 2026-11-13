@@ -250,7 +250,7 @@ class Thermometer extends MY_Controller
 			'thermometer' => $this->thermometer_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-thermometer';
+		$this->active_nav = 'thermometer';
 		$this->render('form/thermometer/thermometer-status', $data);
 	}
 
@@ -632,10 +632,20 @@ class Thermometer extends MY_Controller
 			. (new DateTime($thermo_verif->created_at))->format('d-m-Y | H:i');
 
 		$qr_produksi_text = null;
-		if (!empty($thermo_verif->nama_lengkap_produksi) && !empty($thermo_verif->tgl_update_produksi)) {
-			$prod_tanggal = (new DateTime($thermo_verif->tgl_update_produksi))->format('d-m-Y | H:i');
+
+		if ((string) $thermo_verif->status_produksi === '1') {
+
+			$prod_tanggal = '-';
+
+			if (!empty($thermo_verif->tgl_update_produksi)) {
+				$prod_tanggal = (new DateTime(
+					$thermo_verif->tgl_update_produksi
+				))->format('d-m-Y | H:i');
+			}
+
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $thermo_verif->nama_lengkap_produksi . "\nForeman/Forelady Produksi\n" . $prod_tanggal;
+				. "Foreman/Forelady Produksi\n"
+				. $prod_tanggal;
 		}
 
 		$spv_tanggal = !empty($thermo_verif->tgl_update_spv)

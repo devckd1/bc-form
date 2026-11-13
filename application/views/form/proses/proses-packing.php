@@ -515,6 +515,39 @@ $url_simpan = $is_audit
 														</div>
 													<?php endif; ?>
 
+
+												<?php elseif ($paramName === 'net_weight'): ?>
+
+													<?php
+													$netWeightValues = $data_packing[0][$kategori]['net_weight'] ?? [];
+
+													if (!is_array($netWeightValues)) {
+														$netWeightValues = [$netWeightValues];
+													}
+
+													for ($i = 0; $i < 3; $i++) {
+														$netWeightValues[$i] = $netWeightValues[$i] ?? '';
+													}
+													?>
+
+													<div class="row">
+														<?php for ($i = 0; $i < 3; $i++): ?>
+															<div class="col-md-4 mb-2">
+																<label class="small font-weight-bold">
+																	Sampel <?= $i + 1 ?>
+																</label>
+
+																<input
+																	type="number"
+																	step="any"
+																	name="packing[0][<?= $kategori ?>][net_weight][<?= $i ?>]"
+																	class="form-control form-control-sm text-center"
+																	placeholder="Sampel <?= $i + 1 ?>"
+																	value="<?= html_escape($netWeightValues[$i]) ?>">
+															</div>
+														<?php endfor; ?>
+													</div>
+
 												<?php else: ?>
 
 													<input
@@ -524,6 +557,7 @@ $url_simpan = $is_audit
 														value="<?= html_escape($val) ?>">
 
 												<?php endif; ?>
+
 
 											<?php endif; ?>
 										</td>

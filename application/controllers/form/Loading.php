@@ -199,8 +199,8 @@ class Loading extends MY_Controller
 			'active_nav' => 'verifikasi-loading',
 		);
 
-		$this->active_nav = 'verifikasi-loading';
-		$this->render('form/loading/loading-verifikasi', $data);
+		$this->active_nav = 'loading';
+		$this->render('form/loading/loading', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -224,7 +224,7 @@ class Loading extends MY_Controller
 			);
 		}
 
-		redirect('loading/verifikasi');
+		redirect('loading');
 	}
 
 	public function verifikasi_massal()
@@ -333,10 +333,10 @@ class Loading extends MY_Controller
 
 		$data = array(
 			'loading' => $this->loading_model->get_by_uuid($uuid),
-			'active_nav' => 'verifikasi-loading'
+			'active_nav' => 'loading'
 		);
 
-		$this->active_nav = 'verifikasi-loading';
+		$this->active_nav = 'loading';
 		$this->render('form/loading/loading-status', $data);
 	}
 

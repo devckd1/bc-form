@@ -232,8 +232,8 @@ class Kebersihankaryawan extends MY_Controller
 			'start' => $start
 		);
 
-		$this->active_nav = 'verifikasi-kebersihankaryawan';
-		$this->render('form/kebersihankaryawan/kebersihankaryawan-verifikasi', $data);
+		$this->active_nav = 'kebersihankaryawan';
+		$this->render('form/kebersihankaryawan/kebersihankaryawan', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -370,7 +370,7 @@ class Kebersihankaryawan extends MY_Controller
 			'kebersihankaryawan' => $this->kebersihankaryawan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-kebersihankaryawan';
+		$this->active_nav = 'kebersihankaryawan';
 		$this->render('form/kebersihankaryawan/kebersihankaryawan-status', $data);
 	}
 
@@ -655,7 +655,7 @@ class Kebersihankaryawan extends MY_Controller
 		$this->load->model('pegawai_model');
 		$data['kebersihankaryawan']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['kebersihankaryawan']->username);
 		$data['kebersihankaryawan']->nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap($data['kebersihankaryawan']->nama_spv);
-		$data['kebersihankaryawan']->nama_lengkap_produksi = $data['kebersihankaryawan']->nama_produksi;
+		//$data['kebersihankaryawan']->nama_lengkap_produksi = $data['kebersihankaryawan']->nama_produksi;
 
 
 		$pdf->SetY($pdf->GetY() + 2);
@@ -784,14 +784,18 @@ class Kebersihankaryawan extends MY_Controller
 			. "QC Inspector\n"
 			. $qc_tanggal;
 
+		// Produksi - tanpa nama
 		$qr_produksi_text = null;
 
-		if (!empty($data['kebersihankaryawan']->nama_lengkap_produksi) && !empty($data['kebersihankaryawan']->tgl_update_produksi)) {
-			$prod_tanggal = (new DateTime($data['kebersihankaryawan']->tgl_update_produksi ?? $data['kebersihankaryawan']->tgl_update_produksi))
-				->format('d-m-Y | H:i');
+		if (
+			(string) $data['kebersihankaryawan']->status_produksi === '1' &&
+			!empty($data['kebersihankaryawan']->tgl_update_produksi)
+		) {
+			$prod_tanggal = (new DateTime(
+				$data['kebersihankaryawan']->tgl_update_produksi
+			))->format('d-m-Y | H:i');
 
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $data['kebersihankaryawan']->nama_lengkap_produksi . "\n"
 				. "Foreman/Forelady Produksi\n"
 				. $prod_tanggal;
 		}

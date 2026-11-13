@@ -172,8 +172,8 @@ class Pengemasan extends MY_Controller
 			'pengemasan' => $this->pengemasan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pengemasan';
-		$this->render('form/pengemasan/pengemasan-verifikasi', $data);
+		$this->active_nav = 'pengemasan';
+		$this->render('form/pengemasan/pengemasan', $data);
 	}
 
 	public function verifikasi_massal()
@@ -238,7 +238,7 @@ class Pengemasan extends MY_Controller
 			'pengemasan' => $this->pengemasan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pengemasan';
+		$this->active_nav = 'pengemasan';
 		$this->render('form/pengemasan/pengemasan-status', $data);
 	}
 

@@ -218,7 +218,12 @@ class Chiller_model extends CI_Model
 	public function verifikasi_produksi($uuid)
 	{
 		$plant    = $this->session->userdata('plant');
-		$username = $this->session->userdata('username');
+		$username = trim((string) $this->session->userdata('username'));
+
+		if ($username === '') {
+			log_message('error', 'Username Produksi kosong saat verifikasi Chiller.');
+			return false;
+		}
 
 		$data = [
 			'nama_produksi'       => $username,
@@ -576,6 +581,7 @@ class Chiller_model extends CI_Model
 		return false;
 	}
 
+
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
 		$this->db->select('
@@ -586,11 +592,13 @@ class Chiller_model extends CI_Model
         nama_produksi,
         status_produksi,
         tgl_update_produksi,
+        status_spv,
         created_at
     ');
 
 		$this->db->where('DATE(date)', $tanggal);
 		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);

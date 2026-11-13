@@ -174,8 +174,8 @@ class Retain extends MY_Controller
 			'retain' => $this->retain_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-retain';
-		$this->render('form/retain/retain-verifikasi', $data);
+		$this->active_nav = 'retain';
+		$this->render('form/retain/retain', $data);
 	}
 
 	public function verifikasi_massal()
@@ -253,7 +253,7 @@ class Retain extends MY_Controller
 			'retain' => $this->retain_model->get_retain_with_plant($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-retain';
+		$this->active_nav = 'retain';
 		$this->render('form/retain/retain-status', $data);
 	}
 

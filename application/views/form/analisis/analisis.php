@@ -159,7 +159,7 @@ function tampilkan_analisis($kode)
 								</td>
 								<td>
 									<?php
-									$nilai = explode(',', $val->analisis);
+									$nilai = explode(',', $val->analisis?? '');
 									$hasil = array_map(
 										'tampilkan_analisis',
 										array_map('trim', $nilai)

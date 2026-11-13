@@ -148,8 +148,8 @@ class Pengayakan extends MY_Controller
 			'pengayakan' => $this->pengayakan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pengayakan';
-		$this->render('form/pengayakan/pengayakan-verifikasi', $data);
+		$this->active_nav = 'pengayakan';
+		$this->render('form/pengayakan/pengayakan', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -317,7 +317,7 @@ class Pengayakan extends MY_Controller
 			'pengayakan' => $this->pengayakan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pengayakan';
+		$this->active_nav = 'pengayakan';
 		$this->render('form/pengayakan/pengayakan-status', $data);
 	}
 
@@ -665,12 +665,21 @@ class Pengayakan extends MY_Controller
 
 		$qr_produksi_text = null;
 
-		if (!empty($data['pengayakan']->nama_lengkap_produksi) && !empty($data['pengayakan']->tgl_update_prod)) {
-			$prod_tanggal = (new DateTime($data['pengayakan']->tgl_update_prod ?? $data['pengayakan']->tgl_update_prod))
-				->format('d-m-Y | H:i');
+		if ((string) $data['pengayakan']->status_produksi === '1') {
+
+			$prod_tanggal = '-';
+
+			if (!empty($data['pengayakan']->tgl_update_prod)) {
+				$prod_tanggal = (new DateTime(
+					$data['pengayakan']->tgl_update_prod
+				))->format('d-m-Y | H:i');
+			} elseif (!empty($data['pengayakan']->tgl_update_produksi)) {
+				$prod_tanggal = (new DateTime(
+					$data['pengayakan']->tgl_update_produksi
+				))->format('d-m-Y | H:i');
+			}
 
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $data['pengayakan']->nama_lengkap_produksi . "\n"
 				. "Foreman/Forelady Produksi\n"
 				. $prod_tanggal;
 		}

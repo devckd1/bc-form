@@ -266,14 +266,14 @@ class Loading_model extends CI_Model
 
 	public function verifikasi_produksi($uuid)
 	{
-		$plant = $this->session->userdata('plant');
+		$plant    = $this->session->userdata('plant');
 		$username = $this->session->userdata('username');
 
-		$data = array(
-			'nama_produksi' => $username,
-			'status_wh' => '1',
-			'tgl_update_produksi' => date('Y-m-d H:i:s')
-		);
+		$data = [
+			'nama_wh'      => $username,
+			'status_wh'    => '1',
+			'tgl_update_wh' => date('Y-m-d H:i:s')
+		];
 
 		$this->db->where('uuid', $uuid);
 		$this->db->where('plant', $plant);
@@ -313,11 +313,13 @@ class Loading_model extends CI_Model
 
 		if ($jenis === 'produksi') {
 
-			// Produksi: Created menjadi Verified
-			$this->db->where('status_produksi', '0');
+			// Verifikasi Warehouse
+			$this->db->where('status_wh', '0');
 
 			$this->db->update($this->table, [
-				'status_produksi' => '1'
+				'nama_wh'       => $nama_spv,
+				'status_wh'     => '1',
+				'tgl_update_wh' => date('Y-m-d H:i:s')
 			]);
 		} else {
 

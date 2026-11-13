@@ -70,7 +70,7 @@ class Analisis_model extends CI_Model
 			'best_before'    => $this->input->post('best_before'),
 			'jumlah_sampel'  => $this->input->post('jumlah_sampel'),
 			'status_spv'     => '0',
-			'status_produksi' => '1',
+			'status_produksi' => '0',
 			'nama_produksi'  => $nama_produksi,
 			'status_lab'     => '0',
 			'is_audit'       => 0,
@@ -481,6 +481,24 @@ class Analisis_model extends CI_Model
 		return $data_analisis;
 	}
 
+	public function get_data_by_plant()
+	{
+		$plant     = $this->session->userdata('plant');
+		$type_user = (int) $this->session->userdata('tipe_user');
+
+		$this->db->from('analisis_lab');
+		$this->db->where('is_audit', 0);
+
+		// Admin level 1 dan 9 dapat melihat seluruh plant
+		if (!in_array($type_user, [1, 9], true)) {
+			$this->db->where('plant', $plant);
+		}
+
+		$this->db->order_by('created_at', 'DESC');
+
+		return $this->db->get()->result();
+	}
+
 	public function get_data_by_plant_pagination($limit = 10, $start = 0, $tanggal = '')
 	{
 		$plant = $this->session->userdata('plant');
@@ -591,27 +609,49 @@ class Analisis_model extends CI_Model
 		}
 
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
 		}
 
 		$this->db->order_by('date', 'ASC');
+
 		$query = $this->db->get('analisis_lab');
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return ($query->num_rows() > 0) ? $query->result() : false;
 	}
 
 	public function get_last_verif_by_date($tanggal, $plant = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, tipe_sampel, penyimpanan, nama_lab, tgl_update_lab, status_lab, catatan_lab, status_produksi, tgl_update_produksi');
+		if (empty($tanggal)) {
+			return false;
+		}
+
+		$this->db->select('
+        nama_spv,
+        tgl_update_spv,
+        username,
+        date,
+        nama_produksi,
+        tipe_sampel,
+        penyimpanan,
+        nama_lab,
+        tgl_update_lab,
+        status_lab,
+        catatan_lab,
+        status_produksi,
+        tgl_update_produksi,
+        status_spv
+    ');
+
 		$this->db->where('DATE(date)', $tanggal);
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
+		$this->db->where('nama_spv IS NOT NULL', null, false);
+		$this->db->where('nama_spv !=', '');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -619,7 +659,10 @@ class Analisis_model extends CI_Model
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
+
 		$query = $this->db->get('analisis_lab');
+
+		log_message('debug', 'Query get_last_verif_by_date: ' . $this->db->last_query());
 
 		return $query->row();
 	}

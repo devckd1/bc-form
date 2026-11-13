@@ -176,8 +176,8 @@ class Sanitasi extends MY_Controller
 			'start' => $start
 		);
 
-		$this->active_nav = 'verifikasi-sanitasi';
-		$this->render('form/sanitasi/sanitasi-verifikasi', $data);
+		$this->active_nav = 'sanitasi';
+		$this->render('form/sanitasi/sanitasi', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -333,7 +333,7 @@ class Sanitasi extends MY_Controller
 			'sanitasi' => $this->sanitasi_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-sanitasi';
+		$this->active_nav = 'sanitasi';
 		$this->render('form/sanitasi/sanitasi-status', $data);
 	}
 
@@ -580,10 +580,11 @@ class Sanitasi extends MY_Controller
 		$y_ttd = $pdf->GetY() + 6;
 		$qr_size = 15;
 
-		// Cek status verifikasi
-		$status_verifikasi = true;
+		// Cek status verifikasi data QC saja
+		$status_verifikasi = !empty($sanitasi_data);
+
 		foreach ($sanitasi_data as $item) {
-			if ($item->status_spv != '1') {
+			if ((int) $item->is_audit !== 0 || (int) $item->status_spv !== 1) {
 				$status_verifikasi = false;
 				break;
 			}
@@ -609,9 +610,18 @@ class Sanitasi extends MY_Controller
 
 		// Produksi
 		$qr_produksi_text = null;
-		if (!empty($nama_prod) && !empty($sanitasi_data[0]->tgl_update_produksi)) {
-			$prod_tanggal = (new DateTime($sanitasi_data[0]->tgl_update_produksi))->format('d-m-Y | H:i');
-			$qr_produksi_text = "Diketahui secara digital oleh,\n$nama_prod\nForeman/Forelady Produksi\n$prod_tanggal";
+
+		if (
+			(string) $sanitasi_data[0]->status_produksi === '1' &&
+			!empty($sanitasi_data[0]->tgl_update_produksi)
+		) {
+			$prod_tanggal = (new DateTime(
+				$sanitasi_data[0]->tgl_update_produksi
+			))->format('d-m-Y | H:i');
+
+			$qr_produksi_text = "Diketahui secara digital oleh,\n"
+				. "Foreman/Forelady Produksi\n"
+				. $prod_tanggal;
 		}
 
 		// SPV

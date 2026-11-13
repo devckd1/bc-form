@@ -152,8 +152,8 @@ class Residu extends MY_Controller
 			'residu' => $this->residu_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-residu';
-		$this->render('form/residu/residu-verifikasi', $data);
+		$this->active_nav = 'residu';
+		$this->render('form/residu/residu', $data);
 	}
 
 	public function verifikasi_massal()
@@ -252,7 +252,7 @@ class Residu extends MY_Controller
 		);
 
 
-		$this->active_nav = 'verifikasi-residu';
+		$this->active_nav = 'residu';
 		$this->render('form/residu/residu-status', $data);
 	}
 
@@ -435,11 +435,26 @@ class Residu extends MY_Controller
 		if ($data['residu']->nama_lengkap_qc && $data['residu']->nama_lengkap_spv) {
 			$pdf->SetXY(25, $y_verifikasi);
 			$pdf->Cell(35, 5, 'Dibuat Oleh,', 0, 0, 'C');
-			$pdf->SetXY(25, $y_verifikasi + 10);
-			$pdf->SetFont('times', 'U', 8);
-			$pdf->Cell(35, 5, $data['residu']->nama_lengkap_qc, 0, 1, 'C');
+			// QR Code Dibuat Oleh (QC)
+			$qr_text_qc = "Dibuat secara digital oleh,\n"
+				. $data['residu']->nama_lengkap_qc
+				. "\nQC Inspector";
+
+			$pdf->write2DBarcode(
+				$qr_text_qc,
+				'QRCODE,L',
+				35,
+				$y_verifikasi + 8,
+				15,
+				15,
+				null,
+				'N'
+			);
+
+			// Jabatan QC
+			$pdf->SetXY(25, $y_verifikasi + 24);
 			$pdf->SetFont('times', '', 8);
-			$pdf->Cell(65, 5, 'QC Inspector', 0, 0, 'C');
+			$pdf->Cell(35, 5, 'QC Inspector', 0, 0, 'C');
 
 			$pdf->SetXY(150, $y_verifikasi);
 			$pdf->Cell(49, 5, 'Disetujui Oleh,', 0, 0, 'C');

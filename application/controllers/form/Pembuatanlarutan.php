@@ -196,8 +196,8 @@ class Pembuatanlarutan extends MY_Controller
 			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pembuatanlarutan';
-		$this->render('form/pembuatanlarutan/pembuatanlarutan-verifikasi', $data);
+		$this->active_nav = 'pembuatanlarutan';
+		$this->render('form/pembuatanlarutan/pembuatanlarutan', $data);
 	}
 
 	public function verifikasi_massal()
@@ -277,7 +277,7 @@ class Pembuatanlarutan extends MY_Controller
 			'pembuatanlarutan' => $this->pembuatanlarutan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pembuatanlarutan';
+		$this->active_nav = 'pembuatanlarutan';
 		$this->render('form/pembuatanlarutan/pembuatanlarutan-status', $data);
 	}
 

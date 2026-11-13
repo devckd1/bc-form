@@ -20,10 +20,22 @@
 				$tanggal_sess = $produksi_data['tanggal'] ?? date('Y-m-d');
 				$shift_sess = $produksi_data['shift'] ?? '';
 
+				$plant_sess = $this->session->userdata('plant');
+
+				$kode_plant = '';
+
+				if ($plant_sess === '651ac623-5e48-44cc-b2f6-5d622603f53c') {
+					$kode_plant = '1'; // Cikande
+				} elseif ($plant_sess === '1eb341e0-1ec4-4484-ba8f-32d23352b84d') {
+					$kode_plant = '3'; // Salatiga
+				}
+
 				$proses_produksi = [
 					'dough_mixing' => [
-						['label' => 'Acuan No. Dokumen / Revisi', 'params' => ['dokumen', 'revisi']],
-						'no_formula',
+						[
+							'label' => 'Acuan No. Dokumen / Revisi / Formula',
+							'params' => ['dokumen', 'revisi', 'no_formula']
+						],
 						'nama_produk',
 						'kode_produksi'
 					],
@@ -33,6 +45,14 @@
 						'yeast',
 						'bread_improver',
 						'premix',
+						[
+							'label' => 'N55BC',
+							'params' => ['n55bc']
+						],
+						[
+							'label' => 'NP55BCY / NP55BCO',
+							'params' => ['np55bcy_np55bco']
+						],
 						'shortening',
 						'chill_water'
 					],
@@ -66,6 +86,10 @@
 					'yeast' => 'Yeast',
 					'bread_improver' => 'Bread Improver',
 					'premix' => 'Premix',
+					'n55bc_sensori' => 'Sensori',
+					'n55bc_formulasi' => 'Formulasi',
+					'np55bcy_np55bco_sensori' => 'Sensori',
+					'np55bcy_np55bco_formulasi' => 'Formulasi',
 					'shortening' => 'Shortening',
 					'chill_water' => 'Chill Water (14 - 16°C)',
 					'waktu_mixing_1' => 'Waktu Mixing 1',
@@ -106,7 +130,7 @@
 				<div class="form-group row">
 					<div class="col-md-3">
 						<label class="font-weight-bold">Tanggal</label>
-						<input type="date" name="date" class="form-control" value="<?= set_value('date', $tanggal_sess) ?>">
+						<input type="date" name="date" id="tanggal_mixing" class="form-control" data-kode-plant="<?= $kode_plant ?>" value="<?= set_value('date', $tanggal_sess) ?>">
 					</div>
 					<div class="col-md-3">
 						<label class="font-weight-bold">Shift</label>
@@ -122,7 +146,11 @@
 						<select name="nama_produk" id="select_nama_produk" class="form-control">
 							<option value="">-- Pilih Produk --</option>
 							<?php foreach ($produk_list as $p): ?>
-								<option value="<?= $p->nama_produk ?>"><?= $p->nama_produk ?></option>
+								<option
+									value="<?= html_escape($p->nama_produk) ?>"
+									data-uuid="<?= html_escape($p->uuid) ?>">
+									<?= html_escape($p->nama_produk) ?>
+								</option>
 							<?php endforeach; ?>
 						</select>
 					</div>
@@ -145,6 +173,7 @@
 							<tr>
 								<th>Jenis Produksi</th>
 								<th>Std. Berat</th>
+								<th>Kode Batch</th>
 								<?php for ($i = 1; $i <= 10; $i++): ?>
 									<th class="text-center kolom-input kolom-input-<?= $i ?>">
 										Input ke-<?= $i ?>
@@ -155,7 +184,7 @@
 						<tbody>
 							<?php foreach ($proses_produksi as $kategori => $params): ?>
 								<tr style="background:#f1f1f1;font-weight:bold;">
-									<td class="baris-kategori" colspan="12">
+									<td class="baris-kategori" colspan="13">
 										<?= ucwords(str_replace('_', ' ', $kategori)) ?>
 									</td>
 								</tr>
@@ -171,68 +200,200 @@
 								?>
 									<tr>
 										<td><?= $label ?></td>
-										<td>
-											<?php
-											if ($kategori == 'kondisi_rm') {
-												$rawStd = $standar_berat[$subParams[0]] ?? '';
-												$stdVal = is_array($rawStd) ? $rawStd['default'] : $rawStd;
-												echo '<input type="text" name="proses_produksi[' . $kategori . '][' . $subParams[0] . '][0]" class="form-control form-control-sm" value="' . $stdVal . '">';
-											}
-											?>
+
+										<!-- Kolom Standar Berat / Kode Batch -->
+										<td class="text-center">
+											<?php if ($kategori == 'kondisi_rm'): ?>
+
+												<?php if (in_array($subParams[0], [
+													'n55bc_sensori',
+													'np55bcy_np55bco_sensori'
+												])): ?>
+
+													QH14101AA0
+
+												<?php elseif ($subParams[0] != 'premix'): ?>
+
+													<?php
+													$rawStd = $standar_berat[$subParams[0]] ?? '';
+													$stdVal = is_array($rawStd)
+														? $rawStd['default']
+														: $rawStd;
+													?>
+
+													<input type="text"
+														name="proses_produksi[<?= $kategori ?>][<?= $subParams[0] ?>][0]"
+														class="form-control form-control-sm"
+														value="<?= $stdVal ?>">
+
+												<?php endif; ?>
+
+											<?php endif; ?>
 										</td>
 
+										<!-- Kolom Kode Batch -->
+										<td class="text-center">
+											<?php if (
+												$kategori === 'kondisi_rm' &&
+												in_array($subParams[0], ['tepung_terigu', 'tepung_tapioka', 'yeast', 'bread_improver', 'n55bc', 'np55bcy_np55bco', 'shortening', 'chill_water'], true)
+											): ?>
+												<input type="text"
+													name="proses_produksi[<?= $kategori ?>][kode_batch_<?= $subParams[0] ?>]"
+													class="form-control form-control-sm"
+													placeholder="Kode Batch">
+											<?php endif; ?>
+										</td>
+
+										<!-- Kolom Input Dinamis -->
 										<?php for ($col = 1; $col <= 10; $col++): ?>
+
 											<td class="text-center kolom-input kolom-input-<?= $col ?>">
-												<?php foreach ($subParams as $sub):
-													$value = '';
-													if (isset($default_mixing[$sub])) $value = $default_mixing[$sub];
-													if (isset($default_baking[$sub])) $value = $default_baking[$sub];
-													if (isset($default_suhu[$sub])) $value = $default_suhu[$sub];
 
-													$subLower = strtolower($sub);
-													$isCheckbox = false;
-													$isNumber = false;
+												<?php
+												// Khusus Acuan Dokumen / Revisi / Formula
+												$isAcuanFormula = (
+													$kategori === 'dough_mixing' &&
+													$subParams === ['dokumen', 'revisi', 'no_formula']
+												);
 
-													// ✅ Kondisi RM logic
-													if ($kategori == 'kondisi_rm' && $subLower !== 'chill_water' && !str_contains($subLower, 'suhu')) {
-														if ($col == 8) {
-															$rawStd = $standar_berat[$subLower] ?? '';
-															$stdVal = is_array($rawStd) ? ($rawStd['col8'] ?? $rawStd['default']) : $rawStd;
-															echo '<input type="text" name="proses_produksi[' . $kategori . '][' . $subLower . '][' . $col . ']" class="form-control form-control-sm" value="' . $stdVal . '">';
-															continue;
-														} else {
-															$isCheckbox = true;
-														}
-													}
-													// ✅ New: Checkbox for sensori, hasil_proofing, sensori_produk
-													elseif (in_array($subLower, ['sensori', 'hasil_proofing', 'sensori_produk'])) {
-														$isCheckbox = true;
-													}
-													// Numeric input
-													elseif ($subLower === 'chill_water' || str_contains($subLower, 'suhu')) {
-														$isNumber = true;
-													}
-
-													$isKodeProduksi = ($kategori == 'dough_mixing' && $sub == 'kode_produksi');
+												if ($isAcuanFormula):
+													$fieldAcuan = [
+														'dokumen',
+														'revisi',
+														'no_formula'
+													];
 												?>
 
-													<?php if ($isCheckbox): ?>
-														<input type="checkbox"
-															name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
-															value="✗"
-															class="checkbox-lg toggle-check">
-													<?php elseif ($isNumber): ?>
-														<input type="number" step="0.01" name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]" value="<?= $value ?>" class="form-control form-control-sm" placeholder="0.00">
-													<?php else: ?>
-														<input type="<?= in_array($sub, ['jam_mulai', 'jam_selesai']) ? 'time' : 'text' ?>"
-															name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
-															value="<?= $value ?>"
-															class="form-control form-control-sm <?= $isKodeProduksi ? 'kode_produksi_field' : '' ?>"
-															id="<?= $isKodeProduksi && $col == 1 ? 'kode_produksi_1' : '' ?>">
-													<?php endif; ?>
+													<div class="d-flex align-items-center" style="gap: 4px;">
+														<?php foreach ($fieldAcuan as $field): ?>
 
-												<?php endforeach; ?>
+															<?php
+															$classAcuan = '';
+
+															if ($field === 'dokumen') {
+																$classAcuan = 'acuan-dokumen';
+															} elseif ($field === 'revisi') {
+																$classAcuan = 'acuan-revisi';
+															} elseif ($field === 'no_formula') {
+																$classAcuan = 'acuan-formula';
+															}
+															?>
+
+															<input type="text"
+																name="proses_produksi[<?= $kategori ?>][<?= $field ?>][<?= $col ?>]"
+																class="form-control form-control-sm <?= $classAcuan ?>"
+																placeholder="<?= $label_param[$field] ?>">
+
+														<?php endforeach; ?>
+													</div>
+
+												<?php else: ?>
+
+													<?php foreach ($subParams as $sub):
+
+														$value = '';
+
+														if (isset($default_mixing[$sub])) {
+															$value = $default_mixing[$sub];
+														}
+
+														if (isset($default_baking[$sub])) {
+															$value = $default_baking[$sub];
+														}
+
+														if (isset($default_suhu[$sub])) {
+															$value = $default_suhu[$sub];
+														}
+
+														$subLower = strtolower($sub);
+
+														$isCheckbox = false;
+														$isNumber = false;
+
+														// Premix tetap kosong
+														if ($kategori == 'kondisi_rm' && $subLower == 'premix') {
+															continue;
+														}
+
+														// Kondisi RM
+														if (
+															$kategori == 'kondisi_rm' &&
+															$subLower !== 'chill_water'
+														) {
+															$isCheckbox = true;
+														}
+
+														// Checkbox Sensori dan Hasil
+														elseif (in_array($subLower, [
+															'sensori',
+															'hasil_proofing',
+															'sensori_produk'
+														])) {
+															$isCheckbox = true;
+														}
+
+														// Input angka
+														elseif (
+															$subLower === 'chill_water' ||
+															strpos($subLower, 'suhu') !== false
+														) {
+															$isNumber = true;
+														}
+
+														$isKodeProduksi = (
+															$kategori == 'dough_mixing' &&
+															$sub == 'kode_produksi'
+														);
+
+														$label_checkbox = '';
+
+														if (strpos($subLower, '_sensori') !== false) {
+															$label_checkbox = 'Sensori';
+														} elseif (strpos($subLower, '_formulasi') !== false) {
+															$label_checkbox = 'Formulasi';
+														}
+													?>
+
+														<?php if ($isCheckbox): ?>
+
+															<div class="d-inline-flex flex-column align-items-center mx-2">
+																<?php if ($label_checkbox): ?>
+																	<small class="mb-1">
+																		<?= $label_checkbox ?>
+																	</small>
+																<?php endif; ?>
+
+																<input type="checkbox"
+																	name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
+																	value="✗"
+																	class="checkbox-lg toggle-check">
+															</div>
+
+														<?php elseif ($isNumber): ?>
+
+															<input type="number"
+																step="0.01"
+																name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
+																value="<?= $value ?>"
+																class="form-control form-control-sm"
+																placeholder="0.00">
+
+														<?php else: ?>
+
+															<input type="<?= in_array($sub, ['jam_mulai', 'jam_selesai']) ? 'time' : 'text' ?>"
+																name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
+																value="<?= $value ?>"
+																class="form-control form-control-sm <?= $isKodeProduksi ? 'kode_produksi_field' : '' ?>"
+																id="<?= $isKodeProduksi && $col == 1 ? 'kode_produksi_1' : '' ?>">
+
+														<?php endif; ?>
+
+													<?php endforeach; ?>
+
+												<?php endif; ?>
+
 											</td>
+
 										<?php endfor; ?>
 									</tr>
 								<?php endforeach; ?>
@@ -261,195 +422,301 @@
 
 
 <script>
-	$(document).ready(function() {
+	
+$(document).ready(function() {
 
-		// =========================================
-		// AUTOFILL JENIS PRODUK
-		// =========================================
-		$('#select_nama_produk').on('change', function() {
-			const selectedProdukRaw = $(this).val() || '';
-			const selectedProduk = selectedProdukRaw.trim().toLowerCase();
+    // =========================================
+    // AUTOFILL JENIS PRODUK
+    // =========================================
+    $('#select_nama_produk').on('change', function() {
+        const selectedProdukRaw = $(this).val() || '';
+        const selectedProduk = selectedProdukRaw.trim().toLowerCase();
 
-			const jenisProdukInputs = $(
-				'input[name^="proses_produksi[dough_mixing][nama_produk]"]'
-			);
+        const jenisProdukInputs = $(
+            'input[name^="proses_produksi[dough_mixing][nama_produk]"]'
+        );
 
-			jenisProdukInputs.val('');
+        jenisProdukInputs.val('');
 
-			if (selectedProduk === 'bc orange sintetis') {
-				jenisProdukInputs.val('BC Orange');
-			} else if (selectedProduk.includes('bc mix')) {
-				jenisProdukInputs.each(function(index) {
-					$(this).val(index < 7 ? 'BC Yellow' : 'BC Orange');
-				});
-			} else {
-				jenisProdukInputs.val(selectedProdukRaw);
-			}
-		});
-
-
-		// =========================================
-		// AUTOFILL KODE PRODUKSI
-		// =========================================
-		$('#kode_produksi_1').on('blur', function() {
-			let baseVal = $(this).val().trim();
-
-			if (!baseVal) {
-				return;
-			}
-
-			if (!/\d+$/.test(baseVal)) {
-				baseVal += '1';
-				$(this).val(baseVal);
-			}
-
-			const kodeDasar = baseVal.replace(/\d+$/, '');
-
-			$('.kode_produksi_field').each(function(index) {
-				if (index === 0) {
-					return;
-				}
-
-				$(this).val(kodeDasar + (index + 1));
-			});
-		});
+        if (selectedProduk === 'bc orange sintetis') {
+            jenisProdukInputs.val('BC Orange');
+        } else if (selectedProduk.includes('bc mix')) {
+            jenisProdukInputs.each(function(index) {
+                $(this).val(index < 7 ? 'BC Yellow' : 'BC Orange');
+            });
+        } else {
+            jenisProdukInputs.val(selectedProdukRaw);
+        }
+    });
 
 
-		// =========================================
-		// KOLOM INPUT DINAMIS
-		// =========================================
-		let jumlahKolomAktif = 1;
-		const maksimalKolom = 10;
+    // =========================================
+    // AUTOFILL ACUAN MASTER FORMULA
+    // =========================================
+    let formulaRequest = null;
 
-		function perbaruiKolomInput() {
-			for (let i = 1; i <= maksimalKolom; i++) {
-				$('.kolom-input-' + i).toggleClass(
-					'aktif',
-					i <= jumlahKolomAktif
-				);
-			}
+    $('#select_nama_produk').on('change', function() {
 
-			// Simpan jumlah kolom yang aktif untuk dikirim ke model.
-			$('#jumlah_kolom').val(jumlahKolomAktif);
+        const produkUuid = $(this).find(':selected').data('uuid');
 
-			// Sesuaikan colspan baris kategori.
-			$('.baris-kategori').attr(
-				'colspan',
-				2 + jumlahKolomAktif
-			);
+        // Batalkan request sebelumnya.
+        if (formulaRequest && formulaRequest.readyState !== 4) {
+            formulaRequest.abort();
+        }
 
-			// Atur tombol tambah dan hapus.
-			$('#btnTambahInput').prop(
-				'disabled',
-				jumlahKolomAktif >= maksimalKolom
-			);
+        // Kosongkan acuan sebelumnya.
+        $('.acuan-dokumen').val('');
+        $('.acuan-revisi').val('');
+        $('.acuan-formula').val('');
 
-			$('#btnHapusInput').prop(
-				'disabled',
-				jumlahKolomAktif <= 1
-			);
-		}
+        if (!produkUuid) {
+            return;
+        }
 
-		// Tombol tambah kolom.
-		$('#btnTambahInput').on('click', function() {
-			if (jumlahKolomAktif < maksimalKolom) {
-				jumlahKolomAktif++;
-				perbaruiKolomInput();
-			}
-		});
+        formulaRequest = $.ajax({
+            url: '<?= site_url("form/proses/get_master_formula") ?>',
+            type: 'GET',
+            dataType: 'json',
+            data: {
+                produk_uuid: produkUuid
+            },
 
-		// Tombol hapus kolom terakhir.
-		$('#btnHapusInput').on('click', function() {
-			if (jumlahKolomAktif <= 1) {
-				return;
-			}
+            success: function(response) {
 
-			const kolomDihapus = jumlahKolomAktif;
+                if (!response.success) {
+                    console.warn(response.message);
+                    return;
+                }
 
-			if (!confirm(
-					'Hapus Input ke-' + kolomDihapus +
-					'? Data pada kolom ini akan dikosongkan.'
-				)) {
-				return;
-			}
+                const data = response.data;
 
-			$('.kolom-input-' + kolomDihapus)
-				.find('input')
-				.each(function() {
-					if ($(this).is(':checkbox')) {
-						$(this).prop('checked', false).val('✗');
-					} else {
-						$(this).val('');
-					}
-				});
+                // Isi seluruh kolom Dokumen.
+                $('.acuan-dokumen').val(data.no_dokumen || '');
 
-			jumlahKolomAktif--;
-			perbaruiKolomInput();
-		});
+                // Isi seluruh kolom Revisi.
+                $('.acuan-revisi').val(data.revisi || '');
+
+                // Isi seluruh kolom Formula.
+                $('.acuan-formula').val(data.formula || '');
+            },
+
+            error: function(xhr, status) {
+                if (status !== 'abort') {
+                    console.error(
+                        'Gagal mengambil Master Formula:',
+                        xhr.responseText
+                    );
+                }
+            }
+        });
+
+    });
+
+    // Jalankan autofill jika produk sudah terpilih saat halaman dibuka.
+    if ($('#select_nama_produk').val()) {
+        $('#select_nama_produk').trigger('change');
+    }
 
 
-		// =========================================
-		// PERHITUNGAN DURASI PROOFING
-		// =========================================
-		function hitungDurasi(idx) {
-			const jamMulai = $(
-				'input[name="proses_produksi[proofing][jam_mulai][' + idx + ']"]'
-			).val();
+    // =========================================
+    // AUTOFILL PREFIX KODE PRODUKSI
+    // =========================================
+    let prefixKodeProduksi = '';
 
-			const jamSelesai = $(
-				'input[name="proses_produksi[proofing][jam_selesai][' + idx + ']"]'
-			).val();
+    function buatPrefixKodeProduksi() {
+        const tanggal = $('#tanggal_mixing').val();
+        const kodePlant = $('#tanggal_mixing').data('kode-plant');
 
-			const durasiInput = $(
-				'input[name="proses_produksi[proofing][durasi_waktu][' + idx + ']"]'
-			);
+        if (!tanggal || !kodePlant) {
+            return '';
+        }
 
-			if (!jamMulai || !jamSelesai) {
-				durasiInput.val('');
-				return;
-			}
+        const [tahun, bulan, hari] = tanggal.split('-').map(Number);
 
-			const mulai = jamMulai.split(':').map(Number);
-			const selesai = jamSelesai.split(':').map(Number);
+        // Tahun 2026 = Q, 2027 = R, dan seterusnya.
+        const kodeTahun = String.fromCharCode(65 + (tahun - 2010));
 
-			let totalMulai = mulai[0] * 60 + mulai[1];
-			let totalSelesai = selesai[0] * 60 + selesai[1];
+        // Januari = A, Februari = B, ..., November = K.
+        const kodeBulan = String.fromCharCode(64 + bulan);
 
-			// Jika selesai melewati tengah malam.
-			if (totalSelesai < totalMulai) {
-				totalSelesai += 24 * 60;
-			}
+        // Format: kode tahun + kode bulan + tanggal + kode plant.
+        return kodeTahun + kodeBulan +
+            String(hari).padStart(2, '0') +
+            kodePlant;
+    }
 
-			durasiInput.val(totalSelesai - totalMulai);
-		}
+    function perbaruiPrefixKodeProduksi() {
+        const prefixBaru = buatPrefixKodeProduksi();
 
-		$(document).on(
-			'change',
-			'input[name*="[jam_mulai]"], input[name*="[jam_selesai]"]',
-			function() {
-				const match = (this.name || '').match(/\[(\d+)\]$/);
+        if (!prefixBaru) {
+            return;
+        }
 
-				if (match) {
-					hitungDurasi(parseInt(match[1], 10));
-				}
-			}
-		);
+        $('.kode_produksi_field').each(function() {
+            let nilai = $(this).val().trim();
+
+            // Pertahankan bagian belakang yang sudah diisi user.
+            if (prefixKodeProduksi && nilai.startsWith(prefixKodeProduksi)) {
+                nilai = nilai.substring(prefixKodeProduksi.length);
+            } else if (nilai.startsWith(prefixBaru)) {
+                nilai = nilai.substring(prefixBaru.length);
+            }
+
+            $(this).val(prefixBaru + nilai);
+        });
+
+        prefixKodeProduksi = prefixBaru;
+    }
+
+    // Jalankan saat tanggal berubah.
+    $('#tanggal_mixing').on('change', function() {
+        perbaruiPrefixKodeProduksi();
+    });
+
+    // Jalankan saat halaman pertama kali dibuka.
+    perbaruiPrefixKodeProduksi();
 
 
-		// =========================================
-		// CHECKBOX ✓ / ✗
-		// =========================================
-		$(document).on('change', '.toggle-check', function() {
-			$(this).val($(this).is(':checked') ? '✓' : '✗');
-		});
+    // =========================================
+    // KOLOM INPUT DINAMIS
+    // =========================================
+    let jumlahKolomAktif = 1;
+    const maksimalKolom = 10;
+
+    function perbaruiKolomInput() {
+
+        for (let i = 1; i <= maksimalKolom; i++) {
+            $('.kolom-input-' + i).toggleClass(
+                'aktif',
+                i <= jumlahKolomAktif
+            );
+        }
+
+        // Simpan jumlah kolom aktif untuk dikirim ke model.
+        $('#jumlah_kolom').val(jumlahKolomAktif);
+
+        // Sesuaikan colspan baris kategori.
+        $('.baris-kategori').attr(
+            'colspan',
+            3 + jumlahKolomAktif
+        );
+
+        // Atur tombol tambah dan hapus.
+        $('#btnTambahInput').prop(
+            'disabled',
+            jumlahKolomAktif >= maksimalKolom
+        );
+
+        $('#btnHapusInput').prop(
+            'disabled',
+            jumlahKolomAktif <= 1
+        );
+    }
+
+    // Tombol tambah kolom.
+    $('#btnTambahInput').on('click', function() {
+        if (jumlahKolomAktif < maksimalKolom) {
+            jumlahKolomAktif++;
+            perbaruiKolomInput();
+        }
+    });
+
+    // Tombol hapus kolom terakhir.
+    $('#btnHapusInput').on('click', function() {
+
+        if (jumlahKolomAktif <= 1) {
+            return;
+        }
+
+        const kolomDihapus = jumlahKolomAktif;
+
+        if (!confirm(
+            'Hapus Input ke-' + kolomDihapus +
+            '? Data pada kolom ini akan dikosongkan.'
+        )) {
+            return;
+        }
+
+        $('.kolom-input-' + kolomDihapus)
+            .find('input')
+            .each(function() {
+                if ($(this).is(':checkbox')) {
+                    $(this).prop('checked', false).val('✗');
+                } else {
+                    $(this).val('');
+                }
+            });
+
+        jumlahKolomAktif--;
+        perbaruiKolomInput();
+    });
 
 
-		// =========================================
-		// INISIALISASI
-		// =========================================
-		perbaruiKolomInput();
+    // =========================================
+    // PERHITUNGAN DURASI PROOFING
+    // =========================================
+    function hitungDurasi(idx) {
 
-	});
+        const jamMulai = $(
+            'input[name="proses_produksi[proofing][jam_mulai][' + idx + ']"]'
+        ).val();
+
+        const jamSelesai = $(
+            'input[name="proses_produksi[proofing][jam_selesai][' + idx + ']"]'
+        ).val();
+
+        const durasiInput = $(
+            'input[name="proses_produksi[proofing][durasi_waktu][' + idx + ']"]'
+        );
+
+        if (!jamMulai || !jamSelesai) {
+            durasiInput.val('');
+            return;
+        }
+
+        const mulai = jamMulai.split(':').map(Number);
+        const selesai = jamSelesai.split(':').map(Number);
+
+        let totalMulai = mulai[0] * 60 + mulai[1];
+        let totalSelesai = selesai[0] * 60 + selesai[1];
+
+        // Jika selesai melewati tengah malam.
+        if (totalSelesai < totalMulai) {
+            totalSelesai += 24 * 60;
+        }
+
+        durasiInput.val(totalSelesai - totalMulai);
+    }
+
+    $(document).on(
+        'change',
+        'input[name*="[jam_mulai]"], input[name*="[jam_selesai]"]',
+        function() {
+
+            const match = (this.name || '').match(/\[(\d+)\]$/);
+
+            if (match) {
+                hitungDurasi(parseInt(match[1], 10));
+            }
+        }
+    );
+
+
+    // =========================================
+    // CHECKBOX ✓ / ✗
+    // =========================================
+    $(document).on('change', '.toggle-check', function() {
+        $(this).val($(this).is(':checked') ? '✓' : '✗');
+    });
+
+
+    // =========================================
+    // INISIALISASI
+    // =========================================
+    perbaruiKolomInput();
+
+});
+
 </script>
 
 
@@ -554,5 +821,25 @@
 		#tabelProsesProduksi input.form-control {
 			font-size: 11px;
 		}
+	}
+
+	/* Checkbox Sensori dan Formulasi */
+	#tabelProsesProduksi .kolom-input .d-inline-flex {
+		min-width: 65px;
+		vertical-align: middle;
+	}
+
+	#tabelProsesProduksi .kolom-input small {
+		font-size: 10px;
+		white-space: nowrap;
+	}
+
+	#tabelProsesProduksi .checkbox-lg {
+		margin: 3px auto;
+	}
+
+	#tabelProsesProduksi th:nth-child(3),
+	#tabelProsesProduksi td:nth-child(3) {
+		width: 120px;
 	}
 </style>

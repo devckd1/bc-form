@@ -222,7 +222,7 @@
 
 									<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_produksi != '1'): ?>
 										<a href="<?= base_url('sensori/verifikasi_produksi/' . $val->uuid); ?>"
-											class="btn btn-warning btn-icon-split mb-1"
+											class="btn btn-primary btn-icon-split mb-1"
 											onclick="return confirm('Apakah Anda yakin ingin menyetujui data ini?')">
 											<span class="text">Setujui</span>
 										</a>

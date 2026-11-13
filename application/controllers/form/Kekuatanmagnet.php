@@ -170,8 +170,8 @@ class Kekuatanmagnet extends MY_Controller
 			'kekuatanmagnet' => $this->kekuatanmagnet_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-kekuatanmagnet';
-		$this->render('form/kekuatanmagnet/kekuatanmagnet-verifikasi', $data);
+		$this->active_nav = 'kekuatanmagnet';
+		$this->render('form/kekuatanmagnet/kekuatanmagnet', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -195,7 +195,7 @@ class Kekuatanmagnet extends MY_Controller
 			);
 		}
 
-		redirect('kekuatanmagnet/verifikasi');
+		redirect('kekuatanmagnet');
 	}
 
 	public function verifikasi_massal()
@@ -322,7 +322,7 @@ class Kekuatanmagnet extends MY_Controller
 			'kekuatanmagnet' => $this->kekuatanmagnet_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-kekuatanmagnet';
+		$this->active_nav = 'kekuatanmagnet';
 		$this->render('form/kekuatanmagnet/kekuatanmagnet-status', $data);
 	}
 

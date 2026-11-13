@@ -178,7 +178,7 @@
 											Detail
 										</a>
 
-										<?php if ($boleh_verifikasi): ?>
+										<?php if ($boleh_verifikasi && $val->status_spv != 1): ?>
 											<a href="<?= base_url('pemusnahan/status/' . $val->uuid); ?>"
 												class="btn btn-info btn-sm">
 												Verifikasi

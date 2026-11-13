@@ -336,7 +336,17 @@ class Reagen_model extends CI_Model
 		$plant = $this->session->userdata('plant');
 		$type_user = $this->session->userdata('tipe_user');
 
-		$this->db->select('MONTH(date) as bulan, YEAR(date) as tahun');
+		$this->db->select("
+        MONTH(date) AS bulan,
+        YEAR(date) AS tahun,
+        SUM(
+            CASE
+                WHEN status_spv = 1 THEN 0
+                ELSE 1
+            END
+        ) AS belum_verifikasi
+    ", false);
+
 		$this->db->from('reagen');
 		$this->db->where('is_audit', 0);
 

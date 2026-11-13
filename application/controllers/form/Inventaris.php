@@ -210,8 +210,8 @@ class Inventaris extends MY_Controller
 			'inventaris' => $this->inventaris_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-inventaris';
-		$this->render('form/inventaris/inventaris-verifikasi', $data);
+		$this->active_nav = 'inventaris';
+		$this->render('form/inventaris/inventaris', $data);
 	}
 
 	public function verifikasi_massal()
@@ -337,7 +337,7 @@ class Inventaris extends MY_Controller
 			'inventaris' => $this->inventaris_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-inventaris';
+		$this->active_nav = 'inventaris';
 		$this->render('form/inventaris/inventaris-status', $data);
 	}
 
@@ -581,36 +581,85 @@ class Inventaris extends MY_Controller
 		if ($status_verifikasi) {
 			$pdf->SetFont('times', '', 8);
 			$pdf->SetTextColor(0, 0, 0);
+
 			$y_verifikasi = $y_after_keterangan;
-			$pdf->SetXY(65, $y_verifikasi + 10);
-			$pdf->Cell(20, 5, 'Diperiksa Oleh, ', 0, 0, 'C');
-			$pdf->SetXY(25, $y_verifikasi + 15);
-			$pdf->Cell(35, 5, 'Awal Shift :', 0, 0, 'C');
-			$pdf->SetXY(25, $y_verifikasi + 20);
-			$pdf->SetFont('times', 'U', 8);
-			$pdf->Cell(35, 5, $data['inventaris']->nama_lengkap_qc, 0, 0, 'C');
-			$pdf->SetFont('times', '', 8);
-			$pdf->SetXY(25, $y_verifikasi + 25);
-			$pdf->Cell(35, 5, 'QC Inspector', 0, 0, 'C');
-			$pdf->SetXY(90, $y_verifikasi + 15);
-			$pdf->Cell(30, 5, 'Akhir Shift :', 0, 0, 'C');
-			$pdf->SetXY(90, $y_verifikasi + 20);
-			$pdf->SetFont('times', 'U', 8);
-			$pdf->Cell(30, 5, $data['inventaris']->nama_qc_update, 0, 0, 'C');
-			$pdf->SetFont('times', '', 8);
-			$pdf->SetXY(25, $y_verifikasi + 25);
-			$pdf->Cell(160, 5, 'QC Inspector', 0, 0, 'C');
-			$pdf->SetXY(150, $y_verifikasi + 10);
-			$pdf->Cell(49, 5, 'Disetujui oleh,', 0, 0, 'C');
+
+			// Judul Diperiksa Oleh (tengah untuk 2 QC)
+			$pdf->SetXY(25, $y_verifikasi + 5);
+			$pdf->Cell(105, 5, 'Diperiksa Oleh,', 0, 0, 'C');
+
+			// Judul Disetujui Oleh (SPV)
+			$pdf->SetXY(145, $y_verifikasi + 5);
+			$pdf->Cell(45, 5, 'Disetujui Oleh,', 0, 0, 'C');
+
+
+			// QC AWAL SHIFT
+			$pdf->SetXY(25, $y_verifikasi + 12);
+			$pdf->Cell(45, 5, 'Awal Shift :', 0, 0, 'C');
+
+			$qr_awal = 'Dibuat secara digital oleh,' . "\n"
+				. $data['inventaris']->nama_lengkap_qc . "\n"
+				. 'QC Inspector' . "\n"
+				. $formatted_date;
+
+			$pdf->write2DBarcode(
+				$qr_awal,
+				'QRCODE,L',
+				40,
+				$y_verifikasi + 18,
+				15,
+				15,
+				null,
+				'N'
+			);
+
+			$pdf->SetXY(25, $y_verifikasi + 34);
+			$pdf->Cell(45, 5, 'QC Inspector', 0, 0, 'C');
+
+
+			// QC AKHIR SHIFT
+			$pdf->SetXY(85, $y_verifikasi + 12);
+			$pdf->Cell(45, 5, 'Akhir Shift :', 0, 0, 'C');
+
+			$qr_akhir = 'Diperbarui secara digital oleh,' . "\n"
+				. $data['inventaris']->nama_qc_update . "\n"
+				. 'QC Inspector' . "\n"
+				. $formatted_date;
+
+			$pdf->write2DBarcode(
+				$qr_akhir,
+				'QRCODE,L',
+				100,
+				$y_verifikasi + 18,
+				15,
+				15,
+				null,
+				'N'
+			);
+
+			$pdf->SetXY(85, $y_verifikasi + 34);
+			$pdf->Cell(45, 5, 'QC Inspector', 0, 0, 'C');
+
+
+			// SPV
 			$qr_text = 'Diverifikasi secara digital oleh,' . "\n"
 				. $data['inventaris']->nama_lengkap_spv . "\n"
 				. 'SPV QC Bread Crumb' . "\n"
 				. $update_tanggal;
 
-			$pdf->write2DBarcode($qr_text, 'QRCODE,L', 167, $y_verifikasi + 15, 15, 15, null, 'N');
+			$pdf->write2DBarcode(
+				$qr_text,
+				'QRCODE,L',
+				160,
+				$y_verifikasi + 18,
+				15,
+				15,
+				null,
+				'N'
+			);
 
-			$pdf->SetXY(150, $y_verifikasi + 30);
-			$pdf->Cell(49, 5, 'Supervisor QC', 0, 0, 'C');
+			$pdf->SetXY(145, $y_verifikasi + 34);
+			$pdf->Cell(45, 5, 'Supervisor QC', 0, 0, 'C');
 		} else {
 			$pdf->SetTextColor(255, 0, 0);
 			$pdf->SetFont('times', '', 8);

@@ -159,8 +159,8 @@ class Kebersihanmesin extends MY_Controller
 			'kebersihanmesin' => $this->kebersihanmesin_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-kebersihanmesin';
-		$this->render('form/kebersihanmesin/kebersihanmesin-verifikasi', $data);
+		$this->active_nav = 'kebersihanmesin';
+		$this->render('form/kebersihanmesin/kebersihanmesin', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -184,7 +184,7 @@ class Kebersihanmesin extends MY_Controller
 			);
 		}
 
-		redirect('kebersihanmesin/verifikasi');
+		redirect('kebersihanmesin');
 	}
 
 
@@ -289,7 +289,7 @@ class Kebersihanmesin extends MY_Controller
 			'kebersihanmesin' => $this->kebersihanmesin_model->get_by_uuid($uuid)
 		);
 
-		$this->active_nav = 'verifikasi-kebersihanmesin';
+		$this->active_nav = 'kebersihanmesin';
 		$this->render('form/kebersihanmesin/kebersihanmesin-status', $data);
 	}
 
@@ -542,7 +542,7 @@ class Kebersihanmesin extends MY_Controller
 		$this->load->model('pegawai_model');
 		$data['kebersihanmesin']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['kebersihanmesin']->username);
 		$data['kebersihanmesin']->nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap($data['kebersihanmesin']->nama_spv);
-		$data['kebersihanmesin']->nama_lengkap_produksi = $data['kebersihanmesin']->nama_produksi;
+		//$data['kebersihanmesin']->nama_lengkap_produksi = $data['kebersihanmesin']->nama_produksi;
 
 		$y_after_keterangan = $pdf->GetY() + 2;
 		$status_verifikasi = true;
@@ -559,14 +559,38 @@ class Kebersihanmesin extends MY_Controller
 		if ($status_verifikasi) {
 			$y_verifikasi = $y_after_keterangan;
 
-			// Dibuat oleh (QC)
+			// Dibuat Oleh (QC) - QR Code
 			$pdf->SetXY(25, $y_verifikasi + 5);
 			$pdf->Cell(95, 5, 'Dibuat Oleh,', 0, 0, 'C');
-			$pdf->SetXY(25, $y_verifikasi + 10);
-			$pdf->SetFont('times', 'U', 8); // underline
-			$pdf->Cell(95, 5, $data['kebersihanmesin']->nama_lengkap_qc, 0, 1, 'C');
+
+			if (
+				!empty($data['kebersihanmesin']->nama_lengkap_qc) &&
+				!empty($data['kebersihanmesin']->created_at)
+			) {
+				$tanggal_qc = (new DateTime(
+					$data['kebersihanmesin']->created_at
+				))->format('d-m-Y | H:i');
+
+				$qr_text_qc = "Dibuat secara digital oleh,\n"
+					. $data['kebersihanmesin']->nama_lengkap_qc . "\n"
+					. "QC Inspector\n"
+					. $tanggal_qc;
+
+				$pdf->write2DBarcode(
+					$qr_text_qc,
+					'QRCODE,L',
+					65,
+					$y_verifikasi + 10,
+					15,
+					15,
+					null,
+					'N'
+				);
+			}
+
+			$pdf->SetXY(25, $y_verifikasi + 24);
 			$pdf->SetFont('times', '', 8);
-			$pdf->Cell(112, 5, 'QC Inspector', 0, 0, 'C');
+			$pdf->Cell(95, 5, 'QC Inspector', 0, 0, 'C');
 
 			// // Diketahui oleh (Produksi)
 			// 	$pdf->SetXY(90, $y_verifikasi + 5);
@@ -583,22 +607,35 @@ class Kebersihanmesin extends MY_Controller
 			// 	}
 
 			// Diketahui oleh (Produksi) - tanpa barcode
+			// Diketahui oleh (Produksi)
 			$pdf->SetXY(90, $y_verifikasi + 5);
 			$pdf->Cell(135, 5, 'Diketahui Oleh,', 0, 0, 'C');
 
-			if ($data['kebersihanmesin']->status_produksi == 1 && !empty($data['kebersihanmesin']->nama_produksi)) {
-				$update_tanggal_produksi = (new DateTime($data['kebersihanmesin']->tgl_update_produksi))->format('d-m-Y | H:i');
+			if (
+				(string) $data['kebersihanmesin']->status_produksi === '1' &&
+				!empty($data['kebersihanmesin']->tgl_update_produksi)
+			) {
+				$update_tanggal_produksi = (new DateTime(
+					$data['kebersihanmesin']->tgl_update_produksi
+				))->format('d-m-Y | H:i');
 
-				$pdf->SetFont('times', 'U', 8);
-				$pdf->SetXY(90, $y_verifikasi + 10);
-				$pdf->Cell(135, 5, $data['kebersihanmesin']->nama_produksi, 0, 1, 'C');
+				$qr_text_produksi = "Diketahui secara digital oleh,\n"
+					. "Foreman/Forelady Produksi\n"
+					. $update_tanggal_produksi;
 
-				$pdf->SetFont('times', '', 8);
-				$pdf->SetXY(90, $y_verifikasi + 15);
-				$pdf->Cell(135, 5, 'Foreman/Forelady Produksi', 0, 1, 'C');
+				$pdf->write2DBarcode(
+					$qr_text_produksi,
+					'QRCODE,L',
+					150,
+					$y_verifikasi + 10,
+					15,
+					15,
+					null,
+					'N'
+				);
 
-				// $pdf->SetXY(90, $y_verifikasi + 20);
-				// $pdf->Cell(135, 5, $update_tanggal_produksi, 0, 0, 'C');
+				$pdf->SetXY(90, $y_verifikasi + 24);
+				$pdf->Cell(135, 5, 'Foreman/Forelady Produksi', 0, 0, 'C');
 			} else {
 				$pdf->SetFont('times', '', 8);
 				$pdf->SetXY(90, $y_verifikasi + 10);

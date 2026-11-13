@@ -377,6 +377,7 @@ class Larutan_model extends CI_Model
 			return false;
 		}
 
+		$this->db->where('is_audit', 0);
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
@@ -392,16 +393,16 @@ class Larutan_model extends CI_Model
 
 		log_message('debug', 'Query get_by_date: ' . $this->db->last_query());
 
-		if ($query->num_rows() > 0) {
-			return $query->result();
-		}
-
-		return false;
+		return $query->num_rows() > 0 ? $query->result() : false;
 	}
 
 	public function get_last_verif_by_date($tanggal, $plant = null, $shift = null)
 	{
-		$this->db->select('nama_spv, tgl_update_spv, username, date, nama_produksi, shift, status_produksi, tgl_update_produksi');
+		$this->db->select('nama_spv, tgl_update_spv, username, date,
+        nama_produksi, shift, status_produksi, tgl_update_produksi');
+
+		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
 		$this->db->where('DATE(date)', $tanggal);
 
 		if (!empty($plant)) {
@@ -414,9 +415,8 @@ class Larutan_model extends CI_Model
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
-		$query = $this->db->get('larutan');
 
-		return $query->row();
+		return $this->db->get('larutan')->row();
 	}
 
 	public function get_audit_by_plant()

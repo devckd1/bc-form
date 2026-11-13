@@ -531,6 +531,7 @@ class Sanitasi_model extends CI_Model
 	public function get_by_date($date, $plant = null, $shift = null)
 	{
 		$this->db->where('DATE(date)', $date);
+		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);

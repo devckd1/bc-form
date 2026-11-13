@@ -21,6 +21,9 @@ if (!empty($bukti)) {
 		$bukti_url = base_url('uploads/' . $bukti);
 	}
 }
+
+// Nilai tahapan sebelumnya
+$tahapan_value = set_value('tahapan', $magnettrap->tahapan);
 ?>
 
 <div class="container-fluid">
@@ -28,6 +31,7 @@ if (!empty($bukti)) {
 	<div class="d-sm-flex align-items-center justify-content-between mb-3">
 		<h1 class="h3 mb-2 text-gray-800">
 			<?= $is_audit ? 'Edit Audit Pemeriksaan Magnet Trap' : 'Update Pemeriksaan Magnet Trap'; ?>
+
 			<?php if ($is_audit): ?>
 				<span class="badge-mode-audit">
 					<i class="fas fa-clipboard-check mr-1"></i>
@@ -46,7 +50,7 @@ if (!empty($bukti)) {
 				</a>
 			</li>
 			<li class="breadcrumb-item active" aria-current="page">
-				<?= $is_audit ? 'Edit' : 'Edit'; ?>
+				Edit
 			</li>
 		</ol>
 	</nav>
@@ -54,10 +58,8 @@ if (!empty($bukti)) {
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
 			<i class="fas fa-info-circle mr-1"></i>
-
 			<strong>Informasi:</strong>
-
-			Halaman ini merupakan menu Edit Audit Loading Produk.
+			Halaman ini merupakan menu Edit Audit Magnet Trap.
 			Perubahan data pada halaman ini tidak akan mengubah data aktual
 			pada menu pemeriksaan.
 		</div>
@@ -71,12 +73,20 @@ if (!empty($bukti)) {
 
 	<div class="card shadow mb-4">
 		<div class="card-body">
+
 			<form class="user"
 				method="post"
 				action="<?= base_url($form_url); ?>"
 				enctype="multipart/form-data">
 
+				<?php if ($this->config->item('csrf_protection')): ?>
+					<input type="hidden"
+						name="<?= $this->security->get_csrf_token_name(); ?>"
+						value="<?= $this->security->get_csrf_hash(); ?>">
+				<?php endif; ?>
+
 				<div class="form-group row">
+
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Tanggal</label>
 						<input type="date"
@@ -92,14 +102,16 @@ if (!empty($bukti)) {
 
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Shift</label>
+
 						<?php $shift_value = set_value('shift', $magnettrap->shift); ?>
 
 						<select name="shift"
 							class="form-control <?= form_error('shift') ? 'is-invalid' : ''; ?>"
 							required>
-							<option value="1" <?= (string)$shift_value === '1' ? 'selected' : ''; ?>>1</option>
-							<option value="2" <?= (string)$shift_value === '2' ? 'selected' : ''; ?>>2</option>
-							<option value="3" <?= (string)$shift_value === '3' ? 'selected' : ''; ?>>3</option>
+
+							<option value="1" <?= (string)$shift_value === '1' ? 'selected' : ''; ?>>Shift 1</option>
+							<option value="2" <?= (string)$shift_value === '2' ? 'selected' : ''; ?>>Shift 2</option>
+							<option value="3" <?= (string)$shift_value === '3' ? 'selected' : ''; ?>>Shift 3</option>
 						</select>
 
 						<div class="invalid-feedback">
@@ -107,36 +119,36 @@ if (!empty($bukti)) {
 						</div>
 					</div>
 
-					<!-- NAMA PRODUK -->
-						<div class="col-sm-6">
-							<label class="form-label font-weight-bold">Nama Produk</label>
-							<input type="text"
-								name="nama_produk"
-								class="form-control <?= form_error('nama_produk') ? 'invalid' : '' ?>"
-								value="<?= set_value('nama_produk', $magnettrap->nama_produk); ?>"
-								placeholder="Nama Produk">
+					<div class="col-sm-6">
+						<label class="form-label font-weight-bold">Nama Produk</label>
+						<input type="text"
+							name="nama_produk"
+							class="form-control <?= form_error('nama_produk') ? 'is-invalid' : ''; ?>"
+							value="<?= html_escape(set_value('nama_produk', $magnettrap->nama_produk)); ?>"
+							placeholder="Nama Produk">
 
-							<div class="invalid-feedback <?= !empty(form_error('nama_produk')) ? 'd-block' : '' ?>">
-								<?= form_error('nama_produk') ?>
-							</div>
+						<div class="invalid-feedback">
+							<?= form_error('nama_produk'); ?>
 						</div>
+					</div>
 
-						<!-- KODE PRODUKSI -->
-						<div class="col-sm-6">
-							<label class="form-label font-weight-bold">Kode Produksi</label>
-							<input type="text"
-								name="kode_produksi"
-								class="form-control <?= form_error('kode_produksi') ? 'invalid' : '' ?>"
-								value="<?= set_value('kode_produksi', $magnettrap->kode_produksi); ?>"
-								placeholder="Kode Produksi">
+					<div class="col-sm-6">
+						<label class="form-label font-weight-bold">Kode Produksi</label>
+						<input type="text"
+							name="kode_produksi"
+							class="form-control <?= form_error('kode_produksi') ? 'is-invalid' : ''; ?>"
+							value="<?= html_escape(set_value('kode_produksi', $magnettrap->kode_produksi)); ?>"
+							placeholder="Kode Produksi">
 
-							<div class="invalid-feedback <?= !empty(form_error('kode_produksi')) ? 'd-block' : '' ?>">
-								<?= form_error('kode_produksi') ?>
-							</div>
+						<div class="invalid-feedback">
+							<?= form_error('kode_produksi'); ?>
 						</div>
+					</div>
+
 				</div>
 
 				<div class="form-group row">
+
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Pukul</label>
 						<input type="time"
@@ -150,20 +162,56 @@ if (!empty($bukti)) {
 						</div>
 					</div>
 
+					<!-- DROPDOWN TAHAPAN MASTER -->
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Tahapan</label>
-						<input type="text"
-							name="tahapan"
-							class="form-control <?= form_error('tahapan') ? 'is-invalid' : ''; ?>"
-							value="<?= html_escape(set_value('tahapan', $magnettrap->tahapan)); ?>">
+
+						<select name="tahapan"
+							class="form-control <?= form_error('tahapan') ? 'is-invalid' : ''; ?>">
+
+							<option value="">Pilih Tahapan</option>
+
+							<?php if (!empty($master_tahapan)): ?>
+								<?php foreach ($master_tahapan as $tahapan): ?>
+									<option
+										value="<?= html_escape($tahapan->nama_tahapan); ?>"
+										<?= (string)$tahapan_value === (string)$tahapan->nama_tahapan ? 'selected' : ''; ?>>
+										<?= html_escape($tahapan->nama_tahapan); ?>
+									</option>
+								<?php endforeach; ?>
+							<?php endif; ?>
+
+							<!-- Pertahankan nilai lama jika sudah tidak ada di master -->
+							<?php
+							$tahapan_tersedia = false;
+
+							if (!empty($master_tahapan)) {
+								foreach ($master_tahapan as $item) {
+									if ((string)$item->nama_tahapan === (string)$tahapan_value) {
+										$tahapan_tersedia = true;
+										break;
+									}
+								}
+							}
+							?>
+
+							<?php if (!empty($tahapan_value) && !$tahapan_tersedia): ?>
+								<option value="<?= html_escape($tahapan_value); ?>" selected>
+									<?= html_escape($tahapan_value); ?> (Data Lama)
+								</option>
+							<?php endif; ?>
+
+						</select>
 
 						<div class="invalid-feedback">
 							<?= form_error('tahapan'); ?>
 						</div>
 					</div>
+
 				</div>
 
 				<div class="form-group row">
+
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Jenis Kontaminasi</label>
 						<input type="text"
@@ -210,11 +258,13 @@ if (!empty($bukti)) {
 							<?= form_error('bukti'); ?>
 						</div>
 					</div>
+
 				</div>
 
 				<hr>
 
 				<div class="form-group row">
+
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Analisis Temuan</label>
 						<input type="text"
@@ -238,6 +288,7 @@ if (!empty($bukti)) {
 							<?= form_error('tindakan'); ?>
 						</div>
 					</div>
+
 				</div>
 
 				<div class="form-group row">
@@ -257,6 +308,7 @@ if (!empty($bukti)) {
 				<hr>
 
 				<div class="form-group row">
+
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Keterangan</label>
 						<textarea name="keterangan"
@@ -278,10 +330,12 @@ if (!empty($bukti)) {
 							<?= form_error('catatan'); ?>
 						</div>
 					</div>
+
 				</div>
 
 				<div class="row">
 					<div class="col">
+
 						<button type="submit" class="btn btn-success mr-2">
 							<i class="fas fa-save mr-1"></i>
 							Simpan <?= $is_audit ? 'Audit' : ''; ?>
@@ -291,6 +345,7 @@ if (!empty($bukti)) {
 							<i class="fas fa-times mr-1"></i>
 							Batal
 						</a>
+
 					</div>
 				</div>
 
@@ -300,22 +355,17 @@ if (!empty($bukti)) {
 </div>
 
 <style>
-	.breadcrumb a,
-	.breadcrumb .breadcrumb-item.active {
-		color: #fff;
-	}
-th {
-		background-color: #f8f9fc;
-	}
-
 	.breadcrumb {
 		background-color: #2E86C1;
 	}
+
+	.breadcrumb a,
+	.breadcrumb .breadcrumb-item.active {
+		color: #fff !important;
+	}
+
 	th {
 		background-color: #f8f9fc;
-	}
-	.breadcrumb a {
-		color: #fff !important;
 	}
 
 	.card-audit {
@@ -323,7 +373,6 @@ th {
 		border-radius: 8px;
 	}
 
-	/* Label Mode Audit */
 	.badge-mode-audit {
 		display: inline-block;
 		background-color: #5a3298;

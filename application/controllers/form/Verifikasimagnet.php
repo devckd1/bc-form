@@ -179,8 +179,8 @@ class Verifikasimagnet extends MY_Controller
 			'verifikasimagnet' => $this->verifikasimagnet_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-verifikasimagnet';
-		$this->render('form/verifikasimagnet/verifikasimagnet-verifikasi', $data);
+		$this->active_nav = 'verifikasimagnet';
+		$this->render('form/verifikasimagnet/verifikasimagnet', $data);
 	}
 
 	public function verifikasi_massal()
@@ -251,7 +251,7 @@ class Verifikasimagnet extends MY_Controller
 			'verifikasimagnet' => $this->verifikasimagnet_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-verifikasimagnet';
+		$this->active_nav = 'verifikasimagnet';
 		$this->render('form/verifikasimagnet/verifikasimagnet-status', $data);
 	}
 

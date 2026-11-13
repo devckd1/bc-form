@@ -75,33 +75,33 @@ class Larutan extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $larutan = $this->larutan_model->get_by_uuid($uuid);
+	{
+		$larutan = $this->larutan_model->get_by_uuid($uuid);
 
-    if (!$larutan) {
-        show_404();
-        return;
-    }
+		if (!$larutan) {
+			show_404();
+			return;
+		}
 
-    $data = array(
-        'larutan' => $larutan,
-        'is_popup' => $this->input->get('popup') == '1'
-    );
+		$data = array(
+			'larutan' => $larutan,
+			'is_popup' => $this->input->get('popup') == '1'
+		);
 
-    $this->active_nav = 'larutan';
+		$this->active_nav = 'larutan';
 
-    if ($data['is_popup']) {
-        $this->load->view(
-            'form/larutan/larutan-detail',
-            $data
-        );
-    } else {
-        $this->render(
-            'form/larutan/larutan-detail',
-            $data
-        );
-    }
-}
+		if ($data['is_popup']) {
+			$this->load->view(
+				'form/larutan/larutan-detail',
+				$data
+			);
+		} else {
+			$this->render(
+				'form/larutan/larutan-detail',
+				$data
+			);
+		}
+	}
 
 	public function tambah()
 	{
@@ -173,8 +173,8 @@ class Larutan extends MY_Controller
 			'larutan' => $this->larutan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-larutan';
-		$this->render('form/larutan/larutan-verifikasi', $data);
+		$this->active_nav = 'larutan';
+		$this->render('form/larutan/larutan', $data);
 	}
 
 	public function verifikasi_massal()
@@ -231,7 +231,7 @@ class Larutan extends MY_Controller
 			'larutan' => $this->larutan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-larutan';
+		$this->active_nav = 'larutan';
 		$this->render('form/larutan/larutan-status', $data);
 	}
 
@@ -492,11 +492,26 @@ class Larutan extends MY_Controller
 			// Dibuat Oleh (QC)
 			$pdf->SetXY(25, $y_verifikasi + 5);
 			$pdf->Cell(95, 5, 'Dibuat Oleh,', 0, 0, 'C');
-			$pdf->SetXY(25, $y_verifikasi + 10);
-			$pdf->SetFont('times', 'U', 8);
-			$pdf->Cell(95, 5, $data['larutan']->nama_lengkap_qc, 0, 1, 'C');
+
+			// QR Code QC
+			$qr_text_qc = "Dibuat secara digital oleh,\n"
+				. "QC Inspector";
+
+			$pdf->write2DBarcode(
+				$qr_text_qc,
+				'QRCODE,L',
+				65,
+				$y_verifikasi + 10,
+				15,
+				15,
+				null,
+				'N'
+			);
+
+			// Jabatan QC
+			$pdf->SetXY(25, $y_verifikasi + 26);
 			$pdf->SetFont('times', '', 8);
-			$pdf->Cell(112, 5, 'QC Inspector', 0, 0, 'C');
+			$pdf->Cell(95, 5, 'QC Inspector', 0, 0, 'C');
 
 			// // Diketahui Oleh (Produksi)
 			// 	$pdf->SetXY(90, $y_verifikasi + 5);
@@ -511,24 +526,42 @@ class Larutan extends MY_Controller
 			// 		$pdf->Cell(135, 5, 'Belum Diverifikasi', 0, 0, 'C');
 			// 	}
 
-			// Diketahui Oleh (Produksi) - tanpa barcode
+			// Diketahui Oleh (Produksi)
 			$pdf->SetXY(90, $y_verifikasi + 5);
 			$pdf->Cell(135, 5, 'Diketahui Oleh,', 0, 0, 'C');
 
-			if ($data['larutan']->status_produksi == 1 && !empty($data['larutan']->nama_produksi)) {
-				$update_tanggal_produksi = (new DateTime($data['larutan']->tgl_update_produksi))->format('d-m-Y | H:i');
+			if ($data['larutan']->status_produksi == 1) {
 
-				$pdf->SetFont('times', 'U', 8);
-				$pdf->SetXY(90, $y_verifikasi + 10);
-				$pdf->Cell(135, 5, $data['larutan']->nama_produksi, 0, 1, 'C');
+				$update_tanggal_produksi = '';
 
+				if (!empty($data['larutan']->tgl_update_produksi)) {
+					$update_tanggal_produksi = date(
+						'd-m-Y | H:i',
+						strtotime($data['larutan']->tgl_update_produksi)
+					);
+				}
+
+				// QR Code tanpa nama Produksi
+				$qr_text_produksi = "Diketahui secara digital oleh,\n"
+					. "Foreman/Forelady Produksi\n"
+					. $update_tanggal_produksi;
+
+				$pdf->write2DBarcode(
+					$qr_text_produksi,
+					'QRCODE,L',
+					150,
+					$y_verifikasi + 10,
+					15,
+					15,
+					null,
+					'N'
+				);
+
+				$pdf->SetXY(90, $y_verifikasi + 24);
 				$pdf->SetFont('times', '', 8);
-				$pdf->SetXY(90, $y_verifikasi + 15);
-				$pdf->Cell(135, 5, 'Foreman/Forelady Produksi', 0, 1, 'C');
-
-				// $pdf->SetXY(90, $y_verifikasi + 20);
-				// $pdf->Cell(135, 5, $update_tanggal_produksi, 0, 0, 'C');
+				$pdf->Cell(135, 5, 'Foreman/Forelady Produksi', 0, 0, 'C');
 			} else {
+
 				$pdf->SetFont('times', '', 8);
 				$pdf->SetXY(90, $y_verifikasi + 10);
 				$pdf->Cell(135, 5, 'Belum Diverifikasi', 0, 0, 'C');

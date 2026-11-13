@@ -248,7 +248,7 @@ $filter_shift = $filter_shift ?? '';
 
 										<?php if (in_array($tipe_user, [0, 3, 9]) && $val->status_wh != '1'): ?>
 											<a href="<?= base_url('loading/verifikasi_produksi/' . $val->uuid); ?>"
-												class="btn btn-warning btn-icon-split"
+												class="btn btn-primary btn-icon-split"
 												onclick="return confirm('Apakah Anda yakin ingin menyetujui data ini?')">
 												<span class="text">Setujui</span>
 											</a>

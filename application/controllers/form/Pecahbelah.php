@@ -183,8 +183,8 @@ class Pecahbelah extends MY_Controller
 			'pecahbelah' => $this->pecahbelah_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pecahbelah';
-		$this->render('form/pecahbelah/pecahbelah-verifikasi', $data);
+		$this->active_nav = 'pecahbelah';
+		$this->render('form/pecahbelah/pecahbelah', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -208,7 +208,7 @@ class Pecahbelah extends MY_Controller
 			);
 		}
 
-		redirect('pecahbelah/verifikasi');
+		redirect('pecahbelah');
 	}
 
 	public function verifikasi_massal()
@@ -319,7 +319,7 @@ class Pecahbelah extends MY_Controller
 			'pecahbelah' => $this->pecahbelah_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pecahbelah';
+		$this->active_nav = 'pecahbelah';
 		$this->render('form/pecahbelah/pecahbelah-status', $data);
 	}
 
@@ -705,48 +705,69 @@ class Pecahbelah extends MY_Controller
 			if ($status_verifikasi) {
 				$y_verifikasi = $y_after_keterangan;
 
-				// Dibuat oleh (QC)
+				// ==========================================
+				// DIBUAT OLEH (QC)
+				// ==========================================
 				$pdf->SetXY(25, $y_verifikasi + 5);
 				$pdf->Cell(35, 5, 'Dibuat Oleh,', 0, 0, 'C');
-				$pdf->SetXY(25, $y_verifikasi + 10);
-				$pdf->SetFont('times', 'U', 8); // underline
-				$pdf->Cell(35, 5, $data['pecahbelah']->nama_lengkap_qc, 0, 1, 'C');
-				$pdf->SetFont('times', '', 8);
-				$pdf->Cell(65, 5, 'QC Inspector', 0, 0, 'C');
 
-				// // Diketahui oleh (Produksi)
-				// 	$pdf->SetXY(90, $y_verifikasi + 5);
-				// 	$pdf->Cell(35, 5, 'Diketahui Oleh,', 0, 0, 'C');
-				// 	if ($data['pecahbelah']->status_produksi == 1 && !empty($data['pecahbelah']->nama_produksi)) {
-				// 		$update_tanggal_produksi = (new DateTime($data['pecahbelah']->tgl_update_produksi))->format('d-m-Y | H:i');
-				// 		$qr_text_produksi = "Diketahui secara digital oleh,\n" . $data['pecahbelah']->nama_lengkap_produksi . "\nForeman/Forelady Produksi\n" . $update_tanggal_produksi;
-				// 		$pdf->write2DBarcode($qr_text_produksi, 'QRCODE,L', 100, $y_verifikasi + 10, 15, 15, null, 'N');
-				// 		$pdf->SetXY(90, $y_verifikasi + 24);
-				// 		$pdf->Cell(35, 5, 'Foreman/Forelady Produksi', 0, 0, 'C');
-				// 	} else {
-				// 		$pdf->SetXY(90, $y_verifikasi + 10);
-				// 		$pdf->Cell(35, 5, 'Belum Diverifikasi', 0, 0, 'C');
-				// 	}
+				$waktu_qc = !empty($data['pecahbelah']->created_at)
+					? date('d-m-Y | H:i', strtotime($data['pecahbelah']->created_at))
+					: '-';
 
-				// Diketahui oleh (Produksi) - tanpa barcode
+				$qr_text_qc = "Dibuat secara digital oleh,\n"
+					. $data['pecahbelah']->nama_lengkap_qc . "\n"
+					. "QC Inspector\n"
+					. $waktu_qc;
+
+				$pdf->write2DBarcode(
+					$qr_text_qc,
+					'QRCODE,L',
+					35,
+					$y_verifikasi + 10,
+					15,
+					15,
+					null,
+					'N'
+				);
+
+				$pdf->SetXY(25, $y_verifikasi + 26);
+				$pdf->Cell(35, 5, 'QC Inspector', 0, 0, 'C');
+
+
+				// ==========================================
+				// DIKETAHUI OLEH (PRODUKSI)
+				// ==========================================
 				$pdf->SetXY(90, $y_verifikasi + 5);
 				$pdf->Cell(35, 5, 'Diketahui Oleh,', 0, 0, 'C');
 
-				if ($data['pecahbelah']->status_produksi == 1 && !empty($data['pecahbelah']->nama_produksi)) {
-					$update_tanggal_produksi = (new DateTime($data['pecahbelah']->tgl_update_produksi))->format('d-m-Y | H:i');
+				if (
+					$data['pecahbelah']->status_produksi == 1 &&
+					!empty($data['pecahbelah']->nama_produksi)
+				) {
+					$waktu_produksi = !empty($data['pecahbelah']->tgl_update_produksi)
+						? date('d-m-Y | H:i', strtotime($data['pecahbelah']->tgl_update_produksi))
+						: '-';
 
-					$pdf->SetFont('times', 'U', 8);
-					$pdf->SetXY(90, $y_verifikasi + 10);
-					$pdf->Cell(35, 5, $data['pecahbelah']->nama_lengkap_produksi, 0, 1, 'C');
+					$qr_text_produksi = "Diketahui secara digital oleh,\n"
+						. $data['pecahbelah']->nama_lengkap_produksi . "\n"
+						. "Foreman/Forelady Produksi\n"
+						. $waktu_produksi;
 
-					$pdf->SetFont('times', '', 8);
-					$pdf->SetXY(90, $y_verifikasi + 15);
-					$pdf->Cell(35, 5, 'Foreman/Forelady Produksi', 0, 1, 'C');
+					$pdf->write2DBarcode(
+						$qr_text_produksi,
+						'QRCODE,L',
+						100,
+						$y_verifikasi + 10,
+						15,
+						15,
+						null,
+						'N'
+					);
 
-					$pdf->SetXY(90, $y_verifikasi + 20);
-					$pdf->Cell(35, 5, $update_tanggal_produksi, 0, 0, 'C');
+					$pdf->SetXY(85, $y_verifikasi + 26);
+					$pdf->Cell(45, 5, 'Foreman/Forelady Produksi', 0, 0, 'C');
 				} else {
-					$pdf->SetFont('times', '', 8);
 					$pdf->SetXY(90, $y_verifikasi + 10);
 					$pdf->Cell(35, 5, 'Belum Diverifikasi', 0, 0, 'C');
 				}

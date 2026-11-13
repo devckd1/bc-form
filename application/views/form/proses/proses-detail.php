@@ -21,6 +21,8 @@ $label_param = [
 	'yeast' => 'Yeast (0.732 kg)',
 	'bread_improver' => 'Bread Improver',
 	'premix' => 'Premix',
+	'n55bc' => 'N55BC',
+	'np55bcy_np55bco' => 'NP55BCY / NP55BCO',
 	'shortening' => 'Shortening (0.252 kg)',
 	'chill_water' => 'Chill Water (14 - 16°C) (std. 18)',
 	'waktu_mixing_1' => 'Waktu Mixing 1',
@@ -54,34 +56,49 @@ if (!is_array($proses_data)) {
 	$proses_data = [];
 }
 
-$jumlah_kolom = 1;
+// Ambil metadata jumlah kolom.
+if (isset($proses_data['_meta']['jumlah_kolom'])) {
+	$jumlah_kolom = (int) $proses_data['_meta']['jumlah_kolom'];
+	$jumlah_kolom = max(1, min(10, $jumlah_kolom));
+} else {
+	// Fallback untuk data lama.
+	$jumlah_kolom = 1;
 
-for ($i = 1; $i <= 10; $i++) {
-	$kolom_terisi = false;
+	for ($i = 1; $i <= 10; $i++) {
+		$kolom_terisi = false;
 
-	foreach ($proses_data as $param_list) {
-		if (!is_array($param_list)) {
-			continue;
-		}
-
-		foreach ($param_list as $values) {
-			if (!is_array($values)) {
+		foreach ($proses_data as $kategori => $param_list) {
+			if (!is_array($param_list) || $kategori === '_meta') {
 				continue;
 			}
 
-			$value = trim((string) ($values[$i] ?? ''));
+			foreach ($param_list as $param => $values) {
+				// Kode Batch bukan input berdasarkan kolom.
+				if (strpos($param, 'kode_batch_') === 0) {
+					continue;
+				}
 
-			if ($value !== '' && $value !== '✗') {
-				$kolom_terisi = true;
-				break 2;
+				if (!is_array($values) || !array_key_exists($i, $values)) {
+					continue;
+				}
+
+				$value = trim((string) ($values[$i] ?? ''));
+
+				if ($value !== '' && $value !== '✗') {
+					$kolom_terisi = true;
+					break 2;
+				}
 			}
 		}
-	}
 
-	if ($kolom_terisi) {
-		$jumlah_kolom = $i;
+		if ($kolom_terisi) {
+			$jumlah_kolom = $i;
+		}
 	}
 }
+
+// Metadata tidak ditampilkan sebagai kategori.
+unset($proses_data['_meta']);
 
 $label_shift = [
 	'1' => 'Shift 1',
@@ -133,35 +150,35 @@ $format_tanggal = function ($tanggal) {
 ?>
 
 <div class="container-fluid">
-<?php if (empty($is_popup)): ?>
-	<!-- Judul halaman -->
-	<div class="d-sm-flex align-items-center justify-content-between mb-3">
-		<h1 class="h3 mb-2 text-gray-800">
-			<?= html_escape($page_title) ?>
+	<?php if (empty($is_popup)): ?>
+		<!-- Judul halaman -->
+		<div class="d-sm-flex align-items-center justify-content-between mb-3">
+			<h1 class="h3 mb-2 text-gray-800">
+				<?= html_escape($page_title) ?>
 
-			<?php if ($is_audit): ?>
-				<span class="badge-mode-audit">MODE AUDIT</span>
-			<?php endif; ?>
-		</h1>
-	</div>
+				<?php if ($is_audit): ?>
+					<span class="badge-mode-audit">MODE AUDIT</span>
+				<?php endif; ?>
+			</h1>
+		</div>
 
-	<!-- Breadcrumb -->
-	<nav aria-label="breadcrumb">
-		<ol class="breadcrumb">
-			<li class="breadcrumb-item">
-				<a href="<?= base_url($back_url) ?>">
-					<i class="fas fa-arrow-left"></i>
-					<?= $is_audit
-						? 'Daftar Audit Proses Produksi'
-						: 'Daftar Laporan Verifikasi Proses Produksi' ?>
-				</a>
-			</li>
-			<li class="breadcrumb-item active" aria-current="page">
-				<?= $is_audit ? 'Detail Audit' : 'Detail Verifikasi' ?>
-			</li>
-		</ol>
-	</nav>
-<?php endif; ?>
+		<!-- Breadcrumb -->
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item">
+					<a href="<?= base_url($back_url) ?>">
+						<i class="fas fa-arrow-left"></i>
+						<?= $is_audit
+							? 'Daftar Audit Proses Produksi'
+							: 'Daftar Laporan Verifikasi Proses Produksi' ?>
+					</a>
+				</li>
+				<li class="breadcrumb-item active" aria-current="page">
+					<?= $is_audit ? 'Detail Audit' : 'Detail Verifikasi' ?>
+				</li>
+			</ol>
+		</nav>
+	<?php endif; ?>
 	<?php if ($is_audit): ?>
 		<div class="alert" style="background-color: #f3e8ff; border-left: 4px solid #6f42c1; color: #4b2a75;">
 			<i class="fas fa-info-circle mr-1"></i>
@@ -207,53 +224,143 @@ $format_tanggal = function ($tanggal) {
 			<?php else: ?>
 
 				<div class="table-responsive">
-					<table class="table table-bordered">
+					<table class="table table-bordered" id="tabelDetailProses">
+
 						<thead class="thead-light">
 							<tr>
-								<th style="width: 20%;">Jenis Parameter</th>
-								<th>Standar / Input ke-0</th>
+								<th style="min-width:220px;">Jenis Produksi</th>
+								<th style="min-width:100px;">Std. Berat</th>
+								<th style="min-width:120px;">Kode Batch</th>
 
 								<?php for ($i = 1; $i <= $jumlah_kolom; $i++): ?>
-									<th class="text-center">Input ke-<?= $i ?></th>
+									<th class="text-center" style="min-width:120px;">
+										Input ke-<?= $i ?>
+									</th>
 								<?php endfor; ?>
 							</tr>
 						</thead>
 
+
 						<tbody>
-							<?php foreach ($proses_data as $kategori => $param_list): ?>
-								<?php if (!is_array($param_list)) continue; ?>
+							<?php
+							$kode_batch_params = [
+								'tepung_terigu',
+								'tepung_tapioka',
+								'yeast',
+								'bread_improver',
+								'n55bc',
+								'np55bcy_np55bco',
+								'shortening',
+								'chill_water'
+							];
+
+							foreach ($proses_data as $kategori => $param_list):
+								if (!is_array($param_list) || $kategori === '_meta') {
+									continue;
+								}
+							?>
 
 								<tr style="background-color:#f8f9fc;font-weight:bold;">
-									<td colspan="<?= 2 + $jumlah_kolom ?>">
+									<td colspan="<?= 3 + $jumlah_kolom ?>">
 										<?= html_escape(strtoupper(str_replace('_', ' ', $kategori))) ?>
 									</td>
 								</tr>
 
+								<?php
+								// Tampilkan Acuan Dokumen / Revisi / Formulasi satu kali saja.
+								if (
+									$kategori === 'dough_mixing' &&
+									(
+										isset($param_list['dokumen']) ||
+										isset($param_list['revisi']) ||
+										isset($param_list['no_formula'])
+									)
+								):
+								?>
+									<tr>
+										<td>Acuan Dokumen / Revisi / Formulasi</td>
+										<td class="text-center">-</td>
+										<td class="text-center">-</td>
+
+										<?php for ($i = 1; $i <= $jumlah_kolom; $i++): ?>
+											<td class="text-center">
+												<?php
+												$acuan = array_filter([
+													$param_list['dokumen'][$i] ?? '',
+													$param_list['revisi'][$i] ?? '',
+													$param_list['no_formula'][$i] ?? ''
+												], function ($value) {
+													return $value !== '' && $value !== null;
+												});
+
+												echo !empty($acuan)
+													? html_escape(implode(' / ', $acuan))
+													: '-';
+												?>
+											</td>
+										<?php endfor; ?>
+									</tr>
+								<?php endif; ?>
+
 								<?php foreach ($param_list as $param => $values): ?>
+
 									<?php
-									if (!is_array($values)) {
-										$values = [$values];
+									// Lewati parameter yang sudah digabung.
+									if (in_array($param, ['dokumen', 'revisi', 'no_formula'], true)) {
+										continue;
 									}
 
-									$label = $label_param[$param] ?? $param;
+									// Kode Batch tidak dibuat sebagai baris tersendiri.
+									if (strpos($param, 'kode_batch_') === 0) {
+										continue;
+									}
+
+									if (!is_array($values)) {
+										$values = [0 => $values];
+									}
+
+									$label = $label_param[$param] ?? ucwords(str_replace('_', ' ', $param));
+									$std_value = $values[0] ?? '';
+
+									$kode_batch = '';
+
+									if (
+										$kategori === 'kondisi_rm' &&
+										in_array($param, $kode_batch_params, true)
+									) {
+										$kode_batch = $param_list['kode_batch_' . $param] ?? '';
+									}
 									?>
 
 									<tr>
 										<td><?= html_escape($label) ?></td>
 
-										<td>
-											<?= html_escape((string) ($values[0] ?? '')) ?>
+										<td class="text-center">
+											<?= html_escape((string) $std_value) ?>
+										</td>
+
+										<td class="text-center">
+											<?= html_escape((string) $kode_batch) ?>
 										</td>
 
 										<?php for ($i = 1; $i <= $jumlah_kolom; $i++): ?>
 											<td class="text-center">
-												<?= html_escape((string) ($values[$i] ?? '')) ?>
+												<?php
+												$nilai = $values[$i] ?? '';
+
+												echo ($nilai === '' || $nilai === null)
+													? '-'
+													: html_escape((string) $nilai);
+												?>
 											</td>
 										<?php endfor; ?>
 									</tr>
+
 								<?php endforeach; ?>
+
 							<?php endforeach; ?>
 						</tbody>
+
 					</table>
 				</div>
 
@@ -290,9 +397,9 @@ $format_tanggal = function ($tanggal) {
 				'sensori_produk' => 'Sensori Produk',
 				'kondisi_kemasan' => 'Kondisi Kemasan',
 				'ketepatan_labelisasi' => 'Ketepatan Labelisasi',
-				'kode_supplier' => 'Kode Supplier',
-				'net_weight' => 'Nett Weight (9,850 - 10,100 g/plastic bag)',
-				'bukti_labelisasi' => 'Bukti Labelisasi'
+				'kode_supplier' => 'Kode Supplier Kemasan',
+				'net_weight' => 'Berat Produk (10,010 - 10,110 g/plastic bag)',
+				'bukti_labelisasi' => 'Dokumentasi'
 			];
 
 			// Struktur proses_packing berupa array kategori.
@@ -335,47 +442,120 @@ $format_tanggal = function ($tanggal) {
 							</thead>
 
 							<tbody>
-								<?php foreach ($packing_data as $kategori => $param_list): ?>
-									<?php if (!is_array($param_list)) continue; ?>
+								<?php
+								// Mengambil nilai pertama dari data packing
+								$ambilNilaiPacking = function ($value) {
+									if (is_array($value)) {
+										return $value[0] ?? '';
+									}
 
-									<tr style="background-color:#f8f9fc;font-weight:bold;">
+									return $value ?? '';
+								};
+
+								foreach ($packing_data as $kategori => $params):
+								?>
+
+									<tr style="background-color:#f1f1f1;font-weight:bold;">
 										<td colspan="2">
-											<?= html_escape(strtoupper(str_replace('_', ' ', $kategori))) ?>
+											<?= strtoupper(str_replace('_', ' ', $kategori)) ?>
 										</td>
 									</tr>
 
-									<?php foreach ($param_list as $param => $value): ?>
+									<?php foreach ($params as $param => $value): ?>
+
+										<?php
+										// Gabungkan Kondisi Kemasan dan Ketepatan Labelisasi
+										if ($param === 'ketepatan_labelisasi') {
+											continue;
+										}
+
+										if ($param === 'kondisi_kemasan') {
+											$kondisi = $ambilNilaiPacking(
+												$params['kondisi_kemasan'] ?? ''
+											);
+
+											$labelisasi = $ambilNilaiPacking(
+												$params['ketepatan_labelisasi'] ?? ''
+											);
+
+											$hasilKondisi = ($kondisi === 'Oke') ? 'V' : '-';
+											$hasilLabelisasi = ($labelisasi === 'Oke') ? 'V' : '-';
+										?>
+
+											<tr>
+												<td>Kondisi Kemasan / Ketepatan Labelisasi</td>
+												<td class="text-center">
+													<?= $hasilKondisi ?> / <?= $hasilLabelisasi ?>
+												</td>
+											</tr>
+
+										<?php
+											continue;
+										}
+
+										// Label khusus
+										$label = $label_param_packing[$param] ?? ucfirst(
+											str_replace('_', ' ', $param)
+										);
+
+										if ($param === 'kode_supplier') {
+											$label = 'Kode Supplier Kemasan';
+										} elseif ($param === 'net_weight') {
+											$label = 'Berat Produk (10,010 - 10,110 g/plastic bag)';
+										} elseif ($param === 'bukti_labelisasi') {
+											$label = 'Dokumentasi';
+										}
+										?>
+
 										<tr>
-											<td>
-												<?= html_escape($label_param_packing[$param] ?? $param) ?>
-											</td>
+											<td><?= html_escape($label) ?></td>
 
 											<td>
-												<?php
-												if ($param === 'bukti_labelisasi' && !empty($value)) {
-													$file = is_array($value) ? ($value[0] ?? '') : $value;
+												<?php if ($param === 'bukti_labelisasi'): ?>
 
-													if (
-														$file &&
-														file_exists(FCPATH . 'uploads/bukti_labelisasi/' . $file)
-													) {
-														echo '<a href="' .
-															html_escape(base_url('uploads/bukti_labelisasi/' . rawurlencode($file))) .
-															'" target="_blank" rel="noopener noreferrer">Lihat Gambar</a>';
-													} else {
-														echo '-';
-													}
-												} else {
-													$display_value = is_array($value)
-														? ($value[0] ?? '-')
-														: ($value ?? '-');
+													<?php
+													$file = $ambilNilaiPacking($value);
+													$path = FCPATH . 'uploads/bukti_labelisasi/' . $file;
+													?>
 
-													echo html_escape((string) $display_value);
-												}
-												?>
+													<?php if (!empty($file) && file_exists($path)): ?>
+														<a
+															href="<?= html_escape(base_url(
+																		'uploads/bukti_labelisasi/' . rawurlencode($file)
+																	)) ?>"
+															target="_blank"
+															rel="noopener noreferrer">
+															<i class="fas fa-image"></i> Lihat Dokumentasi
+														</a>
+													<?php else: ?>
+														-
+													<?php endif; ?>
+
+												<?php elseif ($param === 'net_weight'): ?>
+
+													<?php
+													$weights = is_array($value) ? $value : [$value];
+													?>
+
+													<div class="d-flex flex-wrap" style="gap:12px;">
+														<?php for ($i = 0; $i < 3; $i++): ?>
+															<div>
+																<strong>Sampel <?= $i + 1 ?>:</strong>
+																<?= html_escape($weights[$i] ?? '-') ?>
+															</div>
+														<?php endfor; ?>
+													</div>
+
+												<?php else: ?>
+
+													<?= html_escape($ambilNilaiPacking($value) ?: '-') ?>
+
+												<?php endif; ?>
 											</td>
 										</tr>
+
 									<?php endforeach; ?>
+
 								<?php endforeach; ?>
 							</tbody>
 						</table>
@@ -507,6 +687,21 @@ $format_tanggal = function ($tanggal) {
 	}
 
 	.table-responsive table thead th {
+		text-align: center;
+	}
+
+	#tabelDetailProses {
+		width: 100%;
+		white-space: nowrap;
+	}
+
+	#tabelDetailProses th,
+	#tabelDetailProses td {
+		vertical-align: middle;
+		padding: 6px 8px;
+	}
+
+	#tabelDetailProses thead th {
 		text-align: center;
 	}
 </style>

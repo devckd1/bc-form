@@ -382,7 +382,7 @@ class Suhu extends MY_Controller
 			'suhu' => $this->suhu_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-suhu';
+		$this->active_nav = 'suhu';
 		$this->render('form/suhu/suhu-status', $data);
 	}
 
@@ -612,8 +612,14 @@ class Suhu extends MY_Controller
 		$data['suhu']->nama_lengkap_spv =
 			$this->pegawai_model->get_nama_lengkap($data['suhu']->nama_spv);
 
-		$data['suhu']->nama_lengkap_produksi =
-			$data['suhu']->nama_produksi;
+		$data['suhu']->nama_lengkap_produksi = '';
+
+		if (!empty($data['suhu']->nama_produksi)) {
+			$data['suhu']->nama_lengkap_produksi =
+				$this->pegawai_model->get_nama_lengkap(
+					$data['suhu']->nama_produksi
+				);
+		}
 
 		// =====================================
 		// GROUP BERDASARKAN SHIFT
@@ -1502,12 +1508,17 @@ class Suhu extends MY_Controller
 
 				$qr_produksi_text = null;
 
-				if (!empty($data['suhu']->nama_lengkap_produksi) && !empty($data['suhu']->tgl_update_produksi)) {
-					$prod_tanggal = (new DateTime($data['suhu']->tgl_update_produksi ?? $data['suhu']->tgl_update_produksi))
-						->format('d-m-Y | H:i');
+				if (
+					(string) $data['suhu']->status_produksi === '1' &&
+					!empty($data['suhu']->nama_produksi) &&
+					!empty($data['suhu']->tgl_update_produksi)
+				) {
+					$prod_tanggal = (new DateTime(
+						$data['suhu']->tgl_update_produksi
+					))->format('d-m-Y | H:i');
 
 					$qr_produksi_text = "Diketahui secara digital oleh,\n"
-						. $data['suhu']->nama_lengkap_produksi . "\n"
+						. $data['suhu']->nama_produksi . "\n"
 						. "Foreman/Forelady Produksi\n"
 						. $prod_tanggal;
 				}

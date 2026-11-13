@@ -171,8 +171,8 @@ class Chiller extends MY_Controller
 			'start' => $start
 		);
 
-		$this->active_nav = 'verifikasi-chiller';
-		$this->render('form/chiller/chiller-verifikasi', $data);
+		$this->active_nav = 'chiller';
+		$this->render('form/chiller/chiller', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -305,7 +305,7 @@ class Chiller extends MY_Controller
 
 		$data = array(
 			'chiller' => $this->chiller_model->get_by_uuid($uuid),
-			'active_nav' => 'verifikasi-chiller'
+			'active_nav' => 'chiller'
 		);
 
 		$this->load->view('partials/head', $data);
@@ -483,7 +483,14 @@ class Chiller extends MY_Controller
 		$this->load->model('pegawai_model');
 		$data['chiller']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['chiller']->username);
 		$data['chiller']->nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap($data['chiller']->nama_spv);
-		$data['chiller']->nama_lengkap_produksi = $data['chiller']->nama_produksi;
+		$data['chiller']->nama_lengkap_produksi = '';
+
+		if (!empty($data['chiller']->nama_produksi)) {
+			$data['chiller']->nama_lengkap_produksi =
+				$this->pegawai_model->get_nama_lengkap(
+					$data['chiller']->nama_produksi
+				);
+		}
 
 		require_once APPPATH . 'third_party/tcpdf/tcpdf.php';
 
@@ -655,14 +662,55 @@ class Chiller extends MY_Controller
 			. "QC Inspector\n"
 			. $qc_tanggal;
 
+
+		$produksi_usernames = [];
+		$produksi_timestamps = [];
+
+		foreach ($chiller_data as $item) {
+			if (
+				isset($item->status_produksi) &&
+				$item->status_produksi == '1' &&
+				!empty($item->nama_produksi)
+			) {
+				$produksi_usernames[] = $item->nama_produksi;
+			}
+
+			if (
+				isset($item->status_produksi) &&
+				$item->status_produksi == '1' &&
+				!empty($item->tgl_update_produksi)
+			) {
+				$produksi_timestamps[] = $item->tgl_update_produksi;
+			}
+		}
+
+		$produksi_usernames = array_unique($produksi_usernames);
+		$produksi_nama_lengkap = [];
+
+		foreach ($produksi_usernames as $username) {
+			$nama = $this->pegawai_model->get_nama_lengkap($username);
+
+			if (!empty($nama)) {
+				$produksi_nama_lengkap[] = $nama;
+			}
+		}
+
+		$produksi_nama_text = !empty($produksi_nama_lengkap)
+			? implode(', ', array_unique($produksi_nama_lengkap))
+			: '-';
+
+		$produksi_tanggal = !empty($produksi_timestamps)
+			? max($produksi_timestamps)
+			: null;
+
 		$qr_produksi_text = null;
 
-		if (!empty($data['chiller']->nama_lengkap_produksi) && !empty($data['chiller']->tgl_update_produksi)) {
-			$prod_tanggal = (new DateTime($data['chiller']->tgl_update_produksi ?? $data['chiller']->tgl_update_produksi))
+		if (!empty($produksi_nama_lengkap) && $produksi_tanggal) {
+			$prod_tanggal = (new DateTime($produksi_tanggal))
 				->format('d-m-Y | H:i');
 
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $data['chiller']->nama_lengkap_produksi . "\n"
+				. $produksi_nama_text . "\n"
 				. "Foreman/Forelady Produksi\n"
 				. $prod_tanggal;
 		}

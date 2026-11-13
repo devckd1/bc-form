@@ -306,8 +306,8 @@ class Seasoning extends MY_Controller
 			'seasoning' => $this->seasoning_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-seasoning';
-		$this->render('form/seasoning/seasoning-verifikasi', $data);
+		$this->active_nav = 'seasoning';
+		$this->render('form/seasoning/seasoning', $data);
 	}
 
 	public function verifikasi_massal()
@@ -386,7 +386,7 @@ class Seasoning extends MY_Controller
 			'seasoning' => $this->seasoning_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-seasoning';
+		$this->active_nav = 'seasoning';
 		$this->render('form/seasoning/seasoning-status', $data);
 	}
 

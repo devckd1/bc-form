@@ -375,7 +375,6 @@ class Thermometer_model extends CI_Model
 		];
 	}
 
-
 	public function diketahui_update($uuid)
 	{
 
@@ -524,13 +523,17 @@ class Thermometer_model extends CI_Model
 		return $this->db->delete('thermometer');
 	}
 
-	public function get_by_date($date, $plant = null)
+	public function get_by_date($date, $plant = null, $shift = null)
 	{
-		$this->db->where('date', $date);
+		$this->db->where('DATE(date)', $date);
 		$this->db->where('is_audit', 0);
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
+		}
+
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
 		}
 
 		return $this->db
@@ -539,17 +542,23 @@ class Thermometer_model extends CI_Model
 			->result();
 	}
 
-	public function get_last_verif_by_date($date, $plant = null)
+	public function get_last_verif_by_date($date, $plant = null, $shift = null)
 	{
-		$this->db->where('date', $date);
+		$this->db->where('DATE(date)', $date);
 		$this->db->where('is_audit', 0);
+		$this->db->where('status_spv', '1');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
 		}
 
+		if (!empty($shift) && $shift !== 'semua') {
+			$this->db->where('shift', $shift);
+		}
+
 		return $this->db
-			->order_by('created_at', 'DESC')
+			->order_by('tgl_update_spv', 'DESC')
+			->limit(1)
 			->get('thermometer')
 			->row();
 	}

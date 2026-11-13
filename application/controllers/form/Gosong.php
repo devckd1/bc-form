@@ -170,8 +170,8 @@ class Gosong extends MY_Controller
 			'gosong' => $this->gosong_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-gosong';
-		$this->render('form/gosong/gosong-verifikasi', $data);
+		$this->active_nav = 'gosong';
+		$this->render('form/gosong/gosong', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -195,7 +195,7 @@ class Gosong extends MY_Controller
 			);
 		}
 
-		redirect('gosong/verifikasi');
+		redirect('gosong');
 	}
 
 	public function verifikasi_massal()
@@ -320,7 +320,7 @@ class Gosong extends MY_Controller
 			'gosong' => $this->gosong_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-gosong';
+		$this->active_nav = 'gosong';
 		$this->render('form/gosong/gosong-status', $data);
 	}
 

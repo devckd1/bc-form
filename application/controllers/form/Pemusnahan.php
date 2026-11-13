@@ -191,8 +191,8 @@ class Pemusnahan extends MY_Controller
 			'pemusnahan' => $this->pemusnahan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pemusnahan';
-		$this->render('form/pemusnahan/pemusnahan-verifikasi', $data);
+		$this->active_nav = 'pemusnahan';
+		$this->render('form/pemusnahan/pemusnahan', $data);
 	}
 
 	public function verifikasi_massal()
@@ -263,7 +263,7 @@ class Pemusnahan extends MY_Controller
 			'pemusnahan' => $this->pemusnahan_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pemusnahan';
+		$this->active_nav = 'pemusnahan';
 		$this->render('form/pemusnahan/pemusnahan-status', $data);
 	}
 

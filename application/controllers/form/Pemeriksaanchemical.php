@@ -307,8 +307,8 @@ class Pemeriksaanchemical extends MY_Controller
 			'pemeriksaanchemical' => $this->pemeriksaanchemical_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-pemeriksaanchemical';
-		$this->render('form/pemeriksaanchemical/pemeriksaanchemical-verifikasi', $data);
+		$this->active_nav = 'pemeriksaanchemical';
+		$this->render('form/pemeriksaanchemical/pemeriksaanchemical', $data);
 	}
 
 	public function verifikasi_massal()
@@ -388,7 +388,7 @@ class Pemeriksaanchemical extends MY_Controller
 			'pemeriksaanchemical' => $this->pemeriksaanchemical_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-pemeriksaanchemical';
+		$this->active_nav = 'pemeriksaanchemical';
 		$this->render('form/pemeriksaanchemical/pemeriksaanchemical-status', $data);
 	}
 

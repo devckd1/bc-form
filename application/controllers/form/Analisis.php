@@ -229,8 +229,8 @@ class Analisis extends MY_Controller
 			'analisis' => $this->analisis_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-analisis';
-		$this->render('form/analisis/analisis-verifikasi', $data);
+		$this->active_nav = 'verifikasi';
+		$this->render('form/analisis/analisis', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -254,7 +254,7 @@ class Analisis extends MY_Controller
 			);
 		}
 
-		redirect('analisis/verifikasi');
+		redirect('analisis');
 	}
 
 	public function verifikasi_massal($tanggal, $jenis = 'spv')
@@ -334,7 +334,7 @@ class Analisis extends MY_Controller
 			'analisis' => $this->analisis_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-analisis';
+		$this->active_nav = 'analisis';
 		$this->render('form/analisis/analisis-status', $data);
 	}
 
@@ -653,7 +653,7 @@ class Analisis extends MY_Controller
 			$analisis1 = [];
 			$analisis2 = [];
 			$analisis3 = [];
-			$nilai_analisis = explode(',', $analisis->analisis);
+			$nilai_analisis = explode(',', $analisis->analisis?? '');
 
 			foreach ($nilai_analisis as $nilai) {
 				$nilai = trim($nilai);

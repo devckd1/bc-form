@@ -311,6 +311,9 @@ class Residu_model extends CI_Model
 	{
 		$this->db->select('date, standar, hasil_pemeriksaan, keterangan, tindakan, verifikasi, username, catatan');
 
+		// Hanya data QC, bukan snapshot Audit
+		$this->db->where('is_audit', 0);
+
 		$this->db->where('date >=', $start_date);
 		$this->db->where('date <=', $end_date);
 
@@ -319,6 +322,7 @@ class Residu_model extends CI_Model
 		}
 
 		$this->db->order_by('date', 'ASC');
+
 		$query = $this->db->get('residu');
 
 		log_message('debug', 'Query get_by_month: ' . $this->db->last_query());
@@ -329,13 +333,19 @@ class Residu_model extends CI_Model
 
 		return false;
 	}
-
 	public function get_last_verif_by_month($start_date, $end_date, $plant = null)
 	{
 		$this->db->select('area, titik_sampling, nama_spv, tgl_update_spv, username, date,
-			standar, hasil_pemeriksaan, keterangan, tindakan, verifikasi, catatan');
+        standar, hasil_pemeriksaan, keterangan, tindakan, verifikasi, catatan');
+
+		// Hanya mengambil data QC
+		$this->db->where('is_audit', 0);
+
 		$this->db->where('date >=', $start_date);
 		$this->db->where('date <=', $end_date);
+
+		// Hanya data yang sudah diverifikasi SPV
+		$this->db->where('status_spv', '1');
 
 		if (!empty($plant)) {
 			$this->db->where('plant', $plant);
@@ -343,6 +353,7 @@ class Residu_model extends CI_Model
 
 		$this->db->order_by('tgl_update_spv', 'DESC');
 		$this->db->limit(1);
+
 		$query = $this->db->get('residu');
 
 		return $query->row();

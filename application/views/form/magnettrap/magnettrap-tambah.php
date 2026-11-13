@@ -75,11 +75,26 @@
 					</div>
 					<div class="col-sm-6">
 						<label class="form-label font-weight-bold">Tahapan</label>
-						<input type="text" name="tahapan" class="form-control <?= form_error('tahapan') ? 'invalid' : '' ?> " value="<?= set_value('tahapan'); ?>">
-						<div class="invalid-feedback <?= !empty(form_error('tahapan')) ? 'd-block' : ''; ?> ">
+
+						<select name="tahapan"
+							class="form-control <?= form_error('tahapan') ? 'is-invalid' : '' ?>">
+
+							<option value="">Pilih Tahapan</option>
+
+							<?php foreach ($master_tahapan as $tahapan): ?>
+								<option value="<?= html_escape($tahapan->nama_tahapan) ?>"
+									<?= set_select('tahapan', $tahapan->nama_tahapan) ?>>
+									<?= html_escape($tahapan->nama_tahapan) ?>
+								</option>
+							<?php endforeach; ?>
+
+						</select>
+
+						<div class="invalid-feedback">
 							<?= form_error('tahapan') ?>
 						</div>
 					</div>
+
 				</div>
 				<div class="form-group row">
 					<div class="col-sm-6">

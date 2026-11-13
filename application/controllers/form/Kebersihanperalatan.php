@@ -164,8 +164,8 @@ class Kebersihanperalatan extends MY_Controller
 			'kebersihanperalatan' => $this->kebersihanperalatan_model->get_data_by_plant()
 		);
 
-		$this->active_nav = 'verifikasi-kebersihanperalatan';
-		$this->render('form/kebersihanperalatan/kebersihanperalatan-verifikasi', $data);
+		$this->active_nav = 'kebersihanperalatan';
+		$this->render('form/kebersihanperalatan/kebersihanperalatan', $data);
 	}
 
 	public function verifikasi_produksi($uuid)
@@ -478,9 +478,9 @@ class Kebersihanperalatan extends MY_Controller
 		setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'indonesian');
 		$tanggal = $data['kebersihanperalatan']->date;
 		$date = new DateTime($tanggal);
-		$formatted_date = $datetime->format('l, d F Y');
+		$formatted_date = $date->format('l, d F Y');
 
-		$formatted_date2 = $datetime->format('d F Y');
+		$formatted_date2 = $date->format('d F Y');
 
 		$pdf->SetFont('times', '', 10);
 		$pdf->SetX(10);
@@ -527,7 +527,7 @@ class Kebersihanperalatan extends MY_Controller
 		$this->load->model('pegawai_model');
 		$data['kebersihanperalatan']->nama_lengkap_qc = $this->pegawai_model->get_nama_lengkap($data['kebersihanperalatan']->username);
 		$data['kebersihanperalatan']->nama_lengkap_spv = $this->pegawai_model->get_nama_lengkap($data['kebersihanperalatan']->nama_spv);
-		$data['kebersihanperalatan']->nama_lengkap_produksi = $data['kebersihanperalatan']->nama_produksi;
+		//$data['kebersihanperalatan']->nama_lengkap_produksi = $data['kebersihanperalatan']->nama_produksi;
 
 		$pdf->SetY($pdf->GetY() + 2);
 		$pdf->SetFont('times', '', 8);
@@ -633,14 +633,18 @@ class Kebersihanperalatan extends MY_Controller
 			. "QC Inspector\n"
 			. $qc_tanggal;
 
+		// QR Produksi tanpa nama
 		$qr_produksi_text = null;
 
-		if (!empty($data['kebersihanperalatan']->nama_lengkap_produksi) && !empty($data['kebersihanperalatan']->tgl_update_produksi)) {
-			$prod_tanggal = (new DateTime($data['kebersihanperalatan']->tgl_update_produksi ?? $data['kebersihanperalatan']->tgl_update_produksi))
-				->format('d-m-Y | H:i');
+		if (
+			(string) $data['kebersihanperalatan']->status_produksi === '1' &&
+			!empty($data['kebersihanperalatan']->tgl_update_produksi)
+		) {
+			$prod_tanggal = (new DateTime(
+				$data['kebersihanperalatan']->tgl_update_produksi
+			))->format('d-m-Y | H:i');
 
 			$qr_produksi_text = "Diketahui secara digital oleh,\n"
-				. $data['kebersihanperalatan']->nama_lengkap_produksi . "\n"
 				. "Foreman/Forelady Produksi\n"
 				. $prod_tanggal;
 		}

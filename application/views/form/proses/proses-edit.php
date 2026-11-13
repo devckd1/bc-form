@@ -15,6 +15,16 @@ $tanggal_sess = set_value('date', $proses->date);
 $shift_sess = set_value('shift', $proses->shift);
 $nama_produk_sess = set_value('nama_produk', $proses->nama_produk);
 
+$plant_sess = $this->session->userdata('plant');
+
+$kode_plant = '';
+
+if ($plant_sess === '651ac623-5e48-44cc-b2f6-5d622603f53c') {
+	$kode_plant = '1'; // Cikande
+} elseif ($plant_sess === '1eb341e0-1ec4-4484-ba8f-32d23352b84d') {
+	$kode_plant = '3'; // Salatiga
+}
+
 $decoded_proses = json_decode($proses->proses_produksi ?? '', true);
 $proses_data = is_array($decoded_proses) ? $decoded_proses : [];
 
@@ -59,8 +69,10 @@ unset($proses_data['_meta']);
 
 $proses_produksi = [
 	'dough_mixing' => [
-		['label' => 'Acuan No. Dokumen / Revisi', 'params' => ['dokumen', 'revisi']],
-		'no_formula',
+		[
+			'label' => 'Acuan No. Dokumen / Revisi / Formula',
+			'params' => ['dokumen', 'revisi', 'no_formula']
+		],
 		'nama_produk',
 		'kode_produksi'
 	],
@@ -70,6 +82,14 @@ $proses_produksi = [
 		'yeast',
 		'bread_improver',
 		'premix',
+		[
+			'label' => 'N55BC',
+			'params' => ['n55bc']
+		],
+		[
+			'label' => 'NP55BCY / NP55BCO',
+			'params' => ['np55bcy_np55bco']
+		],
 		'shortening',
 		'chill_water'
 	],
@@ -103,6 +123,8 @@ $label_param = [
 	'yeast' => 'Yeast',
 	'bread_improver' => 'Bread Improver',
 	'premix' => 'Premix',
+	'n55bc' => 'N55BC',
+	'np55bcy_np55bco' => 'NP55BCY / NP55BCO',
 	'shortening' => 'Shortening',
 	'chill_water' => 'Chill Water (14 - 16°C)',
 	'waktu_mixing_1' => 'Waktu Mixing 1',
@@ -125,11 +147,11 @@ $label_param = [
 ];
 
 $standar_berat = [
-	'tepung_terigu' => '',
+	'tepung_terigu' => '32.960',
 	'tepung_tapioka' => '2.270',
-	'yeast' => '0.372',
-	'bread_improver' => '',
-	'premix' => '',
+	'yeast' => '0.732',
+	'bread_improver' => '0.038',
+	'premix' => ['default' => '0.7468', 'col8' => '0.7653'],
 	'shortening' => '0.252',
 	'chill_water' => '18'
 ];
@@ -194,7 +216,9 @@ $default_baking = [
 						<input
 							type="date"
 							name="date"
+							id="tanggal_mixing"
 							class="form-control"
+							data-kode-plant="<?= $kode_plant ?>"
 							value="<?= html_escape($tanggal_sess) ?>"
 							required>
 					</div>
@@ -242,6 +266,7 @@ $default_baking = [
 							<tr>
 								<th>Jenis Produksi</th>
 								<th>Std. Berat</th>
+								<th>Kode Batch</th>
 								<?php for ($i = 1; $i <= 10; $i++): ?>
 									<th class="text-center kolom-input kolom-input-<?= $i ?>">
 										Input ke-<?= $i ?>
@@ -253,7 +278,7 @@ $default_baking = [
 						<tbody>
 							<?php foreach ($proses_produksi as $kategori => $params): ?>
 								<tr style="background:#f1f1f1;font-weight:bold;">
-									<td class="baris-kategori" colspan="12">
+									<td class="baris-kategori" colspan="13">
 										<?= ucwords(str_replace('_', ' ', $kategori)) ?>
 									</td>
 								</tr>
@@ -272,95 +297,182 @@ $default_baking = [
 									<tr>
 										<td><?= html_escape($label) ?></td>
 
-										<td>
+										<!-- Kolom Standar Berat -->
+										<td class="text-center">
 											<?php if ($kategori === 'kondisi_rm'): ?>
+
 												<?php
 												$stdParam = $subParams[0];
-												$stdVal = $proses_data[$kategori][$stdParam][0]
-													?? $standar_berat[$stdParam]
-													?? '';
+
+												if ($stdParam !== 'premix') {
+													$rawStd = $standar_berat[$stdParam] ?? '';
+													$stdDefault = is_array($rawStd)
+														? $rawStd['default']
+														: $rawStd;
+
+													$stdVal = $proses_data[$kategori][$stdParam][0]
+														?? $stdDefault;
 												?>
+													<input
+														type="text"
+														name="proses_produksi[<?= $kategori ?>][<?= $stdParam ?>][0]"
+														class="form-control form-control-sm"
+														value="<?= html_escape((string) $stdVal) ?>">
+												<?php } ?>
+
+											<?php endif; ?>
+										</td>
+
+										<!-- Kolom Kode Batch -->
+										<td class="text-center">
+											<?php
+											$kodeBatchParams = [
+												'tepung_terigu',
+												'tepung_tapioka',
+												'yeast',
+												'bread_improver',
+												'n55bc',
+												'np55bcy_np55bco',
+												'shortening',
+												'chill_water'
+											];
+
+											if (
+												$kategori === 'kondisi_rm' &&
+												in_array($subParams[0], $kodeBatchParams, true)
+											):
+												$namaKodeBatch = 'kode_batch_' . $subParams[0];
+												$nilaiKodeBatch = $proses_data[$kategori][$namaKodeBatch] ?? '';
+											?>
 												<input
 													type="text"
-													name="proses_produksi[<?= $kategori ?>][<?= $stdParam ?>][0]"
+													name="proses_produksi[<?= $kategori ?>][<?= $namaKodeBatch ?>]"
 													class="form-control form-control-sm"
-													value="<?= html_escape((string) $stdVal) ?>">
+													placeholder="Kode Batch"
+													value="<?= html_escape((string) $nilaiKodeBatch) ?>">
 											<?php endif; ?>
 										</td>
 
 										<?php for ($col = 1; $col <= 10; $col++): ?>
+
 											<td class="text-center kolom-input kolom-input-<?= $col ?>">
-												<?php foreach ($subParams as $sub): ?>
-													<?php
-													$value = $proses_data[$kategori][$sub][$col] ?? '';
 
-													if ($value === '' && isset($default_mixing[$sub])) {
-														$value = $default_mixing[$sub];
-													}
+												<?php
+												$isAcuanFormula = (
+													$kategori === 'dough_mixing' &&
+													$subParams === ['dokumen', 'revisi', 'no_formula']
+												);
 
-													if ($value === '' && isset($default_baking[$sub])) {
-														$value = $default_baking[$sub];
-													}
+												if ($isAcuanFormula):
+													$fieldAcuan = ['dokumen', 'revisi', 'no_formula'];
+												?>
 
-													$subLower = strtolower($sub);
-													$isCheckbox = false;
-													$isNumber = false;
-
-													if (
-														$kategori === 'kondisi_rm'
-														&& $subLower !== 'chill_water'
-														&& !str_contains($subLower, 'suhu')
-													) {
-														if ($col === 8) {
-													?>
+													<div class="d-flex align-items-center" style="gap: 4px;">
+														<?php foreach ($fieldAcuan as $field): ?>
 															<input
 																type="text"
-																name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
+																name="proses_produksi[<?= $kategori ?>][<?= $field ?>][<?= $col ?>]"
 																class="form-control form-control-sm"
-																value="<?= html_escape((string) $value) ?>">
-													<?php
+																placeholder="<?= $label_param[$field] ?? $field ?>"
+																value="<?= html_escape((string) ($proses_data[$kategori][$field][$col] ?? '')) ?>">
+														<?php endforeach; ?>
+													</div>
+
+												<?php else: ?>
+
+													<?php foreach ($subParams as $sub): ?>
+
+														<?php
+														$value = $proses_data[$kategori][$sub][$col] ?? '';
+
+														if ($value === '' && isset($default_mixing[$sub])) {
+															$value = $default_mixing[$sub];
+														}
+
+														if ($value === '' && isset($default_baking[$sub])) {
+															$value = $default_baking[$sub];
+														}
+
+														$subLower = strtolower($sub);
+
+														$isCheckbox = false;
+														$isNumber = false;
+
+														// Premix tetap kosong.
+														if ($kategori === 'kondisi_rm' && $subLower === 'premix') {
 															continue;
 														}
 
-														$isCheckbox = true;
-													} elseif (in_array($subLower, ['sensori', 'hasil_proofing', 'sensori_produk'], true)) {
-														$isCheckbox = true;
-													} elseif ($subLower === 'chill_water' || str_contains($subLower, 'suhu')) {
-														$isNumber = true;
-													}
+														// Kondisi RM menggunakan checkbox kecuali Chill Water.
+														if (
+															$kategori === 'kondisi_rm' &&
+															$subLower !== 'chill_water'
+														) {
+															$isCheckbox = true;
+														}
 
-													$isKodeProduksi = ($kategori === 'dough_mixing' && $sub === 'kode_produksi');
-													$checked = in_array((string) $value, ['✓', '1'], true);
-													?>
+														// Checkbox Sensori dan Hasil.
+														elseif (in_array($subLower, [
+															'sensori',
+															'hasil_proofing',
+															'sensori_produk'
+														], true)) {
+															$isCheckbox = true;
+														}
 
-													<?php if ($isCheckbox): ?>
-														<input
-															type="checkbox"
-															class="checkbox-lg toggle-check"
-															name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
-															value="✓"
-															<?= $checked ? 'checked' : '' ?>>
+														// Input angka.
+														elseif (
+															$subLower === 'chill_water' ||
+															strpos($subLower, 'suhu') !== false
+														) {
+															$isNumber = true;
+														}
 
-													<?php elseif ($isNumber): ?>
-														<input
-															type="number"
-															step="0.01"
-															name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
-															value="<?= html_escape((string) $value) ?>"
-															class="form-control form-control-sm"
-															placeholder="0.00">
+														$isKodeProduksi = (
+															$kategori === 'dough_mixing' &&
+															$sub === 'kode_produksi'
+														);
 
-													<?php else: ?>
-														<input
-															type="<?= in_array($sub, ['jam_mulai', 'jam_selesai'], true) ? 'time' : 'text' ?>"
-															name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
-															value="<?= html_escape((string) $value) ?>"
-															class="form-control form-control-sm <?= $isKodeProduksi ? 'kode_produksi_field' : '' ?>"
-															<?= $isKodeProduksi && $col === 1 ? 'id="kode_produksi_1"' : '' ?>>
-													<?php endif; ?>
+														$checked = in_array((string) $value, ['✓', '1'], true);
+														?>
 
-												<?php endforeach; ?>
+														<?php if ($isCheckbox): ?>
+
+															<div class="d-inline-flex flex-column align-items-center mx-2">
+																<input
+																	type="checkbox"
+																	class="checkbox-lg toggle-check"
+																	name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
+																	value="✗"
+																	<?= $checked ? 'checked' : '' ?>>
+															</div>
+
+														<?php elseif ($isNumber): ?>
+
+															<input
+																type="number"
+																step="0.01"
+																name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
+																value="<?= html_escape((string) $value) ?>"
+																class="form-control form-control-sm"
+																placeholder="0.00">
+
+														<?php else: ?>
+
+															<input
+																type="<?= in_array($sub, ['jam_mulai', 'jam_selesai'], true) ? 'time' : 'text' ?>"
+																name="proses_produksi[<?= $kategori ?>][<?= $sub ?>][<?= $col ?>]"
+																value="<?= html_escape((string) $value) ?>"
+																class="form-control form-control-sm">
+
+														<?php endif; ?>
+
+													<?php endforeach; ?>
+
+												<?php endif; ?>
+
 											</td>
+
 										<?php endfor; ?>
 									</tr>
 								<?php endforeach; ?>
@@ -449,6 +561,11 @@ $default_baking = [
 		vertical-align: middle;
 		margin-left: 6px;
 	}
+
+	#tabelProsesProduksi th:nth-child(3),
+	#tabelProsesProduksi td:nth-child(3) {
+		width: 120px;
+	}
 </style>
 
 <script>
@@ -468,7 +585,7 @@ $default_baking = [
 
 			$('.baris-kategori').attr(
 				'colspan',
-				2 + jumlahKolomAktif
+				3 + jumlahKolomAktif
 			);
 
 			// Simpan jumlah kolom yang aktif untuk dikirim saat Edit.
@@ -519,6 +636,58 @@ $default_baking = [
 			jumlahKolomAktif--;
 			perbaruiKolomInput();
 		});
+
+		// =========================================
+		// AUTOFILL PREFIX KODE PRODUKSI
+		// =========================================
+		let prefixKodeProduksi = '';
+
+		function buatPrefixKodeProduksi() {
+			const tanggal = $('#tanggal_mixing').val();
+			const kodePlant = $('#tanggal_mixing').data('kode-plant');
+
+			if (!tanggal || !kodePlant) {
+				return '';
+			}
+
+			const [tahun, bulan, hari] = tanggal.split('-').map(Number);
+
+			const kodeTahun = String.fromCharCode(65 + (tahun - 2010));
+			const kodeBulan = String.fromCharCode(64 + bulan);
+
+			return kodeTahun + kodeBulan +
+				String(hari).padStart(2, '0') +
+				kodePlant;
+		}
+
+		function perbaruiPrefixKodeProduksi() {
+			const prefixBaru = buatPrefixKodeProduksi();
+
+			if (!prefixBaru) {
+				return;
+			}
+
+			$('.kode_produksi_field').each(function() {
+				let nilai = $(this).val().trim();
+
+				if (prefixKodeProduksi && nilai.startsWith(prefixKodeProduksi)) {
+					nilai = nilai.substring(prefixKodeProduksi.length);
+				} else if (nilai.startsWith(prefixBaru)) {
+					nilai = nilai.substring(prefixBaru.length);
+				}
+
+				$(this).val(prefixBaru + nilai);
+			});
+
+			prefixKodeProduksi = prefixBaru;
+		}
+
+		$('#tanggal_mixing').on('change', function() {
+			perbaruiPrefixKodeProduksi();
+		});
+
+		// Jalankan ketika Edit dibuka.
+		perbaruiPrefixKodeProduksi();
 
 		// Pastikan checkbox yang dicentang mengirim nilai ✓.
 		$('input[type="checkbox"]').each(function() {

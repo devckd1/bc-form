@@ -37,18 +37,19 @@
 
 				<?php $tipe_user = (int) $this->session->userdata('tipe_user'); ?>
 
-				<div class="d-flex align-items-center flex-wrap mb-2">
+				<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
+					<div class="d-flex align-items-center flex-wrap mb-2">
 
-					<input
-						type="date"
-						name="tanggal"
-						id="tanggal_massal"
-						class="form-control mr-2 mb-2"
-						style="width: 170px;"
-						value="<?= html_escape($filter_tanggal ?? ''); ?>"
-						required>
+						<input
+							type="date"
+							name="tanggal"
+							id="tanggal_massal"
+							class="form-control mr-2 mb-2"
+							style="width: 170px;"
+							value="<?= html_escape($filter_tanggal ?? ''); ?>"
+							required>
 
-					<?php if (in_array($tipe_user, [0, 1, 2, 9], true)): ?>
+
 						<button
 							type="button"
 							class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
@@ -56,27 +57,18 @@
 							<i class="fas fa-check-double mr-1"></i>
 							Verifikasi Massal
 						</button>
-					<?php endif; ?>
 
-					<?php if (in_array($tipe_user, [0, 1, 3, 9], true)): ?>
+
 						<button
 							type="button"
-							class="btn btn-primary mr-1 mb-2 btnVerifikasiMassal"
-							data-jenis="produksi">
-							<i class="fas fa-industry mr-1"></i>
-							Verifikasi Massal
+							id="resetFilterResidu"
+							class="btn btn-secondary mb-2">
+							<i class="fas fa-sync-alt mr-1"></i>
+							Reset
 						</button>
-					<?php endif; ?>
 
-					<button
-						type="button"
-						id="resetFilterResidu"
-						class="btn btn-secondary mb-2">
-						<i class="fas fa-sync-alt mr-1"></i>
-						Reset
-					</button>
-
-				</div>
+					</div>
+				<?php endif; ?>
 
 				<!-- KANAN: Tambah dan Mode Audit -->
 				<div class="text-right mb-2 ml-auto">
@@ -167,7 +159,8 @@
 										<span class="text">Detail</span>
 									</a>
 
-									<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+									<?php if (in_array($tipe_user, [0, 1, 2, 9]) &&
+											$val->status_spv != 1): ?>
 										<a href="<?= base_url('residu/status/' . $val->uuid); ?>"
 											class="btn btn-info btn-icon-split">
 											<span class="text">Verifikasi</span>
@@ -182,6 +175,30 @@
 					</tbody>
 				</table>
 			</div>
+			<?php if (in_array($tipe_user, [0, 1, 2, 9])): ?>
+				<br>
+				<div class="mb-3">
+					<form method="GET" action="<?= base_url('residu/cetak') ?>" class="form-inline">
+
+						<label for="bulan" class="mr-2 font-weight-bold">
+							Pilih Bulan:
+						</label>
+
+						<input
+							type="month"
+							name="bulan"
+							id="bulan"
+							class="form-control mr-2"
+							required>
+
+						<button type="submit" class="btn btn-success">
+							<i class="fas fa-file-pdf fa-sm text-white-50"></i>
+							Export PDF
+						</button>
+
+					</form>
+				</div>
+			<?php endif; ?>
 
 		</div>
 	</div>

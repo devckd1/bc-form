@@ -671,7 +671,8 @@ class Kebersihanruang_model extends CI_Model
 			$this->db->where('status_produksi', '0');
 
 			$this->db->update('kebersihan_ruang', [
-				'status_produksi' => '1'
+				'status_produksi'     => '1',
+				'tgl_update_produksi' => date('Y-m-d H:i:s')
 			]);
 		} else {
 

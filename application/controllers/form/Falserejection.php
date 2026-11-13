@@ -70,29 +70,29 @@ class Falserejection extends MY_Controller
 	}
 
 	public function detail($uuid)
-{
-    $falserejection = $this->falserejection_model->get_by_uuid($uuid);
+	{
+		$falserejection = $this->falserejection_model->get_by_uuid($uuid);
 
-    if (!$falserejection) {
-        show_404();
-        return;
-    }
+		if (!$falserejection) {
+			show_404();
+			return;
+		}
 
-    $is_popup = $this->input->get('popup') == '1';
+		$is_popup = $this->input->get('popup') == '1';
 
-    $data = [
-        'falserejection' => $falserejection,
-        'is_popup' => $is_popup
-    ];
+		$data = [
+			'falserejection' => $falserejection,
+			'is_popup' => $is_popup
+		];
 
-    $this->active_nav = 'falserejection';
+		$this->active_nav = 'falserejection';
 
-    if ($is_popup) {
-        $this->load->view('form/falserejection/falserejection-detail', $data);
-    } else {
-        $this->render('form/falserejection/falserejection-detail', $data);
-    }
-}
+		if ($is_popup) {
+			$this->load->view('form/falserejection/falserejection-detail', $data);
+		} else {
+			$this->render('form/falserejection/falserejection-detail', $data);
+		}
+	}
 
 	public function edit($uuid)
 	{
@@ -125,8 +125,8 @@ class Falserejection extends MY_Controller
 			'falserejection' => $this->falserejection_model->get_data_by_plant(),
 		);
 
-		$this->active_nav = 'verifikasi-falserejection';
-		$this->render('form/falserejection/falserejection-verifikasi', $data);
+		$this->active_nav = 'falserejection';
+		$this->render('form/falserejection/falserejection', $data);
 	}
 
 	public function verifikasi_massal()
@@ -207,7 +207,7 @@ class Falserejection extends MY_Controller
 			'falserejection' => $this->falserejection_model->get_by_uuid($uuid),
 		);
 
-		$this->active_nav = 'verifikasi-falserejection';
+		$this->active_nav = 'falserejection';
 		$this->render('form/falserejection/falserejection-status', $data);
 	}
 
@@ -355,7 +355,12 @@ class Falserejection extends MY_Controller
 
 		$pdf->SetFont('times', 'B', 10);
 		$pdf->SetX(10);
-		$pdf->Write(0, 'Mesin: ' . (!empty($data['metal']->no_mesin) ? $data['metal']->no_mesin : ' - '));
+		$pdf->Write(
+			0,
+			'Mesin: ' . (!empty($data['falserejection']->no_mesin)
+				? $data['falserejection']->no_mesin
+				: ' - ')
+		);
 		$pdf->Ln(5);
 
 		$pdf->SetFont('times', 'B', 10);
@@ -525,8 +530,18 @@ class Falserejection extends MY_Controller
 		$falserejection_data = $this->falserejection_model->get_audit_by_date($tanggal);
 		$falserejection_data_verif = $this->falserejection_model->get_last_verif_by_date($tanggal);
 
-		if (!$falserejection_data || !$falserejection_data_verif) {
-			show_error('Data tidak ditemukan, Pilih tanggal yang ingin dicetak', 404);
+		if (empty($falserejection_data)) {
+			show_error(
+				'Data False Rejection tidak ditemukan pada tanggal ' . $tanggal,
+				404
+			);
+		}
+
+		if (!$falserejection_data_verif) {
+			show_error(
+				'Data verifikasi False Rejection tidak ditemukan pada tanggal ' . $tanggal,
+				404
+			);
 		}
 
 		$data['falserejection'] = $falserejection_data_verif;

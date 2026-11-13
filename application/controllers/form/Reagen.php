@@ -204,8 +204,8 @@ class Reagen extends MY_Controller
 			'bulan_tahun' => $bulan_tahun
 		];
 
-		$this->active_nav = 'verifikasi-reagen';
-		$this->render('form/reagen/reagen-verifikasi', $data);
+		$this->active_nav = 'reagen';
+		$this->render('form/reagen/reagen', $data);
 	}
 
 	public function verifikasi_bulan($bulan, $tahun)
@@ -218,7 +218,7 @@ class Reagen extends MY_Controller
 			$this->session->set_flashdata('error_msg', 'Verifikasi gagal.');
 		}
 
-		redirect('reagen/verifikasi');
+		redirect('reagen');
 	}
 
 	public function status($bulan, $tahun)
@@ -231,7 +231,7 @@ class Reagen extends MY_Controller
 			'tahun'  => $tahun
 		];
 
-		$this->active_nav = 'verifikasi-reagen';
+		$this->active_nav = 'reagen';
 		$this->render('form/reagen/reagen-status', $data);
 	}
 
