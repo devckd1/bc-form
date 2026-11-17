@@ -7,6 +7,20 @@ class Master_formula_model extends CI_Model
 	protected $table = 'master_formula';
 	protected $table_detail = 'master_formula_detail';
 
+	// Daftar bahan yang diperbolehkan
+	private function daftar_bahan()
+	{
+		return [
+			'Tepung Terigu',
+			'Tepung Tapioka',
+			'Yeast',
+			'Bread Improve N55BC',
+			'NP55BCY / NP55BCO',
+			'Shortening',
+			'Chill Water (14 - 16°C)'
+		];
+	}
+
 	// Generate UUID
 	private function generate_uuid()
 	{
@@ -40,30 +54,14 @@ class Master_formula_model extends CI_Model
 			->row();
 	}
 
-	// Dropdown produk yang belum memiliki Master Formula
+	// Dropdown semua produk berdasarkan plant
+	// Produk boleh memiliki lebih dari satu formulasi
 	public function get_produk_dropdown($plant, $formula_uuid = null)
 	{
-		$this->db->select('p.uuid, p.nama_produk');
-		$this->db->from('produk p');
-
-		$this->db->join(
-			'master_formula mf',
-			'mf.produk_uuid = p.uuid AND mf.plant = p.plant',
-			'left'
-		);
-
-		$this->db->where('p.plant', $plant);
-
-		if ($formula_uuid !== null) {
-			$this->db->group_start()
-				->where('mf.id IS NULL', null, false)
-				->or_where('mf.uuid', $formula_uuid)
-				->group_end();
-		} else {
-			$this->db->where('mf.id IS NULL', null, false);
-		}
-
 		return $this->db
+			->select('p.uuid, p.nama_produk')
+			->from('produk p')
+			->where('p.plant', $plant)
 			->order_by('p.nama_produk', 'ASC')
 			->get()
 			->result();
@@ -88,6 +86,52 @@ class Master_formula_model extends CI_Model
 			->count_all_results('produk') > 0;
 	}
 
+	// Validasi nama formulasi agar tidak duplikat dalam plant
+	public function nama_formulasi_tersedia($nama, $plant, $exclude_uuid = null)
+	{
+		$this->db
+			->from($this->table)
+			->where('plant', $plant)
+			->where('nama_formulasi', trim($nama));
+
+		if ($exclude_uuid !== null) {
+			$this->db->where('uuid !=', $exclude_uuid);
+		}
+
+		return $this->db->count_all_results() === 0;
+	}
+
+	// Validasi detail bahan
+	private function detail_valid($details)
+	{
+		if (empty($details) || !is_array($details)) {
+			return false;
+		}
+
+		$daftar_bahan = $this->daftar_bahan();
+
+		foreach ($details as $detail) {
+
+			if (
+				empty($detail['nama_bahan']) ||
+				!in_array($detail['nama_bahan'], $daftar_bahan, true)
+			) {
+				return false;
+			}
+
+			if (
+				!isset($detail['standar_berat']) ||
+				$detail['standar_berat'] === '' ||
+				!is_numeric($detail['standar_berat']) ||
+				$detail['standar_berat'] < 0
+			) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	// Simpan Master Formula baru
 	public function insert($data, $details = [])
 	{
@@ -98,12 +142,23 @@ class Master_formula_model extends CI_Model
 			return false;
 		}
 
+		if (!$this->nama_formulasi_tersedia(
+			$data['nama_formulasi'],
+			$plant
+		)) {
+			return false;
+		}
+
+		if (!$this->detail_valid($details)) {
+			return false;
+		}
+
 		$uuid = $this->generate_uuid();
 
 		$formula = [
 			'uuid'           => $uuid,
 			'produk_uuid'    => $produk_uuid,
-			'nama_formulasi' => $data['nama_formulasi'],
+			'nama_formulasi' => trim($data['nama_formulasi']),
 			'no_dokumen'     => $data['no_dokumen'] ?? null,
 			'revisi'         => $data['revisi'] ?? null,
 			'formula'        => $data['formula'] ?? null,
@@ -121,13 +176,13 @@ class Master_formula_model extends CI_Model
 		}
 
 		foreach ($details as $index => $detail) {
+
 			$this->db->insert($this->table_detail, [
-				'uuid'         => $this->generate_uuid(),
-				'formula_uuid' => $uuid,
-				'nama_bahan'   => $detail['nama_bahan'],
-				'komposisi'    => $detail['komposisi'] ?? null,
-				'satuan'       => $detail['satuan'] ?? null,
-				'urutan'       => $index + 1
+				'uuid'          => $this->generate_uuid(),
+				'formula_uuid'  => $uuid,
+				'nama_bahan'    => $detail['nama_bahan'],
+				'standar_berat' => $detail['standar_berat'],
+				'urutan'        => $index + 1
 			]);
 		}
 
@@ -154,9 +209,21 @@ class Master_formula_model extends CI_Model
 			return false;
 		}
 
+		if (!$this->nama_formulasi_tersedia(
+			$data['nama_formulasi'],
+			$plant,
+			$uuid
+		)) {
+			return false;
+		}
+
+		if (!$this->detail_valid($details)) {
+			return false;
+		}
+
 		$formula = [
 			'produk_uuid'    => $data['produk_uuid'],
-			'nama_formulasi' => $data['nama_formulasi'],
+			'nama_formulasi' => trim($data['nama_formulasi']),
 			'no_dokumen'     => $data['no_dokumen'] ?? null,
 			'revisi'         => $data['revisi'] ?? null,
 			'formula'        => $data['formula'] ?? null,
@@ -170,19 +237,20 @@ class Master_formula_model extends CI_Model
 			->where('plant', $plant)
 			->update($this->table, $formula);
 
-		// Ganti seluruh detail dengan data terbaru
+		// Hapus detail lama
 		$this->db
 			->where('formula_uuid', $uuid)
 			->delete($this->table_detail);
 
+		// Simpan detail terbaru
 		foreach ($details as $index => $detail) {
+
 			$this->db->insert($this->table_detail, [
-				'uuid'         => $this->generate_uuid(),
-				'formula_uuid' => $uuid,
-				'nama_bahan'   => $detail['nama_bahan'],
-				'komposisi'    => $detail['komposisi'] ?? null,
-				'satuan'       => $detail['satuan'] ?? null,
-				'urutan'       => $index + 1
+				'uuid'          => $this->generate_uuid(),
+				'formula_uuid'  => $uuid,
+				'nama_bahan'    => $detail['nama_bahan'],
+				'standar_berat' => $detail['standar_berat'],
+				'urutan'        => $index + 1
 			]);
 		}
 
@@ -226,21 +294,43 @@ class Master_formula_model extends CI_Model
 		return true;
 	}
 
-
-	public function get_by_produk($produk_uuid, $plant)
+	// Ambil daftar formulasi berdasarkan produk dan plant
+	public function get_dropdown_by_produk($produk_uuid, $plant)
 	{
-		$formula = $this->db
+		return $this->db
+			->select('uuid, nama_formulasi, no_dokumen, revisi, formula')
 			->where('produk_uuid', $produk_uuid)
 			->where('plant', $plant)
-			->get('master_formula')
-			->row();
+			->order_by('nama_formulasi', 'ASC')
+			->get($this->table)
+			->result();
+	}
 
-		if (!$formula) {
-			return null;
+	// Ambil satu formulasi berdasarkan UUID, produk, dan plant
+	public function get_by_uuid_produk($formula_uuid, $produk_uuid, $plant)
+	{
+		return $this->db
+			->where('uuid', $formula_uuid)
+			->where('produk_uuid', $produk_uuid)
+			->where('plant', $plant)
+			->get($this->table)
+			->row();
+	}
+
+	// Ambil Master Formula berdasarkan produk
+	public function get_by_produk($produk_uuid, $plant)
+	{
+		$formulas = $this->db
+			->where('produk_uuid', $produk_uuid)
+			->where('plant', $plant)
+			->order_by('created_at', 'DESC')
+			->get($this->table)
+			->result();
+
+		foreach ($formulas as $formula) {
+			$formula->detail = $this->get_detail($formula->uuid);
 		}
 
-		$formula->detail = $this->get_detail($formula->uuid);
-
-		return $formula;
+		return $formulas;
 	}
 }

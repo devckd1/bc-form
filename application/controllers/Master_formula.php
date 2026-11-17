@@ -212,6 +212,56 @@ class Master_formula extends MY_Controller
 		redirect('master_formula');
 	}
 
+	// Halaman Edit Master Formula
+	public function edit($uuid = null)
+	{
+		if (empty($uuid)) {
+			show_404();
+		}
+
+		$plant = $this->get_plant();
+
+		$formula = $this->formula_model->get_by_uuid($uuid, $plant);
+
+		if (!$formula) {
+			show_404();
+		}
+
+		$data = [
+			'formula' => $formula,
+			'detail'  => $this->formula_model->get_detail($uuid),
+			'produk'  => $this->formula_model->get_produk_dropdown($plant)
+		];
+
+		$this->active_nav = 'master_formula';
+
+		$this->render('master_formula/edit', $data);
+	}
+
+	// Ambil Detail Master Formula untuk modal
+	public function detail($uuid = null)
+	{
+		if (empty($uuid)) {
+			show_404();
+		}
+
+		$plant = $this->get_plant();
+
+		$formula = $this->formula_model->get_by_uuid($uuid, $plant);
+
+		if (!$formula) {
+			show_404();
+		}
+
+		$data = [
+			'formula' => $formula,
+			'detail'  => $this->formula_model->get_detail($uuid)
+		];
+
+		// View partial, bukan render layout utama
+		$this->load->view('master_formula/detail', $data);
+	}
+
 	// Hapus Master Formula
 	public function hapus($uuid)
 	{
@@ -244,16 +294,16 @@ class Master_formula extends MY_Controller
 		redirect('master_formula');
 	}
 
+
 	// Mengambil daftar bahan dari form
 	private function ambil_detail_post()
 	{
 		$nama_bahan = $this->input->post('nama_bahan');
-		$komposisi = $this->input->post('komposisi');
-		$satuan = $this->input->post('satuan');
+		$standar_berat = $this->input->post('standar_berat');
 
 		$details = [];
 
-		if (!is_array($nama_bahan)) {
+		if (!is_array($nama_bahan) || !is_array($standar_berat)) {
 			return $details;
 		}
 
@@ -261,18 +311,22 @@ class Master_formula extends MY_Controller
 
 			$nama = trim($nama);
 
-			if ($nama === '') {
+			$berat = isset($standar_berat[$index])
+				? trim($standar_berat[$index])
+				: '';
+
+			if ($nama === '' || $berat === '') {
+				continue;
+			}
+
+			// Validasi angka
+			if (!is_numeric($berat) || $berat < 0) {
 				continue;
 			}
 
 			$details[] = [
-				'nama_bahan' => $nama,
-				'komposisi'  => isset($komposisi[$index])
-					? trim($komposisi[$index])
-					: null,
-				'satuan'     => isset($satuan[$index])
-					? trim($satuan[$index])
-					: null
+				'nama_bahan'    => $nama,
+				'standar_berat' => $berat
 			];
 		}
 

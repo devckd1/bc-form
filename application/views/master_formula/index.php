@@ -94,16 +94,26 @@
 
 									<td class="text-center text-nowrap">
 
+										<button type="button"
+											class="btn btn-info btn-sm btn-detail"
+											data-url="<?= base_url('master_formula/detail/' . rawurlencode($row->uuid)); ?>"
+											title="Detail">
+											<i class="fas fa-eye"></i>
+										</button>
+
 										<a href="<?= base_url('master_formula/edit/' . rawurlencode($row->uuid)); ?>"
-											class="btn btn-warning btn-sm">
-											Edit
+											class="btn btn-warning btn-sm"
+											title="Edit">
+											<i class="fas fa-edit"></i>
 										</a>
 
 										<button type="button"
 											class="btn btn-danger btn-sm btn-hapus"
 											data-url="<?= base_url('master_formula/hapus/' . rawurlencode($row->uuid)); ?>"
-											data-produk="<?= html_escape($row->nama_produk ?? '-'); ?>">
-											Delete
+											data-produk="<?= html_escape($row->nama_produk ?? '-'); ?>"
+											data-formulasi="<?= html_escape($row->nama_formulasi ?? '-'); ?>"
+											title="Hapus">
+											<i class="fas fa-trash"></i>
 										</button>
 
 									</td>
@@ -119,6 +129,31 @@
 		</div>
 	</div>
 
+</div>
+
+<div class="modal fade" id="modalDetailFormula" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+		<div class="modal-content">
+
+			<div class="modal-header">
+				<h5 class="modal-title">
+					<i class="fas fa-eye mr-1"></i>
+					Detail Master Formula
+				</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+
+			<div class="modal-body" id="detailFormulaContent">
+				<div class="text-center py-4">
+					<i class="fas fa-spinner fa-spin"></i>
+					Memuat data...
+				</div>
+			</div>
+
+		</div>
+	</div>
 </div>
 
 <script>
@@ -185,5 +220,36 @@
 			});
 		});
 
+	});
+
+	// Detail Master Formula
+	$(document).on('click', '.btn-detail', function() {
+
+		const url = $(this).data('url');
+
+		$('#detailFormulaContent').html(`
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin"></i>
+            Memuat data...
+        </div>
+    `);
+
+		$('#modalDetailFormula').modal('show');
+
+		$.ajax({
+			url: url,
+			type: 'GET',
+			dataType: 'html',
+			success: function(response) {
+				$('#detailFormulaContent').html(response);
+			},
+			error: function() {
+				$('#detailFormulaContent').html(`
+                <div class="alert alert-danger mb-0">
+                    Gagal memuat detail Master Formula.
+                </div>
+            `);
+			}
+		});
 	});
 </script>

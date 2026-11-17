@@ -863,12 +863,16 @@ $route['master_tahapan_magnettrap/tambah'] = 'master_tahapan_magnettrap/tambah';
 $route['master_tahapan_magnettrap/edit/(:any)'] = 'master_tahapan_magnettrap/edit/$1';
 $route['master_tahapan_magnettrap/hapus/(:any)'] = 'master_tahapan_magnettrap/hapus/$1';
 
-//Formulasi 
+// Master Formula
 $route['master_formula'] = 'master_formula/index';
 $route['master_formula/tambah'] = 'master_formula/tambah';
 $route['master_formula/simpan'] = 'master_formula/simpan';
+
+$route['master_formula/detail/(:any)'] = 'master_formula/detail/$1';
+
 $route['master_formula/edit/(:any)'] = 'master_formula/edit/$1';
 $route['master_formula/update/(:any)'] = 'master_formula/update/$1';
+
 $route['master_formula/hapus/(:any)'] = 'master_formula/hapus/$1';
 
 //keluhan pelanggan

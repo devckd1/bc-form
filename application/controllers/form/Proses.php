@@ -35,18 +35,21 @@ class Proses extends MY_Controller
 		}
 
 		$produk_uuid = $this->input->get('produk_uuid', TRUE);
+		$formula_uuid = $this->input->get('formula_uuid', TRUE);
 		$plant = $this->session->userdata('plant');
+
+		$response = [
+			'success' => false,
+			'message' => 'Produk atau plant tidak valid.'
+		];
 
 		if (empty($produk_uuid) || empty($plant)) {
 			return $this->output
 				->set_content_type('application/json')
-				->set_output(json_encode([
-					'success' => false,
-					'message' => 'Produk atau plant tidak valid.'
-				]));
+				->set_output(json_encode($response));
 		}
 
-		// Pastikan produk milik plant aktif.
+		// Validasi produk berdasarkan UUID dan plant aktif.
 		$produk = $this->db
 			->where('uuid', $produk_uuid)
 			->where('plant', $plant)
@@ -54,37 +57,54 @@ class Proses extends MY_Controller
 			->row();
 
 		if (!$produk) {
+			$response['message'] = 'Produk tidak ditemukan.';
+
+			return $this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+		}
+
+		// Jika formula_uuid belum dikirim, ambil daftar formulasi.
+		if (empty($formula_uuid)) {
+			$formulas = $this->master_formula_model
+				->get_dropdown_by_produk($produk_uuid, $plant);
+
 			return $this->output
 				->set_content_type('application/json')
 				->set_output(json_encode([
-					'success' => false,
-					'message' => 'Produk tidak ditemukan.'
+					'success' => true,
+					'data' => $formulas
 				]));
 		}
 
-		// Ambil Master Formula.
-		$formula = $this->master_formula_model->get_by_produk(
-			$produk_uuid,
-			$plant
-		);
+		// Jika formula_uuid dikirim, ambil formulasi yang dipilih.
+		$formula = $this->master_formula_model
+			->get_by_uuid_produk($formula_uuid, $produk_uuid, $plant);
 
 		if (!$formula) {
 			return $this->output
 				->set_content_type('application/json')
 				->set_output(json_encode([
 					'success' => false,
-					'message' => 'Master Formula belum tersedia.'
+					'message' => 'Formulasi tidak ditemukan.'
 				]));
 		}
+
+		// Ambil detail bahan formulasi.
+		$detail = $this->master_formula_model
+			->get_detail($formula_uuid);
 
 		return $this->output
 			->set_content_type('application/json')
 			->set_output(json_encode([
 				'success' => true,
 				'data' => [
+					'uuid' => $formula->uuid,
+					'nama_formulasi' => $formula->nama_formulasi,
 					'no_dokumen' => $formula->no_dokumen,
 					'revisi' => $formula->revisi,
-					'formula' => $formula->formula
+					'formula' => $formula->formula,
+					'detail' => $detail
 				]
 			]));
 	}

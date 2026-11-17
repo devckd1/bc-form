@@ -166,9 +166,9 @@
 
 </div>
 <style type="text/css">
-    .breadcrumb {
-        background-color: #2E86C1;
-    }
+	.breadcrumb {
+		background-color: #2E86C1;
+	}
 </style>
 <script>
 	$(document).ready(function() {
@@ -211,11 +211,11 @@
 				return;
 			}
 
-			// Best Before = tanggal produksi + 1 tahun
+			// Best Before = tanggal produksi + 6 bulan
 			var bestBefore = new Date(tanggalProduksi);
 
-			bestBefore.setUTCFullYear(
-				bestBefore.getUTCFullYear() + 1
+			bestBefore.setUTCMonth(
+				bestBefore.getUTCMonth() + 6
 			);
 
 			var hasil = [

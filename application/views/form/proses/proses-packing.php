@@ -186,7 +186,7 @@ $url_simpan = $is_audit
 				'kondisi_kemasan' => 'Kondisi Kemasan',
 				'ketepatan_labelisasi' => 'Ketepatan Labelisasi',
 				'kode_supplier' => 'Kode Supplier',
-				'net_weight' => 'Nett Weight (9,850 - 10,100 g/plastic bag)',
+				'net_weight' => 'Nett Weight (10,010 - 10,110 g/plastic bag)',
 			];
 
 			$proses_packing = [
