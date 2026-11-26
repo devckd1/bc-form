@@ -65,13 +65,13 @@ class Master_formula extends MY_Controller
 	}
 
 	// Halaman tambah Master Formula
-	// Halaman tambah Master Formula
 	public function tambah()
 	{
 		$data = [
 			'produk' => $this->formula_model->get_produk_dropdown(
 				$this->get_plant()
-			)
+			),
+			'material' => $this->formula_model->get_material_dropdown()
 		];
 
 		$this->active_nav = 'master_formula';
@@ -228,9 +228,10 @@ class Master_formula extends MY_Controller
 		}
 
 		$data = [
-			'formula' => $formula,
-			'detail'  => $this->formula_model->get_detail($uuid),
-			'produk'  => $this->formula_model->get_produk_dropdown($plant)
+			'formula'  => $formula,
+			'detail'   => $this->formula_model->get_detail($uuid),
+			'produk'   => $this->formula_model->get_produk_dropdown($plant),
+			'material' => $this->formula_model->get_material_dropdown()
 		];
 
 		$this->active_nav = 'master_formula';

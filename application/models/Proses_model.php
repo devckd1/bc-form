@@ -65,6 +65,16 @@ class Proses_model extends CI_Model
 				}
 
 				foreach ($params as $param => $cols) {
+
+					// Simpan Kode Batch karena nilainya berupa string, bukan array.
+					if (
+						$kategori === 'kondisi_rm' &&
+						strpos($param, 'kode_batch_') === 0
+					) {
+						$cleaned[$kategori][$param] = trim((string) $cols);
+						continue;
+					}
+
 					if (!is_array($cols)) {
 						continue;
 					}
@@ -179,6 +189,16 @@ class Proses_model extends CI_Model
 				}
 
 				foreach ($params as $param => $cols) {
+
+					// Simpan Kode Batch karena nilainya berupa string, bukan array.
+					if (
+						$kategori === 'kondisi_rm' &&
+						strpos($param, 'kode_batch_') === 0
+					) {
+						$cleaned[$kategori][$param] = trim((string) $cols);
+						continue;
+					}
+
 					if (!is_array($cols)) {
 						continue;
 					}
@@ -1025,6 +1045,16 @@ class Proses_model extends CI_Model
 				}
 
 				foreach ($params as $param => $cols) {
+
+					// Simpan Kode Batch karena nilainya berupa string, bukan array.
+					if (
+						$kategori === 'kondisi_rm' &&
+						strpos($param, 'kode_batch_') === 0
+					) {
+						$cleaned[$kategori][$param] = trim((string) $cols);
+						continue;
+					}
+
 					if (!is_array($cols)) {
 						continue;
 					}

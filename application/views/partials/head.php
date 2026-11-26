@@ -93,7 +93,7 @@
 							<a class="collapse-item <?= $active_nav == 'master_sanitasi' ? 'active' : ''; ?>" href="<?= base_url('master-sanitasi') ?>">Master Sanitasi</a>
 							<a class="collapse-item <?= $active_nav == 'master-dokumen' ? 'active' : ''; ?>" href="<?= base_url('master-dokumen') ?>">Master Dokumen</a>
 							<a class="collapse-item <?= $active_nav == 'master_tahapan_magnettrap' ? 'active' : ''; ?>" href="<?= base_url('master_tahapan_magnettrap') ?>">Master Tahapan Magnet Trap</a>
-							<a class="collapse-item <?= $active_nav == 'master_formula' ? 'active' : ''; ?>" href="<?= base_url('master_formula') ?>">Master formula</a>
+							<a class="collapse-item <?= $active_nav == 'master_formula' ? 'active' : ''; ?>" href="<?= base_url('master_formula') ?>">Master Formula</a>
 						</div>
 					</div>
 				</li>
@@ -101,7 +101,7 @@
 			<!-- Awal Form QC -->
 
 			<!-- MASTER DATA PRODUKSI (hanya tipe_user 0 & 1) -->
-			<?php if (in_array($tipe_user, [0, 9])): ?>
+			<?php if (in_array($tipe_user, [0, 2, 9])): ?>
 				<hr class="sidebar-divider">
 				<div class="sidebar-heading">DATA PRODUKSI</div>
 				<li class="nav-item <?= $active_nav == 'data_produksi' | $active_nav == 'keluhan-pelanggan' | $active_nav == 'produksi_baru' ? 'active' : ''; ?>">

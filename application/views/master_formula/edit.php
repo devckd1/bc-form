@@ -1,17 +1,5 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 
-<?php
-$daftar_bahan = [
-	'Tepung Terigu',
-	'Tepung Tapioka',
-	'Yeast',
-	'Bread Improve N55BC',
-	'NP55BCY / NP55BCO',
-	'Shortening',
-	'Chill Water (14 - 16°C)'
-];
-?>
-
 <div class="container-fluid">
 
 	<div class="d-sm-flex align-items-center justify-content-between mb-4">
@@ -169,18 +157,28 @@ $daftar_bahan = [
 												class="form-control"
 												required>
 
-												<option value="">-- Pilih Bahan --</option>
+												<option value="">-- Pilih Nama Bahan --</option>
 
-												<?php foreach ($daftar_bahan as $bahan): ?>
-													<option value="<?= html_escape($bahan); ?>"
-														<?= $row->nama_bahan == $bahan ? 'selected' : ''; ?>>
-														<?= html_escape($bahan); ?>
+												<?php foreach ($material as $bahan): ?>
+													<option value="<?= html_escape($bahan->material); ?>"
+														<?= $row->nama_bahan == $bahan->material ? 'selected' : ''; ?>>
+														<?= html_escape($bahan->material); ?>
 													</option>
 												<?php endforeach; ?>
 
-												<?php if (!in_array($row->nama_bahan, $daftar_bahan, true)): ?>
+												<?php
+												// Pertahankan bahan lama jika sudah tidak tersedia di tabel material
+												$material_tersedia = array_column(
+													array_map(function ($item) {
+														return (array) $item;
+													}, $material),
+													'material'
+												);
+												?>
+
+												<?php if (!in_array($row->nama_bahan, $material_tersedia, true)): ?>
 													<option value="<?= html_escape($row->nama_bahan); ?>" selected>
-														<?= html_escape($row->nama_bahan); ?>
+														<?= html_escape($row->nama_bahan); ?> (Material tidak tersedia)
 													</option>
 												<?php endif; ?>
 
@@ -217,13 +215,15 @@ $daftar_bahan = [
 										<select name="nama_bahan[]"
 											class="form-control"
 											required>
-											<option value="">-- Pilih Bahan --</option>
 
-											<?php foreach ($daftar_bahan as $bahan): ?>
-												<option value="<?= html_escape($bahan); ?>">
-													<?= html_escape($bahan); ?>
+											<option value="">-- Pilih Nama Bahan --</option>
+
+											<?php foreach ($material as $bahan): ?>
+												<option value="<?= html_escape($bahan->material); ?>">
+													<?= html_escape($bahan->material); ?>
 												</option>
 											<?php endforeach; ?>
+
 										</select>
 									</td>
 
@@ -287,54 +287,57 @@ $daftar_bahan = [
 	}
 </style>
 <script>
-	$(document).ready(function() {
+	// Data material dari database
+	const materialOptions = `
+		<option value="">-- Pilih Nama Bahan --</option>
+		<?php foreach ($material as $bahan): ?>
+			<option value="<?= html_escape($bahan->material); ?>">
+				<?= html_escape($bahan->material); ?>
+			</option>
+		<?php endforeach; ?>
+	`;
 
-		const daftarBahan = <?= json_encode($daftar_bahan); ?>;
+	$(document).ready(function() {
 
 		// Tambah bahan
 		$('#btnTambahBahan').on('click', function() {
 
-			let opsiBahan = '<option value="">-- Pilih Bahan --</option>';
-
-			daftarBahan.forEach(function(bahan) {
-				opsiBahan += `<option value="${$('<div>').text(bahan).html()}">${$('<div>').text(bahan).html()}</option>`;
-			});
-
 			const row = `
-            <tr>
-                <td class="text-center nomor-bahan"></td>
+				<tr>
+					<td class="text-center nomor-bahan"></td>
 
-                <td>
-                    <select name="nama_bahan[]"
-                        class="form-control"
-                        required>
-                        ${opsiBahan}
-                    </select>
-                </td>
+					<td>
+						<select name="nama_bahan[]"
+							class="form-control"
+							required>
+							${materialOptions}
+						</select>
+					</td>
 
-                <td>
-                    <input type="number"
-                        name="standar_berat[]"
-                        class="form-control"
-                        step="0.0001"
-                        min="0"
-                        placeholder="Masukkan standar berat"
-                        required>
-                </td>
+					<td>
+						<input type="number"
+							name="standar_berat[]"
+							class="form-control"
+							step="0.0001"
+							min="0"
+							placeholder="Masukkan standar berat"
+							required>
+					</td>
 
-                <td class="text-center">
-                    <button type="button"
-                        class="btn btn-danger btn-sm btnHapusBahan">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
+					<td class="text-center">
+						<button type="button"
+							class="btn btn-danger btn-sm btnHapusBahan">
+							<i class="fas fa-trash"></i>
+						</button>
+					</td>
+				</tr>
+			`;
 
 			$('#bodyBahan').append(row);
 
 			updateNomorBahan();
 		});
+
 
 		// Hapus bahan
 		$(document).on('click', '.btnHapusBahan', function() {
@@ -347,6 +350,7 @@ $daftar_bahan = [
 
 			updateNomorBahan();
 		});
+
 
 		// Update nomor dan tombol hapus
 		function updateNomorBahan() {
@@ -362,7 +366,10 @@ $daftar_bahan = [
 			});
 		}
 
+
+		// Inisialisasi nomor
 		updateNomorBahan();
+
 
 		// Validasi form
 		$('#formMasterFormula').on('submit', function(e) {
@@ -371,6 +378,7 @@ $daftar_bahan = [
 			const jumlah = $('#bodyBahan tr').length;
 
 			if (!produk || jumlah < 1) {
+
 				e.preventDefault();
 
 				Swal.fire(
@@ -386,15 +394,27 @@ $daftar_bahan = [
 
 			$('#bodyBahan tr').each(function() {
 
-				const bahan = $(this).find('[name="nama_bahan[]"]').val();
-				const berat = $(this).find('[name="standar_berat[]"]').val();
+				const bahan = $(this)
+					.find('[name="nama_bahan[]"]')
+					.val();
 
-				if (!bahan || berat === '' || Number(berat) < 0) {
+				const berat = $(this)
+					.find('[name="standar_berat[]"]')
+					.val();
+
+				if (
+					!bahan ||
+					berat === '' ||
+					!Number.isFinite(Number(berat)) ||
+					Number(berat) < 0
+				) {
 					valid = false;
+					return false;
 				}
 			});
 
 			if (!valid) {
+
 				e.preventDefault();
 
 				Swal.fire(
@@ -406,9 +426,13 @@ $daftar_bahan = [
 				return false;
 			}
 
+
+			// Cegah submit berulang
 			$('#btnSimpan')
 				.prop('disabled', true)
-				.html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+				.html(
+					'<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...'
+				);
 		});
 
 	});

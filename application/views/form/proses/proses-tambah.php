@@ -70,7 +70,11 @@
 						'hasil_proofing'
 					],
 					'electric_baking' => [
-						['label' => 'Baking Time (High / Low)', 'params' => ['baking_time_high', 'baking_time_low']],
+						[
+							'label' => 'Baking Time (High / Low)',
+							'params' => ['baking_time_high', 'baking_time_low']
+						],
+						'expand_roti',
 					],
 					'hasil_baking' => ['suhu_produk', 'sensori_produk']
 				];
@@ -107,6 +111,7 @@
 					'hasil_proofing' => 'Hasil Proofing',
 					'baking_time_high' => 'Baking Time High',
 					'baking_time_low' => 'Baking Time Low',
+					'expand_roti' => 'Expand Roti (%)',
 					'suhu_produk' => 'Suhu Produk (80 - 97°C)',
 					'sensori_produk' => 'Sensori Produk'
 				];
@@ -210,13 +215,14 @@
 
 												// Hubungan nama bahan Master Formula dengan key tabel proses.
 												$bahanFormula = [
-													'tepung_terigu' => 'Tepung Terigu',
-													'tepung_tapioka' => 'Tepung Tapioka',
-													'yeast' => 'Yeast',
-													'bread_improver' => 'Bread Improve N55BC',
-													'np55bcy_np55bco' => 'NP55BCY / NP55BCO',
-													'shortening' => 'Shortening',
-													'chill_water' => 'Chill Water (14 - 16°C)'
+													'tepung_terigu'     => 'Tepung Terigu',
+													'tepung_tapioka'    => 'Tepung Tapioka',
+													'yeast'             => 'Yeast',
+													'bread_improver'    => 'Bread Improve',
+													'n55bc'             => 'N55BC',
+													'np55bcy_np55bco'   => 'NP55BCY / NP55BCO',
+													'shortening'        => 'Shortening',
+													'chill_water'       => 'Chill Water (14 - 16°C)'
 												];
 												?>
 
@@ -342,7 +348,8 @@
 														// Input angka
 														elseif (
 															$subLower === 'chill_water' ||
-															strpos($subLower, 'suhu') !== false
+															strpos($subLower, 'suhu') !== false ||
+															$subLower === 'expand_roti'
 														) {
 															$isNumber = true;
 														}
@@ -673,7 +680,6 @@
 
 			let angka = String(value).trim();
 
-			// Hilangkan nol yang tidak diperlukan di belakang desimal.
 			if (angka.includes('.')) {
 				angka = angka
 					.replace(/0+$/, '')
@@ -682,7 +688,6 @@
 
 			return angka;
 		}
-
 
 		// =========================================
 		// AUTOFILL PREFIX KODE PRODUKSI

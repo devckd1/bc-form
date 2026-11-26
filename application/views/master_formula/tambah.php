@@ -42,17 +42,6 @@
 			</div>
 
 			<div class="card-body">
-
-				<div class="form-group">
-					<label>Nama Formulasi <span class="text-danger">*</span></label>
-
-					<input type="text"
-						name="nama_formulasi"
-						class="form-control"
-						placeholder="Masukkan nama formulasi"
-						required>
-				</div>
-
 				<div class="form-group">
 					<label>Nama Produk <span class="text-danger">*</span></label>
 
@@ -70,6 +59,16 @@
 						<?php endforeach; ?>
 
 					</select>
+				</div>
+
+				<div class="form-group">
+					<label>Nama Formulasi <span class="text-danger">*</span></label>
+
+					<input type="text"
+						name="nama_formulasi"
+						class="form-control"
+						placeholder="Masukkan nama formulasi"
+						required>
 				</div>
 
 				<div class="form-row">
@@ -148,19 +147,14 @@
 								<td class="text-center nomor-bahan">1</td>
 
 								<td>
-									<select name="nama_bahan[]"
-										class="form-control"
-										required>
-
+									<select name="nama_bahan[]" class="form-control" required>
 										<option value="">-- Pilih Nama Bahan --</option>
-										<option value="Tepung Terigu">Tepung Terigu</option>
-										<option value="Tepung Tapioka">Tepung Tapioka</option>
-										<option value="Yeast">Yeast</option>
-										<option value="Bread Improve N55BC">Bread Improve N55BC</option>
-										<option value="NP55BCY / NP55BCO">NP55BCY / NP55BCO</option>
-										<option value="Shortening">Shortening</option>
-										<option value="Chill Water (14 - 16°C)">Chill Water (14 - 16°C)</option>
 
+										<?php foreach ($material as $row): ?>
+											<option value="<?= html_escape($row->material); ?>">
+												<?= html_escape($row->material); ?>
+											</option>
+										<?php endforeach; ?>
 									</select>
 								</td>
 
@@ -224,56 +218,60 @@
 	}
 </style>
 <script>
+	// Opsi material diambil dari database melalui PHP
+	const materialOptions = `
+		<option value="">-- Pilih Nama Bahan --</option>
+		<?php foreach ($material as $row): ?>
+			<option value="<?= html_escape($row->material); ?>">
+				<?= html_escape($row->material); ?>
+			</option>
+		<?php endforeach; ?>
+	`;
+
 	$(document).ready(function() {
 
 		// Tambah baris bahan
 		$('#btnTambahBahan').on('click', function() {
 
 			const row = `
-            <tr>
-                <td class="text-center nomor-bahan"></td>
+				<tr>
+					<td class="text-center nomor-bahan"></td>
 
-                <td>
-                    <select name="nama_bahan[]"
-                        class="form-control"
-                        required>
+					<td>
+						<select name="nama_bahan[]"
+							class="form-control"
+							required>
 
-                        <option value="">-- Pilih Nama Bahan --</option>
-                        <option value="Tepung Terigu">Tepung Terigu</option>
-                        <option value="Tepung Tapioka">Tepung Tapioka</option>
-                        <option value="Yeast">Yeast</option>
-                        <option value="Bread Improve N55BC">Bread Improve N55BC</option>
-                        <option value="NP55BCY / NP55BCO">NP55BCY / NP55BCO</option>
-                        <option value="Shortening">Shortening</option>
-                        <option value="Chill Water (14 - 16°C)">Chill Water (14 - 16°C)</option>
+							${materialOptions}
 
-                    </select>
-                </td>
+						</select>
+					</td>
 
-                <td>
-                    <input type="number"
-                        name="standar_berat[]"
-                        class="form-control"
-                        placeholder="Masukkan angka"
-                        min="0"
-                        step="any"
-                        required>
-                </td>
+					<td>
+						<input type="number"
+							name="standar_berat[]"
+							class="form-control"
+							placeholder="Masukkan angka"
+							min="0"
+							step="any"
+							required>
+					</td>
 
-                <td class="text-center">
-                    <button type="button"
-                        class="btn btn-danger btn-sm btnHapusBahan">
+					<td class="text-center">
+						<button type="button"
+							class="btn btn-danger btn-sm btnHapusBahan">
 
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
+							<i class="fas fa-trash"></i>
+						</button>
+					</td>
+				</tr>
+			`;
 
 			$('#bodyBahan').append(row);
 
 			updateNomorBahan();
 		});
+
 
 		// Hapus baris bahan
 		$(document).on('click', '.btnHapusBahan', function() {
@@ -283,22 +281,28 @@
 			updateNomorBahan();
 		});
 
-		// Update nomor urut
+
+		// Update nomor urut dan status tombol hapus
 		function updateNomorBahan() {
+
+			const jumlahBaris = $('#bodyBahan tr').length;
 
 			$('#bodyBahan tr').each(function(index) {
 
 				$(this).find('.nomor-bahan').text(index + 1);
 
 				$(this).find('.btnHapusBahan')
-					.prop('disabled', $('#bodyBahan tr').length <= 1);
+					.prop('disabled', jumlahBaris <= 1);
 			});
 		}
+
 
 		// Validasi sebelum simpan
 		$('#formMasterFormula').on('submit', function(e) {
 
+			// Validasi produk
 			if (!$('#produk_uuid').val()) {
+
 				e.preventDefault();
 
 				Swal.fire(
@@ -310,7 +314,10 @@
 				return false;
 			}
 
+
+			// Validasi minimal satu bahan
 			if ($('#bodyBahan tr').length < 1) {
+
 				e.preventDefault();
 
 				Swal.fire(
@@ -322,13 +329,50 @@
 				return false;
 			}
 
-			$('#btnSimpan').prop('disabled', true);
 
-			$('#btnSimpan').html(
-				'<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...'
-			);
+			// Validasi nama bahan dan standar berat
+			let valid = true;
+
+			$('#bodyBahan tr').each(function() {
+
+				const namaBahan = $(this)
+					.find('select[name="nama_bahan[]"]')
+					.val();
+
+				const standarBerat = $(this)
+					.find('input[name="standar_berat[]"]')
+					.val();
+
+				if (!namaBahan || standarBerat === '') {
+					valid = false;
+					return false;
+				}
+			});
+
+			if (!valid) {
+
+				e.preventDefault();
+
+				Swal.fire(
+					'Perhatian',
+					'Semua nama bahan dan standar berat wajib diisi.',
+					'warning'
+				);
+
+				return false;
+			}
+
+
+			// Cegah submit berulang
+			$('#btnSimpan')
+				.prop('disabled', true)
+				.html(
+					'<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...'
+				);
 		});
 
+
+		// Inisialisasi nomor baris
 		updateNomorBahan();
 
 	});

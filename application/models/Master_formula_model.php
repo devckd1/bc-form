@@ -8,17 +8,29 @@ class Master_formula_model extends CI_Model
 	protected $table_detail = 'master_formula_detail';
 
 	// Daftar bahan yang diperbolehkan
-	private function daftar_bahan()
+	//private function daftar_bahan()
+	//{
+	//	return [
+	//		'Tepung Terigu',
+	//		'Tepung Tapioka',
+	//		'Yeast',
+	//		'Bread Improve',
+	//		'N55BC',
+	//		'NP55BCY / NP55BCO',
+	//		'Shortening',
+	//		'Chill Water (14 - 16°C)'
+	//	];
+	//}
+
+	// Ambil daftar material untuk dropdown Master Formula
+	public function get_material_dropdown()
 	{
-		return [
-			'Tepung Terigu',
-			'Tepung Tapioka',
-			'Yeast',
-			'Bread Improve N55BC',
-			'NP55BCY / NP55BCO',
-			'Shortening',
-			'Chill Water (14 - 16°C)'
-		];
+		return $this->db
+			->select('material, berat')
+			->from('material')
+			->order_by('material', 'ASC')
+			->get()
+			->result();
 	}
 
 	// Generate UUID
@@ -102,13 +114,18 @@ class Master_formula_model extends CI_Model
 	}
 
 	// Validasi detail bahan
+	// Validasi detail bahan berdasarkan tabel material
 	private function detail_valid($details)
 	{
 		if (empty($details) || !is_array($details)) {
 			return false;
 		}
 
-		$daftar_bahan = $this->daftar_bahan();
+		$material = $this->get_material_dropdown();
+
+		$daftar_bahan = array_map(function ($row) {
+			return $row->material;
+		}, $material);
 
 		foreach ($details as $detail) {
 
@@ -142,12 +159,12 @@ class Master_formula_model extends CI_Model
 			return false;
 		}
 
-		if (!$this->nama_formulasi_tersedia(
-			$data['nama_formulasi'],
-			$plant
-		)) {
-			return false;
-		}
+		//if (!$this->nama_formulasi_tersedia(
+		//	$data['nama_formulasi'],
+		//	$plant
+		//)) {
+		//	return false;
+		//}
 
 		if (!$this->detail_valid($details)) {
 			return false;
@@ -209,13 +226,13 @@ class Master_formula_model extends CI_Model
 			return false;
 		}
 
-		if (!$this->nama_formulasi_tersedia(
-			$data['nama_formulasi'],
-			$plant,
-			$uuid
-		)) {
-			return false;
-		}
+		//if (!$this->nama_formulasi_tersedia(
+		//	$data['nama_formulasi'],
+		//	$plant,
+		//	$uuid
+		//)) {
+		//	return false;
+		//}
 
 		if (!$this->detail_valid($details)) {
 			return false;

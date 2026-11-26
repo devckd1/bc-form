@@ -108,6 +108,7 @@ $proses_produksi = [
 	],
 	'electric_baking' => [
 		['label' => 'Baking Time (High / Low)', 'params' => ['baking_time_high', 'baking_time_low']],
+		'expand_roti',
 	],
 	'hasil_baking' => ['suhu_produk', 'sensori_produk']
 ];
@@ -142,19 +143,12 @@ $label_param = [
 	'hasil_proofing' => 'Hasil Proofing',
 	'baking_time_high' => 'Baking Time High',
 	'baking_time_low' => 'Baking Time Low',
+	'expand_roti' => 'Expand Roti (%)',
 	'suhu_produk' => 'Suhu Produk (80 - 97°C)',
 	'sensori_produk' => 'Sensori Produk'
 ];
 
-$standar_berat = [
-	'tepung_terigu' => '32.960',
-	'tepung_tapioka' => '2.270',
-	'yeast' => '0.732',
-	'bread_improver' => '0.038',
-	'premix' => ['default' => '0.7468', 'col8' => '0.7653'],
-	'shortening' => '0.252',
-	'chill_water' => '18'
-];
+$standar_berat = [];
 
 $default_mixing = [
 	'waktu_mixing_1' => 3,
@@ -304,21 +298,18 @@ $default_baking = [
 												<?php
 												$stdParam = $subParams[0];
 
-												if ($stdParam !== 'premix') {
-													$rawStd = $standar_berat[$stdParam] ?? '';
-													$stdDefault = is_array($rawStd)
-														? $rawStd['default']
-														: $rawStd;
+												if ($stdParam !== 'premix'):
 
-													$stdVal = $proses_data[$kategori][$stdParam][0]
-														?? $stdDefault;
+													// Ambil Std. Berat yang tersimpan pada data proses.
+													$stdVal = $proses_data[$kategori][$stdParam][0] ?? '';
 												?>
 													<input
 														type="text"
 														name="proses_produksi[<?= $kategori ?>][<?= $stdParam ?>][0]"
-														class="form-control form-control-sm"
-														value="<?= html_escape((string) $stdVal) ?>">
-												<?php } ?>
+														class="form-control form-control-sm std-berat"
+														value="<?= html_escape((string) $stdVal) ?>"
+														readonly>
+												<?php endif; ?>
 
 											<?php endif; ?>
 										</td>
@@ -326,23 +317,22 @@ $default_baking = [
 										<!-- Kolom Kode Batch -->
 										<td class="text-center">
 											<?php
-											$kodeBatchParams = [
-												'tepung_terigu',
-												'tepung_tapioka',
-												'yeast',
-												'bread_improver',
-												'n55bc',
-												'np55bcy_np55bco',
-												'shortening',
-												'chill_water'
-											];
-
 											if (
 												$kategori === 'kondisi_rm' &&
-												in_array($subParams[0], $kodeBatchParams, true)
+												in_array($subParams[0], [
+													'tepung_terigu',
+													'tepung_tapioka',
+													'yeast',
+													'bread_improver',
+													'n55bc',
+													'np55bcy_np55bco',
+													'shortening',
+													'chill_water'
+												], true)
 											):
 												$namaKodeBatch = 'kode_batch_' . $subParams[0];
-												$nilaiKodeBatch = $proses_data[$kategori][$namaKodeBatch] ?? '';
+
+												$nilaiKodeBatch = $proses_data['kondisi_rm'][$namaKodeBatch] ?? '';
 											?>
 												<input
 													type="text"
@@ -423,7 +413,8 @@ $default_baking = [
 														// Input angka.
 														elseif (
 															$subLower === 'chill_water' ||
-															strpos($subLower, 'suhu') !== false
+															strpos($subLower, 'suhu') !== false ||
+															$subLower === 'expand_roti'
 														) {
 															$isNumber = true;
 														}

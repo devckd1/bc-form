@@ -40,6 +40,7 @@ $label_param = [
 	'hasil_proofing' => 'Hasil Proofing',
 	'baking_time_high' => 'Baking Time High',
 	'baking_time_low' => 'Baking Time Low',
+	'expand_roti' => 'Expand Roti (%)',
 	'suhu_produk' => 'Suhu Produk (80 - 97°C)',
 	'sensori_produk' => 'Sensori Produk'
 ];
